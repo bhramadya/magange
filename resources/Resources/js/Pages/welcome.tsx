@@ -1,11 +1,6 @@
 import MainLayout from "../Layouts/MainLayout";
 import { Head } from '@inertiajs/react';
-import {
-    Globe, ChevronDown, Rocket, Shield, Terminal,
-    Building2, Search, ArrowRight, UserPlus,
-    ShieldCheck, KeyRound, GraduationCap,
-    MapPin, Mail, Phone, CheckCircle2, Send
-} from 'lucide-react';
+import { Globe, ChevronDown, Rocket, Shield, Terminal, Building2, Search, ArrowRight, UserPlus, ShieldCheck, KeyRound, GraduationCap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 
@@ -15,20 +10,6 @@ export default function Welcome() {
 
     // 2. State Fitur Pencarian OPD
     const [searchOpd, setSearchOpd] = useState("");
-
-    // --- TAMBAHKAN KODE INI (Logika Slider Captcha) ---
-    const [sliderValue, setSliderValue] = useState(0);
-    const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
-
-    const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = parseInt(e.target.value);
-        setSliderValue(value);
-        if (value >= 95) { // Jika digeser sampai 95%, otomatis mengunci ke 100%
-            setIsCaptchaVerified(true);
-            setSliderValue(100);
-        }
-    };
-    // --------------------------------------------------
 
     // 3. Daftar Lengkap 35 OPD Kota Madiun
     const daftarOPD = [
@@ -527,6 +508,8 @@ export default function Welcome() {
                 </footer>
 
             </div>
-        </>
+        </MainLayout>
     );
-}
+};
+
+export default MyPage;
