@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
 import {
-    ChevronRight, Layout, Zap, Shield, Clock, Building2,
+    ChevronRight, Layout, Shield, Clock, Building2,
     MapPin, Mail, Phone, CheckCircle2, ArrowRight, Send, Search, ChevronDown,
     Menu, X, ShieldCheck, Sparkles, Award, Timer
 } from 'lucide-react';
@@ -12,6 +12,7 @@ import { motion, AnimatePresence, useInView, animate } from 'motion/react';
  * ========================================================================= */
 
 // Scroll Reveal: fade + slide-up saat section masuk ke viewport.
+// Memakai easing 'circOut' agar transisi terasa organik & mewah.
 function Reveal({
     children,
     className,
@@ -24,15 +25,34 @@ function Reveal({
     return (
         <motion.div
             className={className}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.6, delay, ease: 'easeOut' }}
+            transition={{ duration: 0.7, delay, ease: 'circOut' }}
         >
             {children}
         </motion.div>
     );
 }
+
+// Stagger Container: membungkus daftar agar anak-anaknya muncul satu per satu.
+const staggerContainer = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: { staggerChildren: 0.1, delayChildren: 0.05 },
+    },
+};
+
+// Stagger Item: tiap elemen anak muncul dengan fade + slide-up organik.
+const staggerItem = {
+    hidden: { opacity: 0, y: 24 },
+    show: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.6, ease: 'circOut' as const },
+    },
+};
 
 // Animated Statistics: count-up dari 0 ke target saat masuk viewport.
 // Memperbarui DOM secara langsung agar tidak memicu render per-frame.
@@ -57,6 +77,95 @@ function CountUp({ to, suffix = '' }: { to: number; suffix?: string }) {
 
     return <span ref={ref}>{`0${suffix}`}</span>;
 }
+
+/* =========================================================================
+ *  ANIMATED BUTTON (Sliding-circle hover)
+ *  - default : background biru #106feb, teks putih, lingkaran panah #cddcef
+ *              di kanan. Saat hover, lingkaran melebar ke kiri menutupi
+ *              seluruh background → teks berubah jadi hitam.
+ *  - inverted: skema warna dibalik (background terang, lingkaran biru).
+ * ========================================================================= */
+function AnimatedButton({
+    children,
+    as = 'button',
+    href,
+    variant = 'default',
+    type,
+    disabled = false,
+    className = '',
+    onClick,
+}: {
+    children: React.ReactNode;
+    as?: 'button' | 'a';
+    href?: string;
+    variant?: 'default' | 'inverted';
+    type?: 'button' | 'submit';
+    disabled?: boolean;
+    className?: string;
+    onClick?: () => void;
+}) {
+    const isInverted = variant === 'inverted';
+
+    // Skema warna: base = warna tombol saat diam, fill = warna saat hover penuh.
+    const baseBg = isInverted ? 'bg-white' : 'bg-[#106feb]';
+    const baseText = isInverted ? 'text-[#106feb]' : 'text-white';
+    const hoverText = isInverted ? 'group-hover:text-[#106feb]' : 'group-hover:text-[#001122]';
+    const fillCircle = isInverted ? 'bg-[#106feb]' : 'bg-[#cddcef]';
+    const arrowColor = isInverted ? 'text-white' : 'text-[#106feb]';
+    const borderClass = isInverted ? 'border border-[#cddcef]' : '';
+
+    const content = (
+        <>
+            {/* Lingkaran pengisi: diam di kanan, melebar menutupi seluruh tombol saat hover */}
+            <span
+                aria-hidden
+                className={`pointer-events-none absolute right-1.5 top-1/2 h-9 w-9 -translate-y-1/2 rounded-full ${fillCircle} origin-right transition-all duration-500 ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:right-0 group-hover:h-full group-hover:w-full group-hover:rounded-full`}
+            />
+            {/* Label: berada di atas lingkaran, warna teks berubah dinamis saat hover */}
+            <span className={`relative z-10 flex-1 text-left transition-colors duration-300 ${baseText} ${hoverText}`}>
+                {children}
+            </span>
+            {/* Ikon panah dalam lingkaran sempurna di kanan */}
+            <span className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${arrowColor}`}>
+                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+            </span>
+        </>
+    );
+
+    const shared = `group relative inline-flex items-center gap-3 overflow-hidden rounded-full pl-6 pr-1.5 py-1.5 text-[15px] font-semibold ${baseBg} ${borderClass} shadow-lg shadow-[#106feb]/25 transition-shadow duration-300 hover:shadow-xl hover:shadow-[#106feb]/35 ${disabled ? 'pointer-events-none opacity-50' : ''} ${className}`;
+
+    if (as === 'a') {
+        return (
+            <motion.a href={href} onClick={onClick} whileTap={{ scale: 0.97 }} className={shared}>
+                {content}
+            </motion.a>
+        );
+    }
+
+    return (
+        <motion.button type={type} disabled={disabled} onClick={onClick} whileTap={disabled ? undefined : { scale: 0.97 }} className={shared}>
+            {content}
+        </motion.button>
+    );
+}
+
+// Stagger khusus Hero: judul → sub-judul → tombol muncul berurutan (slide-up).
+const heroContainer = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: { staggerChildren: 0.15, delayChildren: 0.1 },
+    },
+};
+
+const heroItem = {
+    hidden: { opacity: 0, y: 28 },
+    show: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.7, ease: 'circOut' as const },
+    },
+};
 
 export default function Welcome() {
     const [scrolled, setScrolled] = useState(false);
@@ -153,188 +262,172 @@ export default function Welcome() {
                 {/* Efek Cahaya Halus (Soft Glow) khas Webild SaaS di area atas */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1000px] h-[500px] bg-gradient-to-b from-[#a8cce8]/30 to-transparent blur-3xl -z-10 pointer-events-none"></div>
 
-                {/* 1. NAVIGATION BAR */}
-                <nav className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'bg-[#f5faff]/80 backdrop-blur-md border-b border-[#e5e7eb] py-4 shadow-sm' : 'bg-transparent py-6'}`}>
-                    <div className="max-w-[1200px] mx-auto px-6 flex items-center justify-between">
+                {/* 1. NAVIGATION BAR — Floating Oval / Capsule (Glassmorphism) */}
+                <motion.nav
+                    initial={{ y: -100, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.7, ease: 'circOut' }}
+                    className="fixed top-4 inset-x-0 z-50 px-4"
+                >
+                    <div className={`max-w-3xl mx-auto flex items-center justify-between gap-3 rounded-full backdrop-blur-md bg-white/70 border border-white/20 pl-5 pr-2 py-2 transition-shadow duration-300 ${scrolled ? 'shadow-[0_8px_30px_rgba(8,71,156,0.12)]' : 'shadow-[0_8px_30px_rgba(8,71,156,0.06)]'}`}>
 
-                        {/* Logo Kombinasi Ikon & Teks */}
+                        {/* Logo (kiri) */}
+                        <div className="flex items-center gap-2 shrink-0">
+                            <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-[#12213e] to-[#1463d0] bg-clip-text text-transparent">E-Magang.</span>
+                        </div>
+
+                        {/* Aksi Kanan: Hamburger (tengah/kanan) + CTA (paling kanan) */}
                         <div className="flex items-center gap-2">
-                            <span className="font-bold text-xl tracking-tight text-[#001122]">E-Magang.</span>
-                        </div>
-
-                        {/* Tautan Menu Tengah */}
-                        <div className="hidden md:flex items-center gap-8 text-[15px] font-medium text-[#001122]/70">
-                            {navLinks.map((link) => (
-                                <a key={link.href} href={link.href} className="hover:text-[#001122] transition-colors">{link.label}</a>
-                            ))}
-                        </div>
-
-                        {/* Aksi Kanan */}
-                        <div className="flex items-center gap-4 md:gap-6">
-                            <button className="hidden md:block text-[15px] font-medium text-[#001122]/70 hover:text-[#001122] transition-colors">
-                                Masuk Akun
-                            </button>
-                            {/* Tombol Primary: Pill-shape 9999px */}
-                            <motion.button
-                                whileHover={{ scale: 1.03 }}
-                                whileTap={{ scale: 0.97 }}
-                                className="px-6 py-2.5 rounded-full bg-[#001122] text-white text-[15px] font-medium hover:bg-[#001122]/80 transition-colors"
-                            >
-                                Daftar Sekarang
-                            </motion.button>
-
-                            {/* Tombol Hamburger (Mobile) */}
+                            {/* Tombol Hamburger — background biru #106feb, ikon putih */}
                             <button
                                 onClick={() => setMobileMenuOpen((v) => !v)}
-                                className="md:hidden p-1 text-[#001122]"
+                                className="flex items-center justify-center h-10 w-10 rounded-full bg-[#106feb] text-white shadow-md shadow-[#106feb]/30 hover:brightness-110 transition-all"
                                 aria-label="Buka menu navigasi"
+                                aria-expanded={mobileMenuOpen}
                             >
-                                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                             </button>
+
+                            {/* Tombol CTA (paling kanan) */}
+                            <AnimatedButton className="hidden sm:inline-flex">
+                                Daftar Sekarang
+                            </AnimatedButton>
                         </div>
                     </div>
 
-                    {/* Dropdown Menu Mobile (Micro-interaction AnimatePresence) */}
+                    {/* Dropdown Panel Melayang (berisi semua menu + Masuk Akun) */}
                     <AnimatePresence>
                         {mobileMenuOpen && (
                             <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                transition={{ duration: 0.3, ease: 'easeInOut' }}
-                                className="md:hidden overflow-hidden bg-[#f5faff]/95 backdrop-blur-md border-t border-[#e5e7eb] mt-4"
+                                initial={{ opacity: 0, y: -10, scale: 0.97 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: -10, scale: 0.97 }}
+                                transition={{ duration: 0.25, ease: 'circOut' }}
+                                className="max-w-3xl mx-auto mt-3 rounded-3xl backdrop-blur-md bg-white/80 border border-white/30 shadow-[0_20px_50px_rgba(8,71,156,0.12)] overflow-hidden"
                             >
-                                <div className="max-w-[1200px] mx-auto px-6 py-4 flex flex-col gap-1">
+                                <div className="px-4 py-4 flex flex-col gap-1">
                                     {navLinks.map((link) => (
                                         <a
                                             key={link.href}
                                             href={link.href}
                                             onClick={() => setMobileMenuOpen(false)}
-                                            className="py-2.5 text-[15px] font-medium text-[#001122]/70 hover:text-[#001122] transition-colors"
+                                            className="py-2.5 px-3 rounded-xl text-[15px] font-medium text-[#001122]/70 hover:text-[#106feb] hover:bg-[#106feb]/5 transition-colors"
                                         >
                                             {link.label}
                                         </a>
                                     ))}
-                                    <button className="mt-2 py-2.5 text-left text-[15px] font-medium text-[#001122]/70 hover:text-[#001122] transition-colors">
+                                    <button className="mt-1 py-2.5 px-3 rounded-xl text-left text-[15px] font-medium text-[#001122]/70 hover:text-[#106feb] hover:bg-[#106feb]/5 transition-colors">
                                         Masuk Akun
                                     </button>
+                                    {/* CTA di dalam panel untuk layar kecil */}
+                                    <div className="sm:hidden mt-2">
+                                        <AnimatedButton className="w-full">
+                                            Daftar Sekarang
+                                        </AnimatedButton>
+                                    </div>
                                 </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
-                </nav>
+                </motion.nav>
 
                 {/* 2. HERO SECTION */}
-                <section className="relative pt-[160px] pb-20 px-6 max-w-[1200px] mx-auto flex flex-col items-center text-center">
+                <section className="relative pt-[180px] pb-20 px-6 max-w-[1200px] mx-auto flex flex-col items-center text-center overflow-visible">
 
-                    {/* Badge Pengumuman (Pill) */}
+                    {/* Glow Blobs premium di belakang teks & foto */}
+                    <div aria-hidden className="pointer-events-none absolute -z-10 inset-0">
+                        <div className="absolute top-10 left-1/4 -translate-x-1/2 w-[420px] h-[420px] rounded-full bg-[#1463d0]/25 blur-[120px]"></div>
+                        <div className="absolute top-24 right-1/4 translate-x-1/2 w-[360px] h-[360px] rounded-full bg-[#8b5cf6]/20 blur-[120px]"></div>
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 w-[520px] h-[300px] rounded-full bg-[#a8cce8]/30 blur-[120px]"></div>
+                    </div>
+
+                    {/* Konten teks Hero dengan staggerChildren (judul → sub → tombol) */}
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, ease: 'easeOut' }}
-                        className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#e5e7eb] bg-white/60 backdrop-blur-sm text-[13px] font-medium text-[#001122]/70 mb-8 hover:bg-white hover:border-[#a8cce8] transition-all cursor-pointer shadow-sm"
+                        variants={heroContainer}
+                        initial="hidden"
+                        animate="show"
+                        className="flex flex-col items-center"
                     >
-                        <span className="flex h-2 w-2 rounded-full bg-[#a8cce8] animate-pulse"></span>
-                        Portal Resmi Diskominfo Kota Madiun
-                        <ChevronRight className="w-3.5 h-3.5" />
+                        {/* Badge Pengumuman (Pill) */}
+                        <motion.div
+                            variants={heroItem}
+                            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-slate-100 bg-white/60 backdrop-blur-md text-[13px] font-medium text-[#001122]/70 mb-8 hover:bg-white hover:border-[#a8cce8] transition-all cursor-pointer shadow-sm"
+                        >
+                            <span className="flex h-2 w-2 rounded-full bg-[#106feb] animate-pulse"></span>
+                            Portal Resmi Diskominfo Kota Madiun
+                            <ChevronRight className="w-3.5 h-3.5" />
+                        </motion.div>
+
+                        {/* Headline Utama — Inter Bold, gradien #12213e → #1463d0 */}
+                        <motion.h1
+                            variants={heroItem}
+                            className="text-[42px] md:text-[68px] font-bold tracking-tight leading-[1.05] max-w-4xl mb-6 bg-gradient-to-r from-[#12213e] to-[#1463d0] bg-clip-text text-transparent"
+                        >
+                            Pusat Kendali Karir <br className="hidden md:block" />
+                            <span className="relative inline-block mt-2">
+                                Digital Anda
+                                {/* Garis bawah dekoratif ala SaaS */}
+                                <svg className="absolute w-full h-3 -bottom-1.5 left-0 text-[#a8cce8] -z-10" viewBox="0 0 100 10" preserveAspectRatio="none">
+                                    <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="6" fill="transparent" strokeLinecap="round"/>
+                                </svg>
+                            </span>
+                        </motion.h1>
+
+                        {/* Deskripsi Sub-headline */}
+                        <motion.p
+                            variants={heroItem}
+                            className="text-[18px] md:text-[20px] text-[#001122]/60 max-w-2xl mb-10 leading-[1.6] font-medium"
+                        >
+                            Kelola pendaftaran, pantau status verifikasi, dan temukan bidang penempatan yang tepat di instansi pemerintahan dalam satu platform cerdas.
+                        </motion.p>
+
+                        {/* Grup Tombol Aksi */}
+                        <motion.div
+                            variants={heroItem}
+                            className="flex flex-col sm:flex-row items-center gap-4"
+                        >
+                            <AnimatedButton className="w-full sm:w-auto">
+                                Mulai Pengajuan Magang
+                            </AnimatedButton>
+                            <AnimatedButton variant="inverted" className="w-full sm:w-auto">
+                                Pelajari Alur
+                            </AnimatedButton>
+                        </motion.div>
                     </motion.div>
 
-                    {/* Headline Utama */}
-                    <motion.h1
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
-                        className="text-[42px] md:text-[68px] font-bold tracking-tight leading-[1.05] text-[#001122] max-w-4xl mb-6"
-                    >
-                        Pusat Kendali Karir <br className="hidden md:block" />
-                        <span className="relative inline-block mt-2">
-                            Digital Anda
-                            {/* Garis bawah dekoratif ala SaaS */}
-                            <svg className="absolute w-full h-3 -bottom-1.5 left-0 text-[#a8cce8] -z-10" viewBox="0 0 100 10" preserveAspectRatio="none">
-                                <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="6" fill="transparent" strokeLinecap="round"/>
-                            </svg>
-                        </span>
-                    </motion.h1>
-
-                    {/* Deskripsi Sub-headline */}
-                    <motion.p
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
-                        className="text-[18px] md:text-[20px] text-[#001122]/60 max-w-2xl mb-10 leading-[1.6] font-light"
-                    >
-                        Kelola pendaftaran, pantau status verifikasi, dan temukan bidang penempatan yang tepat di instansi pemerintahan dalam satu platform cerdas.
-                    </motion.p>
-
-                    {/* Grup Tombol Aksi */}
+                    {/* 3. VISUAL UTAMA — Foto Gedung (scale 0.95 → 1 saat scroll) */}
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
-                        className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto"
+                        initial={{ opacity: 0, scale: 0.95, y: 40 }}
+                        whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                        viewport={{ once: true, margin: '-80px' }}
+                        transition={{ duration: 0.9, ease: 'circOut' }}
+                        className="w-full max-w-5xl mt-24 relative group"
                     >
-                        <motion.button
-                            whileHover={{ scale: 1.03 }}
-                            whileTap={{ scale: 0.97 }}
-                            className="w-full sm:w-auto px-8 py-4 rounded-full bg-[#001122] text-white text-[16px] font-medium hover:bg-[#001122]/80 transition-colors flex items-center justify-center gap-2 group"
-                        >
-                            Mulai Pengajuan Magang
-                            <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        </motion.button>
-                        <motion.button
-                            whileHover={{ scale: 1.03 }}
-                            whileTap={{ scale: 0.97 }}
-                            className="w-full sm:w-auto px-8 py-4 rounded-full border border-[#e5e7eb] bg-white text-[#001122] text-[16px] font-medium hover:bg-[#f5faff] transition-colors flex items-center justify-center gap-2 shadow-sm"
-                        >
-                            <Zap className="w-4 h-4 text-[#a8cce8] fill-[#a8cce8]/20" />
-                            Pelajari Alur
-                        </motion.button>
-                    </motion.div>
+                        {/* Soft Layered Shadow (efek kedalaman 3D) */}
+                        <div className="absolute -inset-4 bg-[#1463d0]/20 blur-[80px] rounded-[40px] -z-10"></div>
 
-                    {/* 3. MOCKUP DASHBOARD (Representasi Gambar Hero) */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 40 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.4, ease: 'easeOut' }}
-                        className="w-full max-w-5xl mt-24 relative group perspective-1000"
-                    >
-                        {/* Glow di belakang mockup */}
-                        <div className="absolute inset-0 bg-[#a8cce8]/30 blur-[100px] rounded-full group-hover:bg-[#a8cce8]/40 transition-colors duration-500"></div>
+                        <div className="relative rounded-3xl overflow-hidden border border-white/40 bg-white shadow-[0_20px_40px_-12px_rgba(8,71,156,0.25),0_40px_80px_-20px_rgba(20,99,208,0.3)] transition-transform duration-700 hover:-translate-y-2">
+                            <img
+                                src="/images/gedung-pemerintahan.jpg"
+                                alt="Gedung Pemerintah Kota Madiun"
+                                loading="lazy"
+                                onError={(e) => {
+                                    // Fallback elegan bila foto belum tersedia di /public/images.
+                                    const img = e.currentTarget;
+                                    img.style.display = 'none';
+                                    const fallback = img.nextElementSibling;
 
-                        {/* Bingkai Luar (Radius 16px) */}
-                        <div className="relative rounded-[16px] border border-[#e5e7eb] bg-white p-2 md:p-3 shadow-2xl shadow-[#001122]/5 transform transition-transform duration-700 hover:-translate-y-2">
-                            {/* Area Konten Dalam (Radius 8px sesuai panduan) */}
-                            <div className="rounded-[8px] border border-[#e5e7eb]/50 bg-[#f5faff]/50 w-full aspect-[16/10] md:aspect-[21/9] flex flex-col overflow-hidden relative">
-
-                                {/* Header Mockup */}
-                                <div className="h-12 border-b border-[#e5e7eb]/50 bg-white flex items-center px-4 gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-[#e5e7eb]"></div>
-                                    <div className="w-3 h-3 rounded-full bg-[#e5e7eb]"></div>
-                                    <div className="w-3 h-3 rounded-full bg-[#e5e7eb]"></div>
-                                </div>
-
-                                {/* Body Mockup (Pola Data) */}
-                                <div className="p-6 flex gap-6 h-full opacity-70">
-                                    {/* Sidebar Semu */}
-                                    <div className="w-48 hidden md:flex flex-col gap-4 border-r border-[#e5e7eb]/50 pr-6">
-                                        <div className="w-full h-8 rounded-md bg-[#a8cce8]/20"></div>
-                                        <div className="w-3/4 h-4 rounded-md bg-[#e5e7eb]"></div>
-                                        <div className="w-5/6 h-4 rounded-md bg-[#e5e7eb]"></div>
-                                        <div className="w-2/3 h-4 rounded-md bg-[#e5e7eb]"></div>
-                                    </div>
-                                    {/* Konten Semu */}
-                                    <div className="flex-1 flex flex-col gap-6">
-                                        <div className="flex justify-between items-center">
-                                            <div className="w-48 h-8 rounded-lg bg-[#e5e7eb]"></div>
-                                            <div className="w-24 h-8 rounded-full bg-[#001122]/5"></div>
-                                        </div>
-                                        <div className="flex gap-4">
-                                            <div className="flex-1 h-24 rounded-[8px] border border-[#e5e7eb] bg-white"></div>
-                                            <div className="flex-1 h-24 rounded-[8px] border border-[#e5e7eb] bg-white"></div>
-                                            <div className="flex-1 h-24 rounded-[8px] border border-[#e5e7eb] bg-white"></div>
-                                        </div>
-                                        <div className="flex-1 w-full rounded-[8px] border border-[#e5e7eb] bg-white"></div>
-                                    </div>
+                                    if (fallback) {
+                                        fallback.classList.remove('hidden');
+                                    }
+                                }}
+                                className="w-full aspect-[16/10] md:aspect-[21/9] object-cover"
+                            />
+                            {/* Placeholder gradien (di-unhide oleh onError bila gambar gagal dimuat) */}
+                            <div className="hidden w-full aspect-[16/10] md:aspect-[21/9] bg-gradient-to-br from-[#12213e] via-[#1463d0] to-[#a8cce8] flex-col items-center justify-center">
+                                <div className="flex flex-col items-center gap-3 text-white/90">
+                                    <Building2 className="w-12 h-12" />
+                                    <span className="text-[15px] font-medium">Gedung Pemerintah Kota Madiun</span>
                                 </div>
                             </div>
                         </div>
@@ -342,14 +435,14 @@ export default function Welcome() {
                 </section>
 
                 {/* 3.5. INFINITE LOGO SLIDER (Instansi) */}
-                <section className="py-12 border-y border-[#e5e7eb] bg-white/60 overflow-hidden">
+                <section className="py-16 border-y border-slate-100 bg-white/60 overflow-hidden">
                     <Reveal className="max-w-[1200px] mx-auto px-6 mb-8">
-                        <p className="text-center text-[14px] font-medium uppercase tracking-wider text-[#001122]/40">
+                        <p className="text-center text-[14px] font-semibold uppercase tracking-wider text-[#001122]/40">
                             Terintegrasi dengan 35 Instansi Pemerintah Kota Madiun
                         </p>
                     </Reveal>
 
-                    {/* Track bergerak terus-menerus (infinite loop) */}
+                    {/* Track bergerak terus-menerus (infinite loop seamless) */}
                     <div className="relative">
                         {/* Fade tepi kiri & kanan */}
                         <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#f5faff] to-transparent z-10 pointer-events-none"></div>
@@ -358,15 +451,15 @@ export default function Welcome() {
                         <motion.div
                             className="flex gap-4 w-max"
                             animate={{ x: ['0%', '-50%'] }}
-                            transition={{ duration: 30, ease: 'linear', repeat: Infinity }}
+                            transition={{ duration: 30, ease: 'linear', repeat: Infinity, repeatType: 'loop' }}
                         >
                             {[...instansiLogos, ...instansiLogos].map((logo, idx) => (
                                 <div
                                     key={idx}
-                                    className="flex items-center gap-3 shrink-0 px-6 py-3 rounded-full border border-[#e5e7eb] bg-white shadow-sm"
+                                    className="flex items-center gap-3 shrink-0 px-6 py-3 rounded-full border border-slate-100 bg-white shadow-[0_4px_20px_rgba(8,71,156,0.04)]"
                                 >
                                     <div className="w-8 h-8 rounded-[8px] bg-[#f5faff] border border-[#a8cce8]/40 flex items-center justify-center">
-                                        <Building2 className="w-4 h-4 text-[#106feb]" />
+                                        <Building2 className="w-4 h-4 text-[#2563eb]" />
                                     </div>
                                     <span className="text-[15px] font-medium text-[#001122]/70 whitespace-nowrap">{logo}</span>
                                 </div>
@@ -376,14 +469,14 @@ export default function Welcome() {
                 </section>
 
                 {/* 4. FITUR UNGGULAN (WEBILD BENTO GRID STYLE) */}
-                <section id="fitur" className="py-20 px-6 max-w-[1200px] mx-auto">
+                <section id="fitur" className="py-24 md:py-32 px-6 max-w-[1200px] mx-auto">
 
                     {/* Section Header */}
                     <Reveal className="flex flex-col items-center text-center gap-2 mb-12 md:mb-16">
-                        <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-[#e5e7eb] bg-white w-fit text-[#001122]/70 shadow-sm">
+                        <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-slate-100 bg-white w-fit text-[#001122]/70 shadow-sm">
                             <p>Kenapa E-Magang?</p>
                         </div>
-                        <h2 className="text-[32px] md:text-[42px] font-bold tracking-tight leading-[1.15] text-[#001122] max-w-2xl text-balance">
+                        <h2 className="text-[32px] md:text-[42px] font-extrabold tracking-tight leading-[1.15] max-w-2xl text-balance bg-gradient-to-r from-[#001122] via-[#2563eb] to-[#a8cce8] bg-clip-text text-transparent">
                             Sistem Cerdas untuk Pengalaman Magang Terbaik
                         </h2>
                         <p className="text-[16px] md:text-[18px] text-[#001122]/60 max-w-2xl leading-relaxed text-balance mt-2">
@@ -391,91 +484,103 @@ export default function Welcome() {
                         </p>
                     </Reveal>
 
-                    {/* Bento Grid Layout (2 Top, 1 Bottom Wide) */}
-                    <div className="flex flex-col gap-4 md:gap-6">
+                    {/* Bento Grid Layout (2 Top, 1 Bottom Wide) — stagger satu per satu */}
+                    <motion.div
+                        variants={staggerContainer}
+                        initial="hidden"
+                        whileInView="show"
+                        viewport={{ once: true, margin: '-80px' }}
+                        className="flex flex-col gap-4 md:gap-6"
+                    >
 
                         {/* Baris Atas (2 Kolom) */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                             {/* Kartu 1 */}
-                            <Reveal delay={0.05}>
-                                <motion.div
-                                    whileHover={{ y: -10, transition: { duration: 0.3 } }}
-                                    className="h-full flex flex-col gap-4 p-6 md:p-8 border border-[#e5e7eb] bg-white rounded-[8px] shadow-sm hover:shadow-xl hover:shadow-[#106feb]/5 hover:border-[#a8cce8] transition-shadow duration-300"
-                                >
-                                    <div className="w-12 h-12 rounded-[8px] bg-[#f5faff] border border-[#a8cce8]/40 flex items-center justify-center mb-2">
-                                        <Clock className="w-6 h-6 text-[#106feb]" />
-                                    </div>
-                                    <h3 className="text-[22px] font-semibold leading-snug text-[#001122]">
-                                        Validasi Real-time
-                                    </h3>
-                                    <p className="text-[16px] leading-relaxed text-[#001122]/60">
-                                        Pantau status pengajuan Anda secara langsung. Sistem akan memberi notifikasi begitu berkas Anda disetujui oleh verifikator dan OPD terkait.
-                                    </p>
-                                </motion.div>
-                            </Reveal>
+                            <motion.div
+                                variants={staggerItem}
+                                whileHover={{ y: -10, transition: { duration: 0.3 } }}
+                                className="h-full flex flex-col gap-4 p-8 md:p-10 border border-slate-100 bg-white rounded-3xl shadow-[0_10px_40px_rgba(8,71,156,0.06)] hover:shadow-[0_20px_60px_rgba(37,99,235,0.12)] hover:border-[#a8cce8] transition-all duration-300"
+                            >
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#f5faff] to-[#a8cce8]/30 border border-[#a8cce8]/40 flex items-center justify-center mb-2">
+                                    <Clock className="w-6 h-6 text-[#2563eb]" />
+                                </div>
+                                <h3 className="text-[22px] font-bold leading-snug text-[#001122]">
+                                    Validasi Real-time
+                                </h3>
+                                <p className="text-[16px] leading-relaxed text-[#001122]/60">
+                                    Pantau status pengajuan Anda secara langsung. Sistem akan memberi notifikasi begitu berkas Anda disetujui oleh verifikator dan OPD terkait.
+                                </p>
+                            </motion.div>
 
                             {/* Kartu 2 */}
-                            <Reveal delay={0.1}>
-                                <motion.div
-                                    whileHover={{ y: -10, transition: { duration: 0.3 } }}
-                                    className="h-full flex flex-col gap-4 p-6 md:p-8 border border-[#e5e7eb] bg-white rounded-[8px] shadow-sm hover:shadow-xl hover:shadow-[#106feb]/5 hover:border-[#a8cce8] transition-shadow duration-300"
-                                >
-                                    <div className="w-12 h-12 rounded-[8px] bg-[#f5faff] border border-[#a8cce8]/40 flex items-center justify-center mb-2">
-                                        <Shield className="w-6 h-6 text-[#106feb]" />
-                                    </div>
-                                    <h3 className="text-[22px] font-semibold leading-snug text-[#001122]">
-                                        Akses Dasbor Aman (Tanpa Sandi)
-                                    </h3>
-                                    <p className="text-[16px] leading-relaxed text-[#001122]/60">
-                                        Lupakan rutinitas mereset kata sandi. Gunakan sistem OTP (One Time Password) via Email/WA untuk login yang instan dan terenkripsi.
-                                    </p>
-                                </motion.div>
-                            </Reveal>
+                            <motion.div
+                                variants={staggerItem}
+                                whileHover={{ y: -10, transition: { duration: 0.3 } }}
+                                className="h-full flex flex-col gap-4 p-8 md:p-10 border border-slate-100 bg-white rounded-3xl shadow-[0_10px_40px_rgba(8,71,156,0.06)] hover:shadow-[0_20px_60px_rgba(37,99,235,0.12)] hover:border-[#a8cce8] transition-all duration-300"
+                            >
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#f5faff] to-[#a8cce8]/30 border border-[#a8cce8]/40 flex items-center justify-center mb-2">
+                                    <Shield className="w-6 h-6 text-[#2563eb]" />
+                                </div>
+                                <h3 className="text-[22px] font-bold leading-snug text-[#001122]">
+                                    Akses Dasbor Aman (Tanpa Sandi)
+                                </h3>
+                                <p className="text-[16px] leading-relaxed text-[#001122]/60">
+                                    Lupakan rutinitas mereset kata sandi. Gunakan sistem OTP (One Time Password) via Email/WA untuk login yang instan dan terenkripsi.
+                                </p>
+                            </motion.div>
                         </div>
 
-                    </div>
+                    </motion.div>
                 </section>
 
                 {/* 4.25. ANIMATED STATISTICS (count-up) */}
-                <section className="py-20 px-6 bg-white border-y border-[#e5e7eb]">
+                <section className="py-24 md:py-32 px-6 bg-white border-y border-slate-100">
                     <div className="max-w-[1200px] mx-auto">
                         <Reveal className="flex flex-col items-center text-center gap-2 mb-14">
-                            <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-[#e5e7eb] bg-[#f5faff] w-fit text-[#001122]/70 shadow-sm">
+                            <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-slate-100 bg-[#f5faff] w-fit text-[#001122]/70 shadow-sm">
                                 <p>Dampak Layanan</p>
                             </div>
-                            <h2 className="text-[32px] md:text-[42px] font-bold tracking-tight leading-[1.15] text-[#001122] max-w-2xl text-balance">
+                            <h2 className="text-[32px] md:text-[42px] font-extrabold tracking-tight leading-[1.15] max-w-2xl text-balance bg-gradient-to-r from-[#001122] via-[#2563eb] to-[#a8cce8] bg-clip-text text-transparent">
                                 Hasil yang Berbicara untuk Dirinya Sendiri
                             </h2>
                         </Reveal>
 
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-                            {statistik.map((stat, idx) => (
-                                <Reveal key={stat.label} delay={idx * 0.08}>
-                                    <div className="h-full flex flex-col items-center text-center gap-3 p-6 md:p-8 rounded-[8px] border border-[#e5e7eb] bg-[#f5faff]">
-                                        <div className="w-12 h-12 rounded-[8px] bg-white border border-[#a8cce8]/40 flex items-center justify-center">
-                                            <stat.icon className="w-6 h-6 text-[#106feb]" />
-                                        </div>
-                                        <div className="text-[40px] md:text-[52px] font-bold tracking-tight text-[#001122] leading-none">
-                                            <CountUp to={stat.value} suffix={stat.suffix} />
-                                        </div>
-                                        <p className="text-[15px] font-medium text-[#001122]/60">{stat.label}</p>
+                        <motion.div
+                            variants={staggerContainer}
+                            initial="hidden"
+                            whileInView="show"
+                            viewport={{ once: true, margin: '-80px' }}
+                            className="grid grid-cols-2 lg:grid-cols-4 gap-5"
+                        >
+                            {statistik.map((stat) => (
+                                <motion.div
+                                    key={stat.label}
+                                    variants={staggerItem}
+                                    className="h-full flex flex-col items-center text-center gap-3 p-8 rounded-3xl border border-slate-100 bg-[#f5faff] shadow-[0_10px_40px_rgba(8,71,156,0.05)]"
+                                >
+                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white to-[#a8cce8]/20 border border-[#a8cce8]/40 flex items-center justify-center">
+                                        <stat.icon className="w-6 h-6 text-[#2563eb]" />
                                     </div>
-                                </Reveal>
+                                    <div className="text-[40px] md:text-[52px] font-extrabold tracking-tight leading-none bg-gradient-to-r from-[#001122] via-[#2563eb] to-[#a8cce8] bg-clip-text text-transparent">
+                                        <CountUp to={stat.value} suffix={stat.suffix} />
+                                    </div>
+                                    <p className="text-[15px] font-medium text-[#001122]/60">{stat.label}</p>
+                                </motion.div>
                             ))}
-                        </div>
+                        </motion.div>
                     </div>
                 </section>
 
                 {/* 4.5. DAFTAR INSTANSI / OPD SECTION (WEBILD STYLE) */}
-                <section id="instansi" className="py-24 px-6 relative z-10 bg-white border-t border-[#e5e7eb]">
+                <section id="instansi" className="py-24 md:py-32 px-6 relative z-10 bg-white border-t border-slate-100">
                     <div className="max-w-[1200px] mx-auto">
 
                         {/* Section Header */}
                         <Reveal className="flex flex-col items-center text-center gap-2 mb-12">
-                            <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-[#e5e7eb] bg-[#f5faff] w-fit text-[#001122]/70 shadow-sm">
+                            <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-slate-100 bg-[#f5faff] w-fit text-[#001122]/70 shadow-sm">
                                 <p>Direktori Instansi</p>
                             </div>
-                            <h2 className="text-[32px] md:text-[42px] font-bold tracking-tight leading-[1.15] text-[#001122] mb-4">
+                            <h2 className="text-[32px] md:text-[42px] font-extrabold tracking-tight leading-[1.15] mb-4 bg-gradient-to-r from-[#001122] via-[#2563eb] to-[#a8cce8] bg-clip-text text-transparent">
                                 Temukan Tempat Magangmu
                             </h2>
                             <p className="text-[16px] md:text-[18px] text-[#001122]/60 max-w-2xl mx-auto leading-relaxed">
@@ -486,35 +591,39 @@ export default function Welcome() {
                         {/* Search Bar (Pill Shape) */}
                         <div className="flex justify-center mb-12">
                             <div className="relative w-full max-w-2xl group">
-                                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[#001122]/40 w-5 h-5 group-focus-within:text-[#106feb] transition-colors" />
+                                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[#001122]/40 w-5 h-5 group-focus-within:text-[#2563eb] transition-colors" />
                                 <input
                                     type="text"
                                     placeholder="Cari dinas, badan, atau kecamatan..."
-                                    className="w-full bg-[#f5faff] border border-[#e5e7eb] rounded-full py-4 pl-14 pr-6 text-[15px] text-[#001122] placeholder:text-[#001122]/40 focus:outline-none focus:border-[#a8cce8] focus:ring-4 focus:ring-[#a8cce8]/20 transition-all shadow-sm"
+                                    className="w-full bg-[#f5faff] border border-slate-100 rounded-full py-4 pl-14 pr-6 text-[15px] text-[#001122] placeholder:text-[#001122]/40 focus:outline-none focus:border-[#a8cce8] focus:ring-4 focus:ring-[#a8cce8]/20 transition-all shadow-sm"
                                     onChange={(e) => setSearchOpd(e.target.value)}
                                 />
                             </div>
                         </div>
 
-                        {/* Grid Kartu OPD (Radius 8px) */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {/* Grid Kartu OPD (Stagger satu per satu) */}
+                        <motion.div
+                            key={searchOpd}
+                            variants={staggerContainer}
+                            initial="hidden"
+                            whileInView="show"
+                            viewport={{ once: true, margin: '-40px' }}
+                            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
+                        >
                             {filteredOPD.length > 0 ? (
-                                filteredOPD.map((opd, idx) => (
+                                filteredOPD.map((opd) => (
                                     <motion.div
                                         key={opd}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        whileInView={{ opacity: 1, y: 0 }}
-                                        viewport={{ once: true, margin: '-40px' }}
-                                        transition={{ duration: 0.4, delay: Math.min(idx, 8) * 0.03, ease: 'easeOut' }}
+                                        variants={staggerItem}
                                         whileHover={{ y: -10, transition: { duration: 0.3 } }}
-                                        className="bg-white border border-[#e5e7eb] rounded-[8px] p-6 hover:border-[#a8cce8] hover:shadow-xl hover:shadow-[#106feb]/5 transition-shadow duration-300 group flex flex-col justify-between h-full cursor-default"
+                                        className="bg-white border border-slate-100 rounded-3xl p-6 shadow-[0_8px_30px_rgba(8,71,156,0.05)] hover:border-[#a8cce8] hover:shadow-[0_20px_50px_rgba(37,99,235,0.12)] transition-all duration-300 group flex flex-col justify-between h-full cursor-default"
                                     >
                                         <div className="flex items-start gap-4">
-                                            {/* Ikon Instansi dengan Radius 8px */}
-                                            <div className="w-12 h-12 rounded-[8px] bg-[#f5faff] border border-[#e5e7eb] flex items-center justify-center shrink-0 group-hover:bg-[#106feb]/10 group-hover:border-[#106feb]/20 transition-colors duration-300">
-                                                <Building2 className="w-6 h-6 text-[#106feb]" />
+                                            {/* Ikon Instansi */}
+                                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#f5faff] to-[#a8cce8]/20 border border-slate-100 flex items-center justify-center shrink-0 group-hover:from-[#2563eb]/10 group-hover:border-[#2563eb]/20 transition-colors duration-300">
+                                                <Building2 className="w-6 h-6 text-[#2563eb]" />
                                             </div>
-                                            <h3 className="text-[15px] font-semibold text-[#001122] leading-[1.5] group-hover:text-[#106feb] transition-colors duration-300">
+                                            <h3 className="text-[15px] font-semibold text-[#001122] leading-[1.5] group-hover:text-[#2563eb] transition-colors duration-300">
                                                 {opd}
                                             </h3>
                                         </div>
@@ -522,11 +631,11 @@ export default function Welcome() {
                                 ))
                             ) : (
                                 /* Tampilan Jika OPD Tidak Ditemukan */
-                                <div className="col-span-full text-center py-12 bg-[#f5faff] border border-dashed border-[#e5e7eb] rounded-[8px]">
+                                <div className="col-span-full text-center py-12 bg-[#f5faff] border border-dashed border-slate-200 rounded-3xl">
                                     <p className="text-[15px] text-[#001122]/60">Instansi "{searchOpd}" tidak ditemukan. Coba kata kunci lain.</p>
                                 </div>
                             )}
-                        </div>
+                        </motion.div>
 
                     </div>
                 </section>
@@ -534,61 +643,67 @@ export default function Welcome() {
 
 
                 {/* 5. ALUR PENDAFTARAN (TIMELINE) */}
-                <section id="alur" className="py-20 border-t border-[#e5e7eb] bg-white">
+                <section id="alur" className="py-24 md:py-32 border-t border-slate-100 bg-white">
                     <div className="max-w-[1200px] mx-auto px-6">
 
                         {/* Section Header */}
                         <Reveal className="flex flex-col items-center text-center gap-2 mb-16">
-                            <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-[#e5e7eb] bg-[#f5faff] w-fit text-[#001122]/70">
+                            <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-slate-100 bg-[#f5faff] w-fit text-[#001122]/70 shadow-sm">
                                 <p>Cara Kerja</p>
                             </div>
-                            <h2 className="text-[32px] md:text-[42px] font-bold tracking-tight leading-[1.15] text-[#001122] max-w-2xl">
+                            <h2 className="text-[32px] md:text-[42px] font-extrabold tracking-tight leading-[1.15] max-w-2xl bg-gradient-to-r from-[#001122] via-[#2563eb] to-[#a8cce8] bg-clip-text text-transparent">
                                 4 Langkah Menuju Penempatan
                             </h2>
                         </Reveal>
 
-                        {/* Grid 4 Kolom untuk Alur */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                        {/* Grid 4 Kolom untuk Alur (stagger satu per satu) */}
+                        <motion.div
+                            variants={staggerContainer}
+                            initial="hidden"
+                            whileInView="show"
+                            viewport={{ once: true, margin: '-80px' }}
+                            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+                        >
 
                             {[
                                 { num: "1", title: "Isi Formulir Publik", desc: "Lengkapi data diri dan instansi tujuan Anda. Sistem akan langsung membuatkan akun secara otomatis untuk Anda.", line: true },
                                 { num: "2", title: "Proses Verifikasi", desc: "Data Anda dievaluasi secara berjenjang oleh Admin Kominfo lalu diteruskan ke Admin OPD yang dituju.", line: true },
                                 { num: "3", title: "Login OTP Dasbor", desc: "Akses dasbor personal Anda menggunakan Email/WA tanpa kata sandi untuk mengunduh surat persetujuan.", line: true },
                                 { num: "4", title: "Sertifikat & Evaluasi", desc: "Unggah laporan tugas akhir Anda dan isi survei layanan untuk mendapatkan e-Sertifikat kelulusan resmi.", line: false },
-                            ].map((step, idx) => (
-                                <Reveal key={step.num} delay={idx * 0.1}>
-                                    <motion.div
-                                        whileHover={{ y: -10, transition: { duration: 0.3 } }}
-                                        className="flex flex-col relative group h-full"
-                                    >
-                                        {/* Garis Penghubung (Hanya muncul di Desktop) */}
-                                        {step.line && (
-                                            <div className="hidden lg:block absolute top-6 left-12 w-full h-[1px] bg-[#e5e7eb] -z-10"></div>
-                                        )}
+                            ].map((step) => (
+                                <motion.div
+                                    key={step.num}
+                                    variants={staggerItem}
+                                    whileHover={{ y: -10, transition: { duration: 0.3 } }}
+                                    className="flex flex-col relative group h-full"
+                                >
+                                    {/* Garis Penghubung (Hanya muncul di Desktop) */}
+                                    {step.line && (
+                                        <div className="hidden lg:block absolute top-6 left-12 w-full h-[1px] bg-gradient-to-r from-[#a8cce8] to-transparent -z-10"></div>
+                                    )}
 
-                                        <div className="w-12 h-12 rounded-[8px] bg-[#f5faff] border border-[#a8cce8]/50 flex items-center justify-center mb-6 text-[#106feb] font-bold text-xl group-hover:bg-[#001122] group-hover:text-white transition-colors duration-300">
-                                            {step.num}
-                                        </div>
-                                        <h3 className="text-[18px] font-semibold text-[#001122] mb-3">{step.title}</h3>
-                                        <p className="text-[15px] text-[#001122]/60 leading-relaxed">
-                                            {step.desc}
-                                        </p>
-                                    </motion.div>
-                                </Reveal>
+                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#f5faff] to-[#a8cce8]/30 border border-[#a8cce8]/50 flex items-center justify-center mb-6 text-[#2563eb] font-extrabold text-xl group-hover:bg-gradient-to-br group-hover:from-[#001122] group-hover:to-[#2563eb] group-hover:text-white group-hover:border-transparent transition-all duration-300 shadow-sm">
+                                        {step.num}
+                                    </div>
+                                    <h3 className="text-[18px] font-bold text-[#001122] mb-3">{step.title}</h3>
+                                    <p className="text-[15px] text-[#001122]/60 leading-relaxed">
+                                        {step.desc}
+                                    </p>
+                                </motion.div>
                             ))}
 
-                        </div>
+                        </motion.div>
                     </div>
                 </section>
 
                 {/* 5.5. FAQ SECTION (WEBILD STYLE) */}
-                <section id="faq" className="py-24 px-6 bg-[#f5faff]">
+                <section id="faq" className="py-24 md:py-32 px-6 bg-[#f5faff]">
                     <div className="max-w-[1200px] mx-auto">
                         <Reveal className="flex flex-col items-center text-center gap-2 mb-16">
-                            <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-[#e5e7eb] bg-white w-fit text-[#001122]/70 shadow-sm">
+                            <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-slate-100 bg-white w-fit text-[#001122]/70 shadow-sm">
                                 <p>Bantuan & FAQ</p>
                             </div>
-                            <h2 className="text-[32px] md:text-[42px] font-bold tracking-tight text-[#001122]">
+                            <h2 className="text-[32px] md:text-[42px] font-extrabold tracking-tight bg-gradient-to-r from-[#001122] via-[#2563eb] to-[#a8cce8] bg-clip-text text-transparent">
                                 Pertanyaan Umum
                             </h2>
                         </Reveal>
@@ -602,14 +717,14 @@ export default function Welcome() {
                             ].map((item, index) => (
                                 <Reveal key={index} delay={(index % 2) * 0.08}>
                                     <div
-                                        className="bg-white border border-[#e5e7eb] rounded-[8px] overflow-hidden hover:border-[#a8cce8] transition-colors duration-300"
+                                        className="bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgba(8,71,156,0.05)] hover:border-[#a8cce8] transition-colors duration-300"
                                     >
                                         <button
                                             onClick={() => setOpenFaq(openFaq === index ? null : index)}
                                             className="w-full flex items-center justify-between p-6 text-left focus:outline-none"
                                         >
-                                            <span className="text-[16px] font-semibold text-[#001122]">{item.q}</span>
-                                            <ChevronDown className={`w-5 h-5 text-[#106feb] shrink-0 transition-transform duration-300 ${openFaq === index ? 'rotate-180' : ''}`} />
+                                            <span className="text-[16px] font-bold text-[#001122]">{item.q}</span>
+                                            <ChevronDown className={`w-5 h-5 text-[#2563eb] shrink-0 transition-transform duration-300 ${openFaq === index ? 'rotate-180' : ''}`} />
                                         </button>
                                         {/* Micro-interaction: AnimatePresence untuk transisi halus accordion */}
                                         <AnimatePresence initial={false}>
@@ -635,16 +750,16 @@ export default function Welcome() {
                 </section>
 
                 {/* 6. KONTAK & FORM PENDAFTARAN */}
-                <section id="daftar" className="py-24 px-6 bg-[#f5faff] border-t border-[#e5e7eb]">
+                <section id="daftar" className="py-24 md:py-32 px-6 bg-[#f5faff] border-t border-slate-100">
                     <div className="max-w-[1200px] mx-auto grid lg:grid-cols-12 gap-12 items-start">
 
                         {/* --- SISI KIRI: INFORMASI KONTAK --- */}
                         <Reveal className="lg:col-span-5 flex flex-col gap-8">
                             <div>
-                                <div className="px-3 py-1 mb-4 text-[14px] rounded-full border border-[#e5e7eb] bg-white w-fit text-[#001122]/70 shadow-sm">
+                                <div className="px-3 py-1 mb-4 text-[14px] rounded-full border border-slate-100 bg-white w-fit text-[#001122]/70 shadow-sm">
                                     <p>Mulai Sekarang</p>
                                 </div>
-                                <h2 className="text-[32px] md:text-[42px] font-bold tracking-tight leading-[1.15] text-[#001122] mb-4 text-balance">
+                                <h2 className="text-[32px] md:text-[42px] font-extrabold tracking-tight leading-[1.15] mb-4 text-balance bg-gradient-to-r from-[#001122] via-[#2563eb] to-[#a8cce8] bg-clip-text text-transparent">
                                     Siap Mendaftar?
                                 </h2>
                                 <p className="text-[16px] md:text-[18px] text-[#001122]/60 leading-relaxed text-balance">
@@ -655,31 +770,31 @@ export default function Welcome() {
                             <div className="flex flex-col gap-4">
                                 <motion.div
                                     whileHover={{ y: -6, transition: { duration: 0.3 } }}
-                                    className="flex gap-4 items-start bg-white p-5 rounded-[8px] border border-[#e5e7eb] shadow-sm hover:shadow-md transition-shadow"
+                                    className="flex gap-4 items-start bg-white p-6 rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgba(8,71,156,0.05)] hover:shadow-[0_16px_40px_rgba(37,99,235,0.1)] transition-shadow"
                                 >
-                                    <MapPin className="w-6 h-6 text-[#106feb] shrink-0 mt-0.5" />
+                                    <MapPin className="w-6 h-6 text-[#2563eb] shrink-0 mt-0.5" />
                                     <div>
-                                        <h4 className="text-[16px] font-semibold text-[#001122] mb-1">Alamat Kantor</h4>
+                                        <h4 className="text-[16px] font-bold text-[#001122] mb-1">Alamat Kantor</h4>
                                         <p className="text-[15px] text-[#001122]/60 leading-relaxed">Jl. Perintis Kemerdekaan No.32, Kota Madiun, Jawa Timur 63117</p>
                                     </div>
                                 </motion.div>
                                 <motion.div
                                     whileHover={{ y: -6, transition: { duration: 0.3 } }}
-                                    className="flex gap-4 items-center bg-white p-5 rounded-[8px] border border-[#e5e7eb] shadow-sm hover:shadow-md transition-shadow"
+                                    className="flex gap-4 items-center bg-white p-6 rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgba(8,71,156,0.05)] hover:shadow-[0_16px_40px_rgba(37,99,235,0.1)] transition-shadow"
                                 >
-                                    <Mail className="w-6 h-6 text-[#106feb] shrink-0" />
+                                    <Mail className="w-6 h-6 text-[#2563eb] shrink-0" />
                                     <div>
-                                        <h4 className="text-[16px] font-semibold text-[#001122] mb-1">Email Layanan</h4>
+                                        <h4 className="text-[16px] font-bold text-[#001122] mb-1">Email Layanan</h4>
                                         <p className="text-[15px] text-[#001122]/60">kominfo@madiunkota.go.id</p>
                                     </div>
                                 </motion.div>
                                 <motion.div
                                     whileHover={{ y: -6, transition: { duration: 0.3 } }}
-                                    className="flex gap-4 items-center bg-white p-5 rounded-[8px] border border-[#e5e7eb] shadow-sm hover:shadow-md transition-shadow"
+                                    className="flex gap-4 items-center bg-white p-6 rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgba(8,71,156,0.05)] hover:shadow-[0_16px_40px_rgba(37,99,235,0.1)] transition-shadow"
                                 >
-                                    <Phone className="w-6 h-6 text-[#106feb] shrink-0" />
+                                    <Phone className="w-6 h-6 text-[#2563eb] shrink-0" />
                                     <div>
-                                        <h4 className="text-[16px] font-semibold text-[#001122] mb-1">Telepon</h4>
+                                        <h4 className="text-[16px] font-bold text-[#001122] mb-1">Telepon</h4>
                                         <p className="text-[15px] text-[#001122]/60">(0351) 467327</p>
                                     </div>
                                 </motion.div>
@@ -688,7 +803,7 @@ export default function Welcome() {
 
                         {/* --- SISI KANAN: FORMULIR PENGAJUAN --- */}
                         <Reveal delay={0.1} className="lg:col-span-7">
-                            <div className="bg-white border border-[#e5e7eb] rounded-[8px] p-6 md:p-10 shadow-sm relative overflow-hidden">
+                            <div className="bg-white border border-slate-100 rounded-3xl p-6 md:p-10 shadow-[0_20px_60px_rgba(8,71,156,0.08)] relative overflow-hidden">
                                 {/* Efek Cahaya Halus di Pojok Kanan Form */}
                                 <div className="absolute -right-20 -top-20 w-[300px] h-[300px] bg-[#a8cce8]/20 rounded-full blur-[80px] pointer-events-none"></div>
 
@@ -770,14 +885,14 @@ export default function Welcome() {
 
                                             {/* Background Pengisi */}
                                             <div
-                                                className="absolute left-0 top-0 bottom-0 bg-[#106feb]/10 transition-all duration-75"
+                                                className="absolute left-0 top-0 bottom-0 bg-[#2563eb]/10 transition-all duration-75"
                                                 style={{ width: `${isCaptchaVerified ? 100 : sliderValue}%` }}
                                             ></div>
 
                                             {/* Teks Instruksi */}
                                             <div className="absolute w-full text-center z-0 text-[15px] font-medium select-none pointer-events-none transition-colors">
                                                 {isCaptchaVerified ? (
-                                                    <span className="text-[#106feb] flex items-center justify-center gap-2">
+                                                    <span className="text-[#2563eb] flex items-center justify-center gap-2">
                                                         <CheckCircle2 className="w-5 h-5" /> Terverifikasi
                                                     </span>
                                                 ) : (
@@ -799,7 +914,7 @@ export default function Welcome() {
 
                                             {/* Gagang Slider (Pill) */}
                                             <div
-                                                className={`absolute z-10 h-[44px] w-[70px] bg-white border border-[#e5e7eb] rounded-full flex items-center justify-center pointer-events-none transition-all duration-75 shadow-sm ${isCaptchaVerified ? 'border-[#106feb] bg-[#106feb]' : ''}`}
+                                                className={`absolute z-10 h-[44px] w-[70px] bg-white border border-[#e5e7eb] rounded-full flex items-center justify-center pointer-events-none transition-all duration-75 shadow-sm ${isCaptchaVerified ? 'border-[#2563eb] bg-[#2563eb]' : ''}`}
                                                 style={{ left: `calc(${isCaptchaVerified ? 100 : sliderValue}% - ${isCaptchaVerified ? 74 : (sliderValue * 0.74) + 6}px)` }}
                                             >
                                                 {isCaptchaVerified ? (
@@ -817,9 +932,9 @@ export default function Welcome() {
                                         disabled={!isCaptchaVerified}
                                         whileHover={isCaptchaVerified ? { scale: 1.02 } : undefined}
                                         whileTap={isCaptchaVerified ? { scale: 0.98 } : undefined}
-                                        className={`w-full py-4 text-[16px] font-medium rounded-full flex items-center justify-center gap-2 transition-colors duration-300 mt-6 ${
+                                        className={`w-full py-4 text-[16px] font-semibold rounded-lg flex items-center justify-center gap-2 transition-all duration-300 mt-6 ${
                                             isCaptchaVerified
-                                            ? "bg-[#001122] text-white hover:bg-[#001122]/80 cursor-pointer shadow-md"
+                                            ? "bg-gradient-to-r from-[#001122] via-[#1e4fd1] to-[#2563eb] text-white hover:brightness-110 cursor-pointer shadow-lg shadow-[#2563eb]/30 hover:shadow-xl hover:shadow-[#2563eb]/40"
                                             : "bg-[#e5e7eb] text-[#001122]/40 cursor-not-allowed"
                                         }`}
                                     >
@@ -833,47 +948,14 @@ export default function Welcome() {
                     </div>
                 </section>
 
-                {/* 6.5. CTA BAND (Blue) */}
-                <section className="px-6 pb-24">
-                    <Reveal className="max-w-[1200px] mx-auto">
-                        <div className="relative overflow-hidden rounded-[16px] bg-gradient-to-br from-[#106feb] to-[#001122] px-8 py-16 md:px-16 md:py-20 text-center">
-                            {/* Glow dekoratif */}
-                            <div className="absolute -top-24 -right-24 w-[300px] h-[300px] bg-[#a8cce8]/30 rounded-full blur-[90px] pointer-events-none"></div>
-                            <div className="absolute -bottom-24 -left-24 w-[300px] h-[300px] bg-[#a8cce8]/20 rounded-full blur-[90px] pointer-events-none"></div>
-
-                            <div className="relative z-10 flex flex-col items-center">
-                                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/20 bg-white/10 backdrop-blur-sm text-[13px] font-medium text-white/80 mb-6">
-                                    <ShieldCheck className="w-4 h-4" />
-                                    Portal Resmi Pemerintah Kota Madiun
-                                </div>
-                                <h2 className="text-[32px] md:text-[44px] font-bold tracking-tight leading-[1.1] text-white max-w-2xl text-balance mb-4">
-                                    Siap Memulai Perjalanan Magang Anda?
-                                </h2>
-                                <p className="text-[16px] md:text-[18px] text-white/70 max-w-xl leading-relaxed text-balance mb-10">
-                                    Daftar gratis hari ini, pantau status verifikasi secara real-time, dan dapatkan e-Sertifikat resmi setelah magang selesai.
-                                </p>
-                                <motion.a
-                                    href="#daftar"
-                                    whileHover={{ scale: 1.03 }}
-                                    whileTap={{ scale: 0.97 }}
-                                    className="px-8 py-4 rounded-full bg-white text-[#001122] text-[16px] font-semibold flex items-center justify-center gap-2 group shadow-lg"
-                                >
-                                    Mulai Pengajuan Magang
-                                    <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                                </motion.a>
-                            </div>
-                        </div>
-                    </Reveal>
-                </section>
-
                 {/* 7. FOOTER */}
-                <footer className="bg-white border-t border-[#e5e7eb] py-12 px-6 text-center">
+                <footer className="bg-white border-t border-slate-100 py-12 px-6 text-center">
                     <div className="flex flex-col items-center justify-center gap-4">
                         <div className="flex items-center gap-2 mb-2">
-                            <div className="w-8 h-8 rounded-lg bg-[#001122] flex items-center justify-center">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#001122] to-[#2563eb] flex items-center justify-center">
                                 <Layout className="w-4 h-4 text-white" />
                             </div>
-                            <span className="font-bold text-xl tracking-tight text-[#001122]">E-Magang.</span>
+                            <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-[#001122] via-[#2563eb] to-[#a8cce8] bg-clip-text text-transparent">E-Magang.</span>
                         </div>
                         <p className="text-[15px] text-[#001122]/50 font-medium">
                             © {new Date().getFullYear()} Dinas Komunikasi dan Informatika Kota Madiun.
