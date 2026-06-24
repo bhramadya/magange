@@ -1,0 +1,176 @@
+{
+  "mode": "light",
+  "colors": {
+    "accent": "#a8cce8",
+    "background": "#f5faff",
+    "text": "#001122"
+  },
+  "typography": {
+    "headings": {
+      "h1": {
+        "fontFamily": "Inter",
+        "fontSize": "32px",
+        "fontWeight": 700,
+        "lineHeight": "38px",
+        "letterSpacing": "0px",
+        "fontFallbacks": [
+          "Inter",
+          "sans-serif"
+        ]
+      },
+      "h2": {
+        "fontFamily": "Inter",
+        "fontSize": "27px",
+        "fontWeight": 700,
+        "lineHeight": "32px",
+        "letterSpacing": "0px",
+        "fontFallbacks": [
+          "Inter",
+          "sans-serif"
+        ]
+      },
+      "h3": {
+        "fontFamily": "Inter",
+        "fontSize": "23px",
+        "fontWeight": 400,
+        "lineHeight": "28px",
+        "letterSpacing": "0px",
+        "fontFallbacks": [
+          "Inter",
+          "sans-serif"
+        ]
+      },
+      "h4": {
+        "fontFamily": "Inter",
+        "fontSize": "19px",
+        "fontWeight": 400,
+        "lineHeight": "23px",
+        "letterSpacing": "0px",
+        "fontFallbacks": [
+          "Inter",
+          "sans-serif"
+        ]
+      }
+    },
+    "p": {
+      "fontFamily": "Inter",
+      "fontSize": "16px",
+      "fontWeight": 400,
+      "lineHeight": "normal",
+      "letterSpacing": "0px",
+      "fontFallbacks": [
+        "Inter",
+        "sans-serif"
+      ]
+    }
+  },
+  "elementSpacing": {
+    "xs": "4px",
+    "sm": "12px",
+    "md": "24px",
+    "lg": "64px",
+    "xl": "124px"
+  },
+  "shadows": {
+    "sm": "color(srgb 0.0823529 0.278431 0.611765 / 0.05) 0px 0.706592px 0.706592px -0.666667px, color(srgb 0.0823529 0.278431 0.611765 / 0.03) 0px 1.80656px 1.80656px -1.33333px, color(srgb 0.0823529 0.278431 0.611765 / 0.02) 0px 3.62176px 3.62176px -2px, color(srgb 0.0823529 0.278431 0.611765 / 0.02) 0px 6.8656px 6.8656px -2.66667px, color(srgb 0.0823529 0.278431 0.611765 / 0.02) 0px 13.6468px 13.6468px -3.33333px, color(srgb 0.0823529 0.278431 0.611765 / 0.02) 0px 30px 30px -4px",
+    "md": "none",
+    "lg": "none",
+    "xl": "none",
+    "inner": "rgba(0, 0, 0, 0.024) 0px 4px 4px 0px, rgba(0, 0, 0, 0.07) 0px 0px 0px 1px, rgba(255, 255, 255, 0.75) 0px 1px 0px 0px inset"
+  },
+  "components": {
+    "button": {
+      "primary": {
+        "borderRadius": "4px",
+        "borderWidth": "1px",
+        "borderStyle": "solid",
+        "padding": "8px 16px",
+        "fontSize": "16px",
+        "fontWeight": 400,
+        "minWidth": "120px",
+        "minHeight": "40px",
+        "textDecoration": "none",
+        "boxShadow": "none",
+        "backgroundColor": "#001122",
+        "color": "#f5faff",
+        "borderColor": "transparent",
+        "fontFallbacks": [
+          "Inter",
+          "sans-serif"
+        ],
+        "fontFamily": "Inter",
+        "css": "box-sizing: border-box; display: inline-block; min-width: 120px; min-height: 40px; background-color: #001122; color: #f5faff; border: 1px solid transparent; border-radius: 4px; padding: 8px 16px; font-size: 16px; font-weight: 400; font-family: Inter, sans-serif; text-decoration: none;"
+      },
+      "secondary": {
+        "borderRadius": "4px",
+        "borderWidth": "1px",
+        "borderStyle": "solid",
+        "padding": "8px 16px",
+        "fontSize": "16px",
+        "fontWeight": 400,
+        "minWidth": "120px",
+        "minHeight": "40px",
+        "textDecoration": "none",
+        "boxShadow": "none",
+        "backgroundColor": "transparent",
+        "color": "#001122",
+        "borderColor": "#001122",
+        "fontFallbacks": [
+          "Inter",
+          "sans-serif"
+        ],
+        "fontFamily": "Inter",
+        "css": "box-sizing: border-box; display: inline-block; min-width: 120px; min-height: 40px; background-color: transparent; color: #001122; border: 1px solid #001122; border-radius: 4px; padding: 8px 16px; font-size: 16px; font-weight: 400; font-family: Inter, sans-serif; text-decoration: none;"
+      },
+      "link": {
+        "borderRadius": "0px",
+        "borderWidth": "0px",
+        "borderStyle": "none",
+        "padding": "0px",
+        "fontSize": "16px",
+        "fontWeight": 400,
+        "minWidth": "0px",
+        "minHeight": "0px",
+        "textDecoration": "underline",
+        "boxShadow": "none",
+        "backgroundColor": "transparent",
+        "color": "#001122",
+        "borderColor": "transparent",
+        "fontFallbacks": [
+          "Inter",
+          "sans-serif"
+        ],
+        "fontFamily": "Inter",
+        "css": "color: #001122; font-size: 16px; font-weight: 400; font-family: Inter, sans-serif; text-decoration: underline;"
+      }
+    },
+    "card": {
+      "backgroundColor": "#f5faff",
+      "borderColor": "#e5e7eb",
+      "borderRadius": "8px",
+      "borderWidth": "1px",
+      "borderStyle": "solid",
+      "padding": "16px",
+      "boxShadow": "none",
+      "textColor": "#001122",
+      "css": "background-color: #f5faff; color: #001122; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px;"
+    }
+  },
+  "fontLinks": {
+    "Inter": {
+      "type": "google",
+      "files": {
+        "100": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyeMZhrib2Bg-4.ttf",
+        "200": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuDyfMZhrib2Bg-4.ttf",
+        "300": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuOKfMZhrib2Bg-4.ttf",
+        "400": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZhrib2Bg-4.ttf",
+        "500": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZhrib2Bg-4.ttf",
+        "600": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZhrib2Bg-4.ttf",
+        "700": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZhrib2Bg-4.ttf",
+        "800": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuDyYMZhrib2Bg-4.ttf",
+        "900": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuBWYMZhrib2Bg-4.ttf"
+      },
+      "category": "sans-serif"
+    }
+  }
+}
