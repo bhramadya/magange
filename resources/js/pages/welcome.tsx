@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useInView, animate } from 'motion/react';
-import { login, register } from '@/routes';
 
 /* =========================================================================
  *  ANIMATION HELPERS (Framer Motion)
@@ -666,7 +665,7 @@ export default function Welcome() {
                         {/* Aksi Kanan: CTA Sliding + Hamburger */}
                         <div className="flex items-center gap-2 xl:gap-3">
                             {/* Tombol CTA dengan animasi sliding overlay */}
-                            <AnimatedButton as="link" href={register()}>
+                            <AnimatedButton as="a" href="#daftar">
                                 Daftar
                             </AnimatedButton>
 
@@ -707,7 +706,7 @@ export default function Welcome() {
                                         </a>
                                     ))}
                                     <Link
-                                        href={login()}
+                                        href="/login-otp"
                                         onClick={() => setMobileMenuOpen(false)}
                                         className="mt-1 py-2.5 px-3 rounded-xl text-left text-[15px] font-medium text-[#001122]/70 hover:text-[#106feb] hover:bg-[#106feb]/5 transition-colors"
                                     >
@@ -789,10 +788,10 @@ export default function Welcome() {
                             variants={heroItem}
                             className="flex flex-col sm:flex-row items-center gap-4"
                         >
-                            <AnimatedButton className="w-full sm:w-auto">
+                            <AnimatedButton as="a" href="#daftar" className="w-full sm:w-auto">
                                 Mulai Pengajuan Magang
                             </AnimatedButton>
-                            <AnimatedButton variant="inverted" className="w-full sm:w-auto">
+                            <AnimatedButton as="a" href="#alur" variant="inverted" className="w-full sm:w-auto">
                                 Pelajari Alur
                             </AnimatedButton>
                         </motion.div>
@@ -1525,7 +1524,7 @@ export default function Welcome() {
                                     <div className="flex items-start gap-3 mt-6 rounded-2xl bg-[#f5faff] border border-slate-200 px-4 py-3.5">
                                         <Info className="w-5 h-5 text-[#1463d0] shrink-0 mt-0.5" />
                                         <p className="text-[13px] text-[#001122]/60 leading-relaxed">
-                                            Pastikan nomor WhatsApp yang Anda masukkan adalah nomor aktif, karena akun dasbor dan link OTP akan dikirimkan ke nomor tersebut.
+                                            Pastikan alamay E-Mail yang Anda masukkan adalah E-Mail aktif, karena akun dasbor dan link OTP akan dikirimkan ke nomor tersebut.
                                         </p>
                                     </div>
 
