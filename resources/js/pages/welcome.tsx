@@ -1,11 +1,12 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import {
     ChevronRight, Layout, Shield, Clock, Building2,
-    MapPin, Mail, Phone, CheckCircle2, ArrowRight, Send, Search, ChevronDown,
+    MapPin, Mail, Phone, CheckCircle2, ArrowRight, ArrowUpRight, Send, Search, ChevronDown,
     Menu, X, ShieldCheck, Sparkles, Award, Timer
 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useInView, animate } from 'motion/react';
+import { login, register } from '@/routes';
 
 /* =========================================================================
  *  ANIMATION HELPERS (Framer Motion)
@@ -79,11 +80,12 @@ function CountUp({ to, suffix = '' }: { to: number; suffix?: string }) {
 }
 
 /* =========================================================================
- *  ANIMATED BUTTON (Sliding-circle hover)
- *  - default : background biru #106feb, teks putih, lingkaran panah #cddcef
- *              di kanan. Saat hover, lingkaran melebar ke kiri menutupi
+ *  ANIMATED BUTTON (Sliding-overlay hover — sesuai blueprint referensi)
+ *  - default : background biru #106feb, teks putih, badge panah #cddcef di
+ *              kanan. Saat hover, overlay #cddcef bergeser dari kiri menutupi
  *              seluruh background → teks berubah jadi hitam.
- *  - inverted: skema warna dibalik (background terang, lingkaran biru).
+ *  - inverted: skema warna dibalik (base terang, overlay & badge biru).
+ *  Mendukung render sebagai <button>, <a>, atau Inertia <Link> (as="link").
  * ========================================================================= */
 function AnimatedButton({
     children,
@@ -96,7 +98,7 @@ function AnimatedButton({
     onClick,
 }: {
     children: React.ReactNode;
-    as?: 'button' | 'a';
+    as?: 'button' | 'a' | 'link';
     href?: string;
     variant?: 'default' | 'inverted';
     type?: 'button' | 'submit';
@@ -106,33 +108,41 @@ function AnimatedButton({
 }) {
     const isInverted = variant === 'inverted';
 
-    // Skema warna: base = warna tombol saat diam, fill = warna saat hover penuh.
-    const baseBg = isInverted ? 'bg-white' : 'bg-[#106feb]';
-    const baseText = isInverted ? 'text-[#106feb]' : 'text-white';
-    const hoverText = isInverted ? 'group-hover:text-[#106feb]' : 'group-hover:text-[#001122]';
-    const fillCircle = isInverted ? 'bg-[#106feb]' : 'bg-[#cddcef]';
+    // Skema warna: base = warna diam, fill = warna overlay saat hover penuh.
+    const baseBg = isInverted ? 'bg-[#cddcef]' : 'bg-[#106feb]';
+    const baseText = isInverted ? 'text-[#12213e]' : 'text-white';
+    const hoverText = isInverted ? 'group-hover:text-white' : 'group-hover:text-black';
+    const fill = isInverted ? 'bg-[#106feb]' : 'bg-[#cddcef]';
+    const badgeBg = isInverted ? 'bg-[#106feb]' : 'bg-[#cddcef]';
     const arrowColor = isInverted ? 'text-white' : 'text-[#106feb]';
-    const borderClass = isInverted ? 'border border-[#cddcef]' : '';
 
     const content = (
         <>
-            {/* Lingkaran pengisi: diam di kanan, melebar menutupi seluruh tombol saat hover */}
+            {/* Overlay geser: menutupi background dari kiri → kanan saat hover */}
             <span
                 aria-hidden
-                className={`pointer-events-none absolute right-1.5 top-1/2 h-9 w-9 -translate-y-1/2 rounded-full ${fillCircle} origin-right transition-all duration-500 ease-[cubic-bezier(0.65,0,0.35,1)] group-hover:right-0 group-hover:h-full group-hover:w-full group-hover:rounded-full`}
+                className={`absolute inset-0 z-0 ${fill} -translate-x-[101%] transition-transform duration-500 ease-out group-hover:translate-x-0`}
             />
-            {/* Label: berada di atas lingkaran, warna teks berubah dinamis saat hover */}
-            <span className={`relative z-10 flex-1 text-left transition-colors duration-300 ${baseText} ${hoverText}`}>
+            {/* Label: warna teks berubah dinamis saat overlay menutupi */}
+            <span className={`relative z-10 font-semibold transition-colors duration-500 ease-out ${baseText} ${hoverText}`}>
                 {children}
             </span>
-            {/* Ikon panah dalam lingkaran sempurna di kanan */}
-            <span className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${arrowColor}`}>
-                <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+            {/* Badge ikon panah (lingkaran) di kanan */}
+            <span className={`relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full ${badgeBg} ${arrowColor}`}>
+                <ArrowUpRight className="size-4" />
             </span>
         </>
     );
 
-    const shared = `group relative inline-flex items-center gap-3 overflow-hidden rounded-full pl-6 pr-1.5 py-1.5 text-[15px] font-semibold ${baseBg} ${borderClass} shadow-lg shadow-[#106feb]/25 transition-shadow duration-300 hover:shadow-xl hover:shadow-[#106feb]/35 ${disabled ? 'pointer-events-none opacity-50' : ''} ${className}`;
+    const shared = `group relative inline-flex items-center justify-between gap-3 overflow-hidden rounded-full py-1 pl-6 pr-1 text-sm ${baseBg} shadow-lg shadow-[#106feb]/25 transition-shadow duration-300 hover:shadow-xl hover:shadow-[#106feb]/35 ${disabled ? 'pointer-events-none opacity-50' : ''} ${className}`;
+
+    if (as === 'link' && href) {
+        return (
+            <Link href={href} onClick={onClick} className={shared}>
+                {content}
+            </Link>
+        );
+    }
 
     if (as === 'a') {
         return (
@@ -262,36 +272,39 @@ export default function Welcome() {
                 {/* Efek Cahaya Halus (Soft Glow) khas Webild SaaS di area atas */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1000px] h-[500px] bg-gradient-to-b from-[#a8cce8]/30 to-transparent blur-3xl -z-10 pointer-events-none"></div>
 
-                {/* 1. NAVIGATION BAR — Floating Oval / Capsule (Glassmorphism) */}
+                {/* 1. NAVIGATION BAR — Oval Floating (Glassmorphism) */}
                 <motion.nav
                     initial={{ y: -100, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ duration: 0.7, ease: 'circOut' }}
-                    className="fixed top-4 inset-x-0 z-50 px-4"
+                    className="fixed z-[1000] top-5 left-1/2 -translate-x-1/2 w-[90%] max-w-[1200px]"
                 >
-                    <div className={`max-w-3xl mx-auto flex items-center justify-between gap-3 rounded-full backdrop-blur-md bg-white/70 border border-white/20 pl-5 pr-2 py-2 transition-shadow duration-300 ${scrolled ? 'shadow-[0_8px_30px_rgba(8,71,156,0.12)]' : 'shadow-[0_8px_30px_rgba(8,71,156,0.06)]'}`}>
+                    <div className={`flex items-center justify-between p-2 xl:p-3 rounded-full backdrop-blur-md bg-white/70 border border-white/20 transition-shadow duration-300 ${scrolled ? 'shadow-[0_12px_40px_rgba(8,71,156,0.14)]' : 'shadow-lg shadow-[#106feb]/5'}`}>
 
                         {/* Logo (kiri) */}
-                        <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-[#12213e] to-[#1463d0] bg-clip-text text-transparent">E-Magang.</span>
-                        </div>
+                        <Link href="/" className="pl-4 text-xl tracking-tight bg-gradient-to-r from-[#12213e] to-[#1463d0] bg-clip-text text-transparent">
+                            E-Magang
+                        </Link>
 
-                        {/* Aksi Kanan: Hamburger (tengah/kanan) + CTA (paling kanan) */}
-                        <div className="flex items-center gap-2">
+                        {/* Aksi Kanan: CTA Sliding + Hamburger */}
+                        <div className="flex items-center gap-2 xl:gap-3">
+                            {/* Tombol CTA dengan animasi sliding overlay */}
+                            <AnimatedButton as="link" href={register()}>
+                                Daftar
+                            </AnimatedButton>
+
                             {/* Tombol Hamburger — background biru #106feb, ikon putih */}
                             <button
                                 onClick={() => setMobileMenuOpen((v) => !v)}
-                                className="flex items-center justify-center h-10 w-10 rounded-full bg-[#106feb] text-white shadow-md shadow-[#106feb]/30 hover:brightness-110 transition-all"
+                                className="relative flex items-center justify-center size-10 rounded-full bg-[#106feb] text-white cursor-pointer shadow-md shadow-[#106feb]/30 hover:brightness-110 transition-all"
                                 aria-label="Buka menu navigasi"
                                 aria-expanded={mobileMenuOpen}
                             >
-                                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                                <div className="flex flex-col gap-1">
+                                    <span className={`w-4 h-0.5 rounded-full bg-white transition-all duration-300 ${mobileMenuOpen ? 'translate-y-[3px] rotate-45' : ''}`}></span>
+                                    <span className={`w-4 h-0.5 rounded-full bg-white transition-all duration-300 ${mobileMenuOpen ? '-translate-y-[3px] -rotate-45' : ''}`}></span>
+                                </div>
                             </button>
-
-                            {/* Tombol CTA (paling kanan) */}
-                            <AnimatedButton className="hidden sm:inline-flex">
-                                Daftar Sekarang
-                            </AnimatedButton>
                         </div>
                     </div>
 
@@ -303,7 +316,7 @@ export default function Welcome() {
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: -10, scale: 0.97 }}
                                 transition={{ duration: 0.25, ease: 'circOut' }}
-                                className="max-w-3xl mx-auto mt-3 rounded-3xl backdrop-blur-md bg-white/80 border border-white/30 shadow-[0_20px_50px_rgba(8,71,156,0.12)] overflow-hidden"
+                                className="mt-3 rounded-3xl backdrop-blur-md bg-white/80 border border-white/30 shadow-[0_20px_50px_rgba(8,71,156,0.12)] overflow-hidden"
                             >
                                 <div className="px-4 py-4 flex flex-col gap-1">
                                     {navLinks.map((link) => (
@@ -316,15 +329,13 @@ export default function Welcome() {
                                             {link.label}
                                         </a>
                                     ))}
-                                    <button className="mt-1 py-2.5 px-3 rounded-xl text-left text-[15px] font-medium text-[#001122]/70 hover:text-[#106feb] hover:bg-[#106feb]/5 transition-colors">
+                                    <Link
+                                        href={login()}
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="mt-1 py-2.5 px-3 rounded-xl text-left text-[15px] font-medium text-[#001122]/70 hover:text-[#106feb] hover:bg-[#106feb]/5 transition-colors"
+                                    >
                                         Masuk Akun
-                                    </button>
-                                    {/* CTA di dalam panel untuk layar kecil */}
-                                    <div className="sm:hidden mt-2">
-                                        <AnimatedButton className="w-full">
-                                            Daftar Sekarang
-                                        </AnimatedButton>
-                                    </div>
+                                    </Link>
                                 </div>
                             </motion.div>
                         )}
@@ -408,7 +419,7 @@ export default function Welcome() {
 
                         <div className="relative rounded-3xl overflow-hidden border border-white/40 bg-white shadow-[0_20px_40px_-12px_rgba(8,71,156,0.25),0_40px_80px_-20px_rgba(20,99,208,0.3)] transition-transform duration-700 hover:-translate-y-2">
                             <img
-                                src="/images/gedung-pemerintahan.jpg"
+                                src="/images/gedung-pemerintahan.png"
                                 alt="Gedung Pemerintah Kota Madiun"
                                 loading="lazy"
                                 onError={(e) => {
@@ -531,44 +542,6 @@ export default function Welcome() {
                         </div>
 
                     </motion.div>
-                </section>
-
-                {/* 4.25. ANIMATED STATISTICS (count-up) */}
-                <section className="py-24 md:py-32 px-6 bg-white border-y border-slate-100">
-                    <div className="max-w-[1200px] mx-auto">
-                        <Reveal className="flex flex-col items-center text-center gap-2 mb-14">
-                            <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-slate-100 bg-[#f5faff] w-fit text-[#001122]/70 shadow-sm">
-                                <p>Dampak Layanan</p>
-                            </div>
-                            <h2 className="text-[32px] md:text-[42px] font-extrabold tracking-tight leading-[1.15] max-w-2xl text-balance bg-gradient-to-r from-[#001122] via-[#2563eb] to-[#a8cce8] bg-clip-text text-transparent">
-                                Hasil yang Berbicara untuk Dirinya Sendiri
-                            </h2>
-                        </Reveal>
-
-                        <motion.div
-                            variants={staggerContainer}
-                            initial="hidden"
-                            whileInView="show"
-                            viewport={{ once: true, margin: '-80px' }}
-                            className="grid grid-cols-2 lg:grid-cols-4 gap-5"
-                        >
-                            {statistik.map((stat) => (
-                                <motion.div
-                                    key={stat.label}
-                                    variants={staggerItem}
-                                    className="h-full flex flex-col items-center text-center gap-3 p-8 rounded-3xl border border-slate-100 bg-[#f5faff] shadow-[0_10px_40px_rgba(8,71,156,0.05)]"
-                                >
-                                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white to-[#a8cce8]/20 border border-[#a8cce8]/40 flex items-center justify-center">
-                                        <stat.icon className="w-6 h-6 text-[#2563eb]" />
-                                    </div>
-                                    <div className="text-[40px] md:text-[52px] font-extrabold tracking-tight leading-none bg-gradient-to-r from-[#001122] via-[#2563eb] to-[#a8cce8] bg-clip-text text-transparent">
-                                        <CountUp to={stat.value} suffix={stat.suffix} />
-                                    </div>
-                                    <p className="text-[15px] font-medium text-[#001122]/60">{stat.label}</p>
-                                </motion.div>
-                            ))}
-                        </motion.div>
-                    </div>
                 </section>
 
                 {/* 4.5. DAFTAR INSTANSI / OPD SECTION (WEBILD STYLE) */}
