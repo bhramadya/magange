@@ -296,7 +296,7 @@ export default function OtpLogin({ status }: OtpLoginProps) {
 
                                     <p className="mt-8 text-center text-sm text-slate-500">
                                         Belum punya akun?{' '}
-                                        <Link href="/pengajuan/baru" className="font-semibold text-[#106feb] hover:underline">
+                                        <Link href="/#daftar" className="font-semibold text-[#106feb] hover:underline">
                                             Ajukan magang
                                         </Link>
                                     </p>

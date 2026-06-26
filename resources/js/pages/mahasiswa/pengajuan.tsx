@@ -321,7 +321,7 @@ function ActionPanel({ application }: { application: InternshipApplication }) {
                     {application.rejection_reason ?? 'Mohon maaf, pengajuan Anda belum dapat disetujui.'}
                 </p>
                 <Link
-                    href="/pengajuan/baru"
+                    href="/#daftar"
                     className="mt-4 inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
                 >
                     Ajukan Ulang <ArrowRight className="size-4" />
@@ -429,7 +429,7 @@ function EmptyState() {
                 Anda belum mengajukan permohonan magang. Mulai sekarang dan pantau prosesnya di sini.
             </p>
             <Link
-                href="/pengajuan/baru"
+                href="/#daftar"
                 className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#106feb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0b4fb0]"
             >
                 Ajukan Magang <ArrowRight className="size-4" />

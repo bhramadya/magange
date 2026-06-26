@@ -19,8 +19,7 @@ Route::inertia('/', 'welcome')->name('home');
 
 // --- Publik (tanpa login) ---
 Route::inertia('login-otp', 'auth/otp-login')->name('login.otp');  // Login OTP (/login asli dikelola Fortify)
-Route::inertia('pengajuan/baru', 'pengajuan/baru')->name('pengajuan.baru'); // Form pengajuan publik
-Route::inertia('lacak', 'lacak')->name('lacak');                   // Lacak status publik
+Route::inertia('lacak', 'lacak')->name('lacak');                   // Lacak status publik (pendaftaran lewat form di welcome #daftar)
 
 // --- Dasbor Mahasiswa ---
 Route::inertia('dashboard', 'mahasiswa/dashboard')->name('dashboard'); // Dasbor mahasiswa
