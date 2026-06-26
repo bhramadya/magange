@@ -13,10 +13,12 @@ use Illuminate\Support\Carbon;
  * @property string $code
  * @property string|null $description
  * @property bool $is_active
+ * @property int $quota_total
+ * @property int $quota_used
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'code', 'description', 'is_active'])]
+#[Fillable(['name', 'code', 'description', 'is_active', 'quota_total', 'quota_used'])]
 class Opd extends Model
 {
     /**
@@ -26,6 +28,8 @@ class Opd extends Model
     {
         return [
             'is_active' => 'boolean',
+            'quota_total' => 'integer',
+            'quota_used' => 'integer',
         ];
     }
 

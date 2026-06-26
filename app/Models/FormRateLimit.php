@@ -12,9 +12,10 @@ use Illuminate\Support\Carbon;
  * @property string $ip_address
  * @property string $identifier
  * @property RateLimitIdentifierType $identifier_type
+ * @property string|null $action_type
  * @property Carbon $submitted_at
  */
-#[Fillable(['ip_address', 'identifier', 'identifier_type', 'submitted_at'])]
+#[Fillable(['ip_address', 'identifier', 'identifier_type', 'action_type', 'submitted_at'])]
 class FormRateLimit extends Model
 {
     /**
