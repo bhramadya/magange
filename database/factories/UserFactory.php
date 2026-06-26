@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 /**
  * @extends Factory<User>
@@ -27,24 +27,32 @@ class UserFactory extends Factory
         return [
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            'whatsapp_number' => '08'.fake()->numerify('##########'),
+            'password' => static::$password ??= Hash::make('123456'),
+            'role' => UserRole::Mahasiswa,
+            'opd_id' => null,
+            'is_active' => true,
         ];
     }
 
     /**
-     * Indicate that the model's email address should be unverified.
+     * Akun Admin Verifikator.
      */
-    public function unverified(): static
+    public function verifikator(): static
     {
         return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
+            'role' => UserRole::AdminVerifikator,
         ]);
     }
 
     /**
-     * Indicate that the model has two-factor authentication configured.
+     * Akun Admin OPD (wajib di-pasangkan dengan opd_id).
      */
-    public function withTwoFactor(): static {}
+    public function opdAdmin(int $opdId): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::AdminOpd,
+            'opd_id' => $opdId,
+        ]);
+    }
 }

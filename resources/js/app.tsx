@@ -14,6 +14,26 @@ createInertiaApp({
         switch (true) {
             case name === 'welcome':
                 return null;
+            // Dasbor role (mahasiswa/verifikator/opd) memakai MagangLayout sendiri.
+            case name.startsWith('mahasiswa/'):
+            case name.startsWith('verifikator/'):
+            case name.startsWith('opd/'):
+                return null;
+            // Login OTP branded (split-screen) mengelola layout sendiri.
+            case name === 'auth/otp-login':
+                return null;
+            // Form pengajuan publik (tanpa login) — wizard branded sendiri.
+            case name === 'pengajuan/baru':
+                return null;
+            // Lacak status publik (tanpa login) — branded sendiri.
+            case name === 'lacak':
+                return null;
+            // Pusat Bantuan — membungkus MagangLayout sendiri (nav mengikuti role).
+            case name === 'bantuan':
+                return null;
+            // Pengaturan — membungkus MagangLayout sendiri (nav mengikuti role).
+            case name === 'pengaturan':
+                return null;
             case name.startsWith('auth/'):
                 return AuthLayout;
             case name.startsWith('settings/'):

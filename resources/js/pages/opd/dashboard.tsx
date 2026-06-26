@@ -1,0 +1,502 @@
+import { Head } from '@inertiajs/react';
+import {
+    Search,
+    ClipboardCheck,
+    CheckCircle2,
+    XCircle,
+    Activity,
+    Building2,
+    GraduationCap,
+    Calendar,
+    Clock,
+    Loader2,
+    UserCog,
+    Briefcase,
+    ArrowRight,
+} from 'lucide-react';
+import { motion } from 'motion/react';
+import { useMemo, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import MagangLayout, { opdNav } from '@/Layouts/magang-layout';
+import { cn } from '@/lib/utils';
+import { STATUS_META } from '@/types/magang';
+import type { ApplicationStatus, InternshipApplication, MagangUser, Opd } from '@/types/magang';
+
+/* =========================================================================
+ *  DASBOR ADMIN OPD — E-MAGANG (Pemkot Madiun)
+ *  OPD menerima pengajuan yang SUDAH DITERUSKAN verifikator (`forwarded_opd`)
+ *  beserta divisi, pembimbing lapangan, & penanggung jawab. OPD memutuskan:
+ *  MENYETUJUI (→ peserta mulai magang) atau MENOLAK dengan alasan.
+ *
+ *  FRONTEND ONLY. Tabel & form memakai MOCK + simulasi state. Rekan backend
+ *  cukup mengirim props dari Inertia::render('opd/dashboard', [...]) dan
+ *  mengganti handler `submitApprove`/`submitReject` dengan:
+ *    router.post(`/opd/pengajuan/${id}/setujui`, {})
+ *    router.post(`/opd/pengajuan/${id}/tolak`,   { rejection_reason })
+ *  Backend hanya mengirim pengajuan milik OPD admin yang login.
+ * ========================================================================= */
+
+/* ---- Util tanggal ---------------------------------------------------- */
+function formatDate(iso: string): string {
+    return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso));
+}
+
+/* ---- Badge status ---------------------------------------------------- */
+const TONE_BADGE: Record<string, string> = {
+    amber: 'bg-amber-50 text-amber-700 border-amber-200',
+    blue: 'bg-blue-50 text-blue-700 border-blue-200',
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    rose: 'bg-rose-50 text-rose-700 border-rose-200',
+    violet: 'bg-violet-50 text-violet-700 border-violet-200',
+    slate: 'bg-slate-100 text-slate-600 border-slate-200',
+};
+
+function StatusBadge({ status }: { status: ApplicationStatus }) {
+    const meta = STATUS_META[status];
+
+    return (
+        <Badge variant="outline" className={cn('rounded-full font-medium', TONE_BADGE[meta.tone])}>
+            {meta.label}
+        </Badge>
+    );
+}
+
+/* ---- Data tiruan ----------------------------------------------------- */
+const THIS_OPD: Opd = { id: 1, name: 'Dinas Komunikasi dan Informatika', code: 'DISKOMINFO' };
+
+const MOCK_USER: MagangUser = {
+    id: 2,
+    name: 'Budi Santoso',
+    email: 'opd.diskominfo@madiunkota.go.id',
+    whatsapp_number: '6281298765432',
+    role: 'admin_opd',
+};
+
+function makeApp(
+    partial: Partial<InternshipApplication> & Pick<InternshipApplication, 'id' | 'ticket_number' | 'status'>,
+): InternshipApplication {
+    return {
+        tujuan_magang: 'Magang kompetensi keahlian',
+        duration_months: 3,
+        start_date: '2026-07-01',
+        end_date: '2026-09-30',
+        institution_name: 'Universitas Negeri Madiun',
+        campus_supervisor: 'Dr. Bambang Sutrisno',
+        opd: THIS_OPD,
+        division: 'Bidang Infrastruktur TIK',
+        field_supervisor: 'Rudi Hartono, S.T',
+        person_in_charge: 'Kepala Bidang IT',
+        rejection_reason: null,
+        forwarded_at: '2026-06-21',
+        opd_decision_at: null,
+        created_at: '2026-06-19',
+        final_report: null,
+        survey_submitted: false,
+        certificate_available: false,
+        ...partial,
+    };
+}
+
+const MOCK_APPLICATIONS: InternshipApplication[] = [
+    makeApp({ id: 21, ticket_number: 'MGG-2026-0051', status: 'forwarded_opd', tujuan_magang: 'Pengembangan aplikasi web', institution_name: 'Universitas Negeri Madiun', division: 'Bidang Pengembangan Aplikasi', field_supervisor: 'Sari Dewi, S.Kom', person_in_charge: 'Kasubbag Aplikasi', forwarded_at: '2026-06-24' }),
+    makeApp({ id: 22, ticket_number: 'MGG-2026-0050', status: 'forwarded_opd', tujuan_magang: 'Desain grafis & multimedia', institution_name: 'SMK Negeri 1 Madiun', division: 'Bidang Layanan Informasi Publik', field_supervisor: 'Andi Wijaya', person_in_charge: 'Kabid IKP', duration_months: 6, forwarded_at: '2026-06-23' }),
+    makeApp({ id: 23, ticket_number: 'MGG-2026-0042', status: 'ongoing', tujuan_magang: 'Administrasi jaringan', institution_name: 'Universitas Negeri Madiun', start_date: '2026-06-01', end_date: '2026-08-31', opd_decision_at: '2026-05-28', forwarded_at: '2026-05-25' }),
+    makeApp({ id: 24, ticket_number: 'MGG-2026-0039', status: 'approved', tujuan_magang: 'Manajemen media sosial', institution_name: 'Universitas Merdeka Madiun', division: 'Bidang IKP', opd_decision_at: '2026-06-22', forwarded_at: '2026-06-20' }),
+    makeApp({ id: 25, ticket_number: 'MGG-2026-0033', status: 'rejected', tujuan_magang: 'Riset keamanan siber', institution_name: 'Politeknik Negeri Madiun', rejection_reason: 'Bidang tidak tersedia pada periode ini.', opd_decision_at: '2026-06-18', forwarded_at: '2026-06-15' }),
+];
+
+/* ---- Filter ---------------------------------------------------------- */
+type FilterKey = 'forwarded_opd' | 'active' | 'decided' | 'all';
+
+const FILTERS: { key: FilterKey; label: string }[] = [
+    { key: 'forwarded_opd', label: 'Perlu Keputusan' },
+    { key: 'active', label: 'Sedang Magang' },
+    { key: 'decided', label: 'Sudah Diputuskan' },
+    { key: 'all', label: 'Semua' },
+];
+
+function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
+    if (filter === 'all') {
+        return true;
+    }
+
+    if (filter === 'forwarded_opd') {
+        return app.status === 'forwarded_opd';
+    }
+
+    if (filter === 'active') {
+        return ['ongoing', 'completion_submitted'].includes(app.status);
+    }
+
+    return ['approved', 'rejected', 'ongoing', 'completion_submitted', 'completed'].includes(app.status);
+}
+
+/* ---- Kartu statistik ------------------------------------------------- */
+function StatCard({ icon: Icon, label, value, tone, delay }: { icon: typeof ClipboardCheck; label: string; value: number; tone: string; delay: number }) {
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay, ease: 'circOut' }}
+            className="rounded-2xl border border-slate-200 bg-white p-5"
+        >
+            <div className={cn('mb-3 flex size-10 items-center justify-center rounded-xl', tone)}>
+                <Icon className="size-5" />
+            </div>
+            <p className="text-2xl font-black text-[#12213e]">{value}</p>
+            <p className="mt-0.5 text-sm text-slate-500">{label}</p>
+        </motion.div>
+    );
+}
+
+/* ---- Dialog keputusan ------------------------------------------------ */
+type DecisionMode = 'approve' | 'reject';
+
+function DetailRow({ label, value, icon: Icon }: { label: string; value: string; icon?: typeof UserCog }) {
+    return (
+        <div className="flex justify-between gap-4 py-2 text-sm">
+            <span className="flex items-center gap-1.5 text-slate-500">
+                {Icon && <Icon className="size-3.5" />}
+                {label}
+            </span>
+            <span className="text-right font-medium text-[#12213e]">{value}</span>
+        </div>
+    );
+}
+
+function DecisionDialog({
+    app,
+    onClose,
+    onApproved,
+    onRejected,
+}: {
+    app: InternshipApplication | null;
+    onClose: () => void;
+    onApproved: (id: number) => void;
+    onRejected: (id: number) => void;
+}) {
+    const [mode, setMode] = useState<DecisionMode>('approve');
+    const [processing, setProcessing] = useState(false);
+    const [reason, setReason] = useState('');
+
+    // Hanya pengajuan `forwarded_opd` yang bisa diputuskan.
+    const decidable = app?.status === 'forwarded_opd';
+
+    function submitApprove() {
+        if (processing || !app) {
+            return;
+        }
+
+        setProcessing(true);
+        // TODO(backend): router.post(`/opd/pengajuan/${app.id}/setujui`, {})
+        setTimeout(() => {
+            setProcessing(false);
+            onApproved(app.id);
+        }, 800);
+    }
+
+    function submitReject() {
+        if (!reason.trim() || processing || !app) {
+            return;
+        }
+
+        setProcessing(true);
+        // TODO(backend): router.post(`/opd/pengajuan/${app.id}/tolak`, { rejection_reason: reason })
+        setTimeout(() => {
+            setProcessing(false);
+            onRejected(app.id);
+        }, 800);
+    }
+
+    return (
+        <Dialog open={!!app} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+                {app && (
+                    <>
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                Detail Pengajuan
+                                <span className="font-mono text-sm font-normal text-slate-400">{app.ticket_number}</span>
+                            </DialogTitle>
+                            <DialogDescription>Penempatan ditetapkan oleh Admin Verifikator.</DialogDescription>
+                        </DialogHeader>
+
+                        {/* Detail pemohon + penempatan */}
+                        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/60 px-4">
+                            <DetailRow label="Asal Instansi" value={app.institution_name} />
+                            <DetailRow label="Tujuan Magang" value={app.tujuan_magang} />
+                            <DetailRow label="Durasi" value={`${app.duration_months} bulan`} />
+                            <DetailRow label="Periode" value={`${formatDate(app.start_date)} – ${formatDate(app.end_date)}`} />
+                            <DetailRow label="Divisi / Bidang" value={app.division ?? '—'} icon={Briefcase} />
+                            <DetailRow label="Pembimbing Lapangan" value={app.field_supervisor ?? '—'} icon={UserCog} />
+                            <DetailRow label="Penanggung Jawab" value={app.person_in_charge ?? '—'} icon={UserCog} />
+                        </div>
+
+                        {decidable ? (
+                            <>
+                                {/* Toggle keputusan */}
+                                <div className="flex gap-2 rounded-xl bg-slate-100 p-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setMode('approve')}
+                                        className={cn(
+                                            'flex-1 rounded-lg py-2 text-sm font-semibold transition',
+                                            mode === 'approve' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500',
+                                        )}
+                                    >
+                                        Setujui
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setMode('reject')}
+                                        className={cn(
+                                            'flex-1 rounded-lg py-2 text-sm font-semibold transition',
+                                            mode === 'reject' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500',
+                                        )}
+                                    >
+                                        Tolak
+                                    </button>
+                                </div>
+
+                                {mode === 'approve' ? (
+                                    <div className="space-y-4">
+                                        <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                                            Peserta akan diterima magang di{' '}
+                                            <span className="font-semibold">{app.opd?.name ?? 'OPD Anda'}</span> dan dapat mulai
+                                            pada {formatDate(app.start_date)}.
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={submitApprove}
+                                            disabled={processing}
+                                            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {processing ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                                            Setujui Pengajuan
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-sm font-semibold text-[#12213e]">Alasan Penolakan</label>
+                                            <textarea
+                                                value={reason}
+                                                onChange={(e) => setReason(e.target.value)}
+                                                rows={4}
+                                                placeholder="Jelaskan alasan penolakan agar pemohon memahaminya…"
+                                                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-rose-400 focus:ring-4 focus:ring-rose-500/15"
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={submitReject}
+                                            disabled={!reason.trim() || processing}
+                                            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-rose-600 text-sm font-bold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {processing ? <Loader2 className="size-4 animate-spin" /> : <XCircle className="size-4" />}
+                                            Tolak Pengajuan
+                                        </button>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                                <p className="mb-2 text-sm font-semibold text-[#12213e]">Status saat ini</p>
+                                <StatusBadge status={app.status} />
+                                {app.status === 'rejected' && app.rejection_reason && (
+                                    <p className="mt-3 text-sm text-rose-600">Alasan: {app.rejection_reason}</p>
+                                )}
+                            </div>
+                        )}
+                    </>
+                )}
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+/* ---- Halaman --------------------------------------------------------- */
+interface OpdDashboardProps {
+    user?: MagangUser;
+    opd?: Opd;
+    applications?: InternshipApplication[];
+}
+
+export default function OpdDashboard({
+    user = MOCK_USER,
+    opd = THIS_OPD,
+    applications = MOCK_APPLICATIONS,
+}: OpdDashboardProps) {
+    const [rows, setRows] = useState(applications);
+    const [filter, setFilter] = useState<FilterKey>('forwarded_opd');
+    const [query, setQuery] = useState('');
+    const [active, setActive] = useState<InternshipApplication | null>(null);
+
+    const stats = useMemo(
+        () => ({
+            pending: rows.filter((a) => a.status === 'forwarded_opd').length,
+            approved: rows.filter((a) => ['approved', 'ongoing', 'completion_submitted', 'completed'].includes(a.status)).length,
+            ongoing: rows.filter((a) => ['ongoing', 'completion_submitted'].includes(a.status)).length,
+            rejected: rows.filter((a) => a.status === 'rejected').length,
+        }),
+        [rows],
+    );
+
+    const filtered = useMemo(() => {
+        const q = query.trim().toLowerCase();
+
+        return rows.filter(
+            (a) =>
+                matchFilter(a, filter) &&
+                (!q ||
+                    a.ticket_number.toLowerCase().includes(q) ||
+                    a.institution_name.toLowerCase().includes(q) ||
+                    a.tujuan_magang.toLowerCase().includes(q)),
+        );
+    }, [rows, filter, query]);
+
+    // Optimistic update (rekan backend mengganti dengan reload props Inertia).
+    function applyStatus(id: number, status: ApplicationStatus) {
+        setRows((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
+        setActive(null);
+    }
+
+    return (
+        <MagangLayout user={user} title="Pengajuan Masuk OPD" active="dashboard" navItems={opdNav}>
+            <Head title="Dasbor OPD — E-Magang" />
+
+            <div className="space-y-6">
+                <div>
+                    <h2 className="text-xl font-black text-[#12213e]">Selamat datang, {user.name.split(' ')[0]} 👋</h2>
+                    <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
+                        <Building2 className="size-4" /> {opd.name} ({opd.code})
+                    </p>
+                </div>
+
+                {/* Statistik */}
+                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                    <StatCard icon={ClipboardCheck} label="Perlu Keputusan" value={stats.pending} tone="bg-amber-50 text-amber-600" delay={0} />
+                    <StatCard icon={CheckCircle2} label="Disetujui" value={stats.approved} tone="bg-emerald-50 text-emerald-600" delay={0.05} />
+                    <StatCard icon={Activity} label="Sedang Magang" value={stats.ongoing} tone="bg-violet-50 text-violet-600" delay={0.1} />
+                    <StatCard icon={XCircle} label="Ditolak" value={stats.rejected} tone="bg-rose-50 text-rose-600" delay={0.15} />
+                </div>
+
+                {/* Toolbar */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap gap-1.5">
+                        {FILTERS.map((f) => (
+                            <button
+                                key={f.key}
+                                type="button"
+                                onClick={() => setFilter(f.key)}
+                                className={cn(
+                                    'rounded-full px-3.5 py-1.5 text-sm font-medium transition',
+                                    filter === f.key ? 'bg-[#106feb] text-white shadow-sm' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50',
+                                )}
+                            >
+                                {f.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="relative sm:w-64">
+                        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                            type="search"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder="Cari tiket / instansi…"
+                            className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                        />
+                    </div>
+                </div>
+
+                {/* Tabel */}
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                    {/* Desktop */}
+                    <table className="hidden w-full text-left text-sm md:table">
+                        <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                            <tr>
+                                <th className="px-5 py-3 font-semibold">No. Tiket</th>
+                                <th className="px-5 py-3 font-semibold">Asal Instansi</th>
+                                <th className="px-5 py-3 font-semibold">Divisi</th>
+                                <th className="px-5 py-3 font-semibold">Diteruskan</th>
+                                <th className="px-5 py-3 font-semibold">Status</th>
+                                <th className="px-5 py-3 text-right font-semibold">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {filtered.map((app) => (
+                                <tr key={app.id} className="transition hover:bg-slate-50/60">
+                                    <td className="px-5 py-3.5 font-mono text-xs font-semibold text-[#12213e]">{app.ticket_number}</td>
+                                    <td className="px-5 py-3.5">{app.institution_name}</td>
+                                    <td className="px-5 py-3.5 text-slate-600">{app.division ?? '—'}</td>
+                                    <td className="px-5 py-3.5 text-slate-500">{app.forwarded_at ? formatDate(app.forwarded_at) : '—'}</td>
+                                    <td className="px-5 py-3.5"><StatusBadge status={app.status} /></td>
+                                    <td className="px-5 py-3.5 text-right">
+                                        <button
+                                            type="button"
+                                            onClick={() => setActive(app)}
+                                            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-[#106feb] transition hover:bg-[#cddcef]/40"
+                                        >
+                                            {app.status === 'forwarded_opd' ? 'Putuskan' : 'Detail'}
+                                            <ArrowRight className="size-3.5" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+
+                    {/* Mobile */}
+                    <div className="divide-y divide-slate-100 md:hidden">
+                        {filtered.map((app) => (
+                            <button
+                                key={app.id}
+                                type="button"
+                                onClick={() => setActive(app)}
+                                className="flex w-full flex-col gap-2 px-4 py-4 text-left transition hover:bg-slate-50/60"
+                            >
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="font-mono text-xs font-semibold text-[#12213e]">{app.ticket_number}</span>
+                                    <StatusBadge status={app.status} />
+                                </div>
+                                <p className="flex items-center gap-1.5 text-sm font-medium text-[#12213e]">
+                                    <Building2 className="size-3.5 text-slate-400" /> {app.institution_name}
+                                </p>
+                                <p className="flex items-center gap-1.5 text-xs text-slate-500">
+                                    <GraduationCap className="size-3.5" /> {app.tujuan_magang}
+                                </p>
+                                <div className="flex items-center gap-4 text-xs text-slate-400">
+                                    <span className="flex items-center gap-1"><Calendar className="size-3" /> {app.forwarded_at ? formatDate(app.forwarded_at) : '—'}</span>
+                                    <span className="flex items-center gap-1"><Clock className="size-3" /> {app.duration_months} bln</span>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+
+                    {filtered.length === 0 && (
+                        <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
+                            <ClipboardCheck className="size-10 text-slate-300" />
+                            <p className="text-sm font-medium text-slate-500">Tidak ada pengajuan pada filter ini.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <DecisionDialog
+                app={active}
+                onClose={() => setActive(null)}
+                onApproved={(id) => applyStatus(id, 'approved')}
+                onRejected={(id) => applyStatus(id, 'rejected')}
+            />
+        </MagangLayout>
+    );
+}

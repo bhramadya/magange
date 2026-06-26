@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -12,14 +11,16 @@ class DatabaseSeeder extends Seeder
 
     /**
      * Seed the application's database.
+     *
+     * Urutan penting: OPD dahulu (dipakai AdminSeeder),
+     * lalu admin (Verifikator dipakai FaqSeeder sebagai created_by).
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $this->call([
+            OpdSeeder::class,
+            AdminSeeder::class,
+            FaqSeeder::class,
         ]);
     }
 }

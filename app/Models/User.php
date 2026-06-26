@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
@@ -15,17 +17,17 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $name
  * @property string $email
- * @property Carbon|null $email_verified_at
- * @property string $password
- * @property string|null $two_factor_secret
- * @property string|null $two_factor_recovery_codes
- * @property Carbon|null $two_factor_confirmed_at
- * @property string|null $remember_token
+ * @property string|null $whatsapp_number
+ * @property string|null $password Hash OTP aktif – diperbarui tiap sesi login
+ * @property UserRole $role
+ * @property int|null $opd_id
+ * @property bool $is_active
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read Opd|null $opd
  */
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
+#[Fillable(['name', 'email', 'whatsapp_number', 'password', 'role', 'opd_id', 'is_active'])]
+#[Hidden(['password'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -39,8 +41,47 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => UserRole::class,
+            'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * OPD tempat admin ini bertugas (khusus role admin_opd).
+     *
+     * @return BelongsTo<Opd, $this>
+     */
+    public function opd(): BelongsTo
+    {
+        return $this->belongsTo(Opd::class);
+    }
+
+    /**
+     * Pengajuan magang yang dibuat oleh user ini (khusus mahasiswa).
+     *
+     * @return HasMany<InternshipApplication, $this>
+     */
+    public function applications(): HasMany
+    {
+        return $this->hasMany(InternshipApplication::class);
+    }
+
+    /**
+     * Token OTP milik user ini.
+     *
+     * @return HasMany<OtpToken, $this>
+     */
+    public function otpTokens(): HasMany
+    {
+        return $this->hasMany(OtpToken::class);
+    }
+
+    /**
+     * Helper cek peran.
+     */
+    public function hasRole(UserRole $role): bool
+    {
+        return $this->role === $role;
     }
 }
