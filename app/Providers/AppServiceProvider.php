@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Contracts\OtpServiceContract;
+use App\Contracts\PengajuanServiceContract;
+use App\Services\OtpService;
+use App\Services\SubmissionService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +19,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(OtpServiceContract::class, OtpService::class);
+        $this->app->bind(PengajuanServiceContract::class, SubmissionService::class);
     }
 
     /**

@@ -30,6 +30,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $opd_decision_by
  * @property Carbon|null $opd_decision_at
  * @property string|null $rejection_reason
+ * @property string|null $surat_penerimaan_path
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -52,6 +53,7 @@ use Illuminate\Support\Carbon;
     'opd_decision_by',
     'opd_decision_at',
     'rejection_reason',
+    'surat_penerimaan_path',
 ])]
 class InternshipApplication extends Model
 {

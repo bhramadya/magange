@@ -15,7 +15,7 @@ test('users can authenticate using the login screen', function () {
 
     $response = $this->post(route('login.store'), [
         'email' => $user->email,
-        'password' => 'password',
+        'password' => '123456',
     ]);
 
     $this->assertAuthenticated();
