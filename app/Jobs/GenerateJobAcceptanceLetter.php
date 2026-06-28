@@ -7,7 +7,6 @@ use App\Models\InternshipApplication;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -41,7 +40,7 @@ class GenerateJobAcceptanceLetter implements ShouldQueue
     {
         $application = $this->application->loadMissing('user', 'opd');
 
-        $year = $application->created_at?->year ?? Date::now()->year;
+        $year = $application->created_at->year;
         $letterNumber = sprintf('SM/%d/%05d', $year, $application->id);
 
         $pdf = Pdf::loadView('pdf.acceptance_letter', [

@@ -16,9 +16,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('application_id')
                   ->unique()
+                  ->comment('1:1 per tiket')
                   ->constrained('internship_applications')
-                  ->cascadeOnDelete()
-                  ->comment('1:1 per tiket');
+                  ->cascadeOnDelete();
             $table->string('file_name');
             $table->string('file_path', 500);
             $table->boolean('is_confirmed')
@@ -28,9 +28,9 @@ return new class extends Migration
                   ->default('pending');
             $table->foreignId('reviewed_by')
                   ->nullable()
+                  ->comment('Admin Verifikator yang mereview')
                   ->constrained('users')
-                  ->nullOnDelete()
-                  ->comment('Admin Verifikator yang mereview');
+                  ->nullOnDelete();
             $table->timestamp('reviewed_at')->nullable();
             $table->timestamp('submitted_at');
             $table->timestamps();

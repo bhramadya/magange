@@ -16,9 +16,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('application_id')
                   ->unique()
+                  ->comment('1:1 per tiket')
                   ->constrained('internship_applications')
-                  ->cascadeOnDelete()
-                  ->comment('1:1 per tiket');
+                  ->cascadeOnDelete();
             $table->tinyInteger('rating')
                   ->unsigned()
                   ->comment('1–5 bintang');
