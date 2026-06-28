@@ -363,7 +363,7 @@ export default function Lacak({ application, ticket }: LacakProps) {
                                         <span className="font-mono font-semibold text-[#12213e]">EMG-2026-123456</span>.
                                     </p>
                                     <Link
-                                        href="/pengajuan/baru"
+                                        href="/#daftar"
                                         className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#106feb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0b5ed0]"
                                     >
                                         Ajukan Magang Baru <ArrowRight className="size-4" />

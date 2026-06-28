@@ -22,9 +22,6 @@ createInertiaApp({
             // Login OTP branded (split-screen) mengelola layout sendiri.
             case name === 'auth/otp-login':
                 return null;
-            // Form pengajuan publik (tanpa login) — wizard branded sendiri.
-            case name === 'pengajuan/baru':
-                return null;
             // Lacak status publik (tanpa login) — branded sendiri.
             case name === 'lacak':
                 return null;
