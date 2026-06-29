@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Enums\ApplicationStatus;
+use Database\Factories\InternshipApplicationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -57,6 +59,9 @@ use Illuminate\Support\Carbon;
 ])]
 class InternshipApplication extends Model
 {
+    /** @use HasFactory<InternshipApplicationFactory> */
+    use HasFactory;
+
     /**
      * @return array<string, string>
      */
@@ -149,5 +154,57 @@ class InternshipApplication extends Model
     public function survey(): HasOne
     {
         return $this->hasOne(SatisfactionSurvey::class, 'application_id');
+    }
+
+    /**
+     * Sertifikat selesai magang (1:1).
+     *
+     * @return HasOne<Certificate, $this>
+     */
+    public function certificate(): HasOne
+    {
+        return $this->hasOne(Certificate::class, 'application_id');
+    }
+
+    /**
+     * Serialisasi sesuai kontrak frontend resources/js/types/magang.ts
+     * (InternshipApplication). Relasi opd/finalReport/survey/certificate
+     * sebaiknya di-eager-load sebelum memanggil ini agar bebas N+1.
+     *
+     * @return array<string, mixed>
+     */
+    public function toMagangArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'ticket_number' => $this->ticket_number,
+            'tujuan_magang' => $this->tujuan_magang,
+            'duration_months' => $this->duration_months,
+            'start_date' => $this->start_date->format('Y-m-d'),
+            'end_date' => $this->end_date->format('Y-m-d'),
+            'institution_name' => $this->institution_name,
+            'campus_supervisor' => $this->campus_supervisor,
+            'status' => $this->status->value,
+            'opd' => $this->opd !== null ? [
+                'id' => $this->opd->id,
+                'name' => $this->opd->name,
+                'code' => $this->opd->code,
+            ] : null,
+            'division' => $this->division,
+            'field_supervisor' => $this->field_supervisor,
+            'person_in_charge' => $this->person_in_charge,
+            'rejection_reason' => $this->rejection_reason,
+            'forwarded_at' => $this->forwarded_at?->toIso8601String(),
+            'opd_decision_at' => $this->opd_decision_at?->toIso8601String(),
+            'created_at' => $this->created_at?->toIso8601String(),
+            'final_report' => $this->finalReport !== null ? [
+                'status' => $this->finalReport->status->value,
+                'file_name' => $this->finalReport->file_name,
+                'submitted_at' => $this->finalReport->submitted_at->toIso8601String(),
+                'is_confirmed' => $this->finalReport->is_confirmed,
+            ] : null,
+            'survey_submitted' => $this->survey !== null,
+            'certificate_available' => $this->certificate !== null && ! $this->certificate->is_download_locked,
+        ];
     }
 }

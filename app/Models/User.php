@@ -18,6 +18,7 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $email
  * @property string|null $whatsapp_number
+ * @property array<string, mixed>|null $notification_preferences
  * @property string|null $password Hash OTP aktif – diperbarui tiap sesi login
  * @property UserRole $role
  * @property int|null $opd_id
@@ -26,7 +27,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read Opd|null $opd
  */
-#[Fillable(['name', 'email', 'whatsapp_number', 'password', 'role', 'opd_id', 'is_active'])]
+#[Fillable(['name', 'email', 'whatsapp_number', 'notification_preferences', 'password', 'role', 'opd_id', 'is_active'])]
 #[Hidden(['password'])]
 class User extends Authenticatable
 {
@@ -44,6 +45,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => UserRole::class,
             'is_active' => 'boolean',
+            'notification_preferences' => 'array',
         ];
     }
 
@@ -83,5 +85,21 @@ class User extends Authenticatable
     public function hasRole(UserRole $role): bool
     {
         return $this->role === $role;
+    }
+
+    /**
+     * Serialisasi sesuai kontrak frontend resources/js/types/magang.ts (MagangUser).
+     *
+     * @return array{id: int, name: string, email: string, whatsapp_number: string|null, role: string}
+     */
+    public function toMagangArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'email' => $this->email,
+            'whatsapp_number' => $this->whatsapp_number,
+            'role' => $this->role->value,
+        ];
     }
 }

@@ -48,10 +48,11 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function configureViews(): void
     {
-        Fortify::loginView(fn (Request $request) => Inertia::render('auth/login', [
-            'canResetPassword' => Features::enabled(Features::resetPasswords()),
-            'status' => $request->session()->get('status'),
-        ]));
+        // Satu-satunya alur masuk adalah login OTP. GET /login (view Fortify)
+        // dialihkan ke /login-otp. Route /login tetap terdaftar (nama 'login')
+        // dengan middleware `guest` Fortify, jadi user yang sudah login tetap
+        // dialihkan menjauh oleh middleware sebelum mencapai closure ini.
+        Fortify::loginView(fn () => redirect()->route('login.otp'));
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [
             'email' => $request->email,

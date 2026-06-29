@@ -25,6 +25,22 @@ class ForwardApplicationRequest extends FormRequest
     }
 
     /**
+     * Data tervalidasi dengan bentuk array tepat yang dibutuhkan
+     * PengajuanServiceContract::forwardToOpd().
+     *
+     * @return array{opd_id: int, division: string, field_supervisor: string, person_in_charge: string}
+     */
+    public function payload(): array
+    {
+        return [
+            'opd_id' => $this->integer('opd_id'),
+            'division' => $this->string('division')->toString(),
+            'field_supervisor' => $this->string('field_supervisor')->toString(),
+            'person_in_charge' => $this->string('person_in_charge')->toString(),
+        ];
+    }
+
+    /**
      * @return array<string, string>
      */
     public function messages(): array

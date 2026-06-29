@@ -30,6 +30,37 @@ class StoreApplicationRequest extends FormRequest
     }
 
     /**
+     * Data tervalidasi dengan bentuk array tepat yang dibutuhkan
+     * PengajuanServiceContract::submit() (string/int konkret, bukan mixed).
+     *
+     * @return array{
+     *     name: string,
+     *     email: string,
+     *     whatsapp_number: string,
+     *     tujuan_magang: string,
+     *     duration_months: int,
+     *     start_date: string,
+     *     end_date: string,
+     *     institution_name: string,
+     *     campus_supervisor: string,
+     * }
+     */
+    public function payload(): array
+    {
+        return [
+            'name' => $this->string('name')->toString(),
+            'email' => $this->string('email')->toString(),
+            'whatsapp_number' => $this->string('whatsapp_number')->toString(),
+            'tujuan_magang' => $this->string('tujuan_magang')->toString(),
+            'duration_months' => $this->integer('duration_months'),
+            'start_date' => $this->string('start_date')->toString(),
+            'end_date' => $this->string('end_date')->toString(),
+            'institution_name' => $this->string('institution_name')->toString(),
+            'campus_supervisor' => $this->string('campus_supervisor')->toString(),
+        ];
+    }
+
+    /**
      * @return array<string, string>
      */
     public function messages(): array

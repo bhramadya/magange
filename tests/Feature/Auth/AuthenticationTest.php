@@ -4,10 +4,11 @@ use App\Models\User;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Fortify\Features;
 
-test('login screen can be rendered', function () {
+test('login screen redirects to otp login', function () {
+    // Alur masuk tunggal: GET /login dialihkan ke /login-otp (lihat FortifyServiceProvider).
     $response = $this->get(route('login'));
 
-    $response->assertOk();
+    $response->assertRedirect(route('login.otp'));
 });
 
 test('users can authenticate using the login screen', function () {

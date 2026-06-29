@@ -1,7 +1,5 @@
 <?php
 
-use Laravel\Fortify\Features;
-
 return [
 
     /*
@@ -136,15 +134,15 @@ return [
     | Features
     |--------------------------------------------------------------------------
     |
-    | Some of the Fortify features are optional. You may disable the features
-    | by removing them from this array. You're free to only remove some of
-    | these features, or you can even remove all of these if you need to.
+    | Aplikasi ini memakai login OTP (lapis sendiri di atas Fortify). Semua
+    | fitur bawaan Fortify dimatikan: registrasi, reset password, verifikasi
+    | email, 2FA, update profil & update password ditangani manual lewat
+    | Settings dan alur OTP.
     |
     */
 
     'features' => [
-        Features::registration(),
-        Features::resetPasswords(),
+        //
     ],
 
 ];

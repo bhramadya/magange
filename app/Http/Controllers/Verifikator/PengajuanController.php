@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Verifikator;
 
 use App\Contracts\PengajuanServiceContract;
-use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Verifikator\ForwardApplicationRequest;
 use App\Http\Requests\Verifikator\RejectApplicationRequest;
@@ -62,7 +61,7 @@ class PengajuanController extends Controller
 
     public function forward(ForwardApplicationRequest $request, InternshipApplication $application): RedirectResponse
     {
-        $validated = $request->validated();
+        $validated = $request->payload();
 
         $this->submissionService->forwardToOpd($application, $validated, $request->user());
 

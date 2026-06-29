@@ -30,9 +30,9 @@ class ApplicationController extends Controller
 
     public function store(StoreApplicationRequest $request): RedirectResponse
     {
-        $validated = $request->validated();
+        $validated = $request->payload();
 
-        $application = $this->submissionService->submit($validated, $request->ip());
+        $application = $this->submissionService->submit($validated, $request->ip() ?? '');
 
         return redirect()->route('lacak')
             ->with('success', 'Pengajuan berhasil dikirim dengan nomor tiket: '.$application->ticket_number);
