@@ -23,9 +23,9 @@ return new class extends Migration
             $table->string('file_name');
             $table->string('file_path', 500);
             $table->foreignId('uploaded_by')
+                  ->comment('Admin Verifikator yang mengunggah')
                   ->constrained('users')
-                  ->restrictOnDelete()
-                  ->comment('Admin Verifikator yang mengunggah');
+                  ->restrictOnDelete();
             $table->timestamp('created_at')->useCurrent();
 
             $table->index(['application_id', 'type']);

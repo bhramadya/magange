@@ -25,9 +25,9 @@ return new class extends Migration
                 ->default(true)
                 ->comment('true = belum boleh diunduh mahasiswa');
             $table->foreignId('uploaded_by')
+                ->comment('Admin yang mengunggah sertifikat')
                 ->constrained('users')
-                ->restrictOnDelete()
-                ->comment('Admin yang mengunggah sertifikat');
+                ->restrictOnDelete();
             $table->timestamps();
 
             $table->index('application_id');

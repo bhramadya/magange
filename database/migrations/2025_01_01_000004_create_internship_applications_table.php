@@ -52,9 +52,9 @@ return new class extends Migration
             // ── Data penempatan (diisi Admin Verifikator saat forward) ─
             $table->foreignId('opd_id')
                   ->nullable()
+                  ->comment('Diisi Admin Verifikator saat forward')
                   ->constrained('opds')
-                  ->nullOnDelete()
-                  ->comment('Diisi Admin Verifikator saat forward');
+                  ->nullOnDelete();
             $table->string('division')
                   ->nullable()
                   ->comment('Bidang penempatan di OPD');
@@ -68,17 +68,17 @@ return new class extends Migration
             // ── Aksi Admin Verifikator ────────────────────────────────
             $table->foreignId('forwarded_by')
                   ->nullable()
+                  ->comment('Admin Verifikator yg memforward')
                   ->constrained('users')
-                  ->nullOnDelete()
-                  ->comment('Admin Verifikator yg memforward');
+                  ->nullOnDelete();
             $table->timestamp('forwarded_at')->nullable();
 
             // ── Aksi Admin OPD ────────────────────────────────────────
             $table->foreignId('opd_decision_by')
                   ->nullable()
+                  ->comment('Admin OPD yg ACC / Tolak')
                   ->constrained('users')
-                  ->nullOnDelete()
-                  ->comment('Admin OPD yg ACC / Tolak');
+                  ->nullOnDelete();
             $table->timestamp('opd_decision_at')->nullable();
             $table->text('rejection_reason')->nullable();
 

@@ -27,9 +27,9 @@ return new class extends Migration
             $table->enum('role', ['mahasiswa', 'admin_verifikator', 'admin_opd']);
             $table->foreignId('opd_id')
                   ->nullable()
+                  ->comment('Hanya untuk role admin_opd')
                   ->constrained('opds')
-                  ->nullOnDelete()
-                  ->comment('Hanya untuk role admin_opd');
+                  ->nullOnDelete();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

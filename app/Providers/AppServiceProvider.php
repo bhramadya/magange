@@ -29,6 +29,18 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->registerPolicies();
+    }
+
+    /**
+     * Register model policies.
+     */
+    protected function registerPolicies(): void
+    {
+        \Illuminate\Support\Facades\Gate::policy(
+            \App\Models\InternshipApplication::class,
+            \App\Policies\InternshipApplicationPolicy::class,
+        );
     }
 
     /**
