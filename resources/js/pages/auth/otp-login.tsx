@@ -269,7 +269,7 @@ export default function OtpLogin({ status }: OtpLoginProps) {
                                                 placeholder="nama@email.com"
                                                 value={email}
                                                 onChange={(e) => setEmail(e.target.value)}
-                                                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                                                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-[#12213e] placeholder:text-slate-400 outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                                             />
                                         </div>
 
