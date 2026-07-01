@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
     Search,
     ChevronDown,
@@ -206,7 +206,16 @@ export default function Bantuan({ user = MOCK_USER }: BantuanProps) {
     const [query, setQuery] = useState('');
     const [openKey, setOpenKey] = useState<string | null>(null);
 
-    const navItems = NAV_BY_ROLE[user.role] ?? mahasiswaNav;
+    // Halaman Bantuan dipakai bersama semua peran lewat satu rute `/bantuan`.
+    // Selama pratinjau (belum ada auth), peran dibawa via query `?role=` dari
+    // sidebar tiap dasbor agar menu sidebar tetap sesuai peran asal — tanpa ini
+    // props `user` default ke mock mahasiswa dan sidebar "pindah" ke mahasiswa.
+    // Saat backend siap, `user.role` asli jadi acuan bila query tak ada.
+    const { url } = usePage();
+    const roleFromQuery = new URLSearchParams(url.split('?')[1] ?? '').get('role');
+    const effectiveRole: UserRole = roleFromQuery && roleFromQuery in NAV_BY_ROLE ? (roleFromQuery as UserRole) : user.role;
+
+    const navItems = NAV_BY_ROLE[effectiveRole] ?? mahasiswaNav;
 
     // Kelompokkan FAQ per kategori setelah difilter pencarian.
     const grouped = useMemo(() => {

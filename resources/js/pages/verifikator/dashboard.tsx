@@ -152,9 +152,9 @@ type ReviewMode = 'forward' | 'reject';
 
 function DetailRow({ label, value }: { label: string; value: string }) {
     return (
-        <div className="flex justify-between gap-4 py-2 text-sm">
-            <span className="text-slate-500">{label}</span>
-            <span className="text-right font-medium text-[#12213e]">{value}</span>
+        <div className="flex justify-between gap-4 py-2.5 text-sm">
+            <span className="font-medium text-slate-600">{label}</span>
+            <span className="text-right font-semibold text-[#0a1628]">{value}</span>
         </div>
     );
 }
@@ -225,7 +225,7 @@ function ReviewDialog({
                         </DialogHeader>
 
                         {/* Detail pemohon */}
-                        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/60 px-4">
+                        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white px-4">
                             <DetailRow label="Asal Instansi" value={app.institution_name} />
                             <DetailRow label="Tujuan Magang" value={app.tujuan_magang} />
                             <DetailRow label="Durasi" value={`${app.duration_months} bulan`} />
@@ -260,7 +260,7 @@ function ReviewDialog({
                         {mode === 'forward' ? (
                             <div className="space-y-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-sm font-semibold text-[#12213e]">OPD Tujuan</label>
+                                    <label className="text-sm font-semibold text-[#0a1628]">OPD Tujuan</label>
                                     <Select value={opdId} onValueChange={setOpdId}>
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Pilih OPD…" />
@@ -276,16 +276,16 @@ function ReviewDialog({
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-sm font-semibold text-[#12213e]">
+                                    <label className="text-sm font-semibold text-[#0a1628]">
                                         Catatan khusus dari Admin Verifikator
-                                        <span className="ml-1 font-normal text-slate-400">(opsional)</span>
+                                        <span className="ml-1 font-normal text-slate-500">(opsional)</span>
                                     </label>
                                     <textarea
                                         value={note}
                                         onChange={(e) => setNote(e.target.value)}
                                         rows={4}
                                         placeholder="Catatan ini akan dibaca Admin OPD saat menerima pengajuan, mis. rekomendasi penempatan atau hal yang perlu diperhatikan…"
-                                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                                        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-[#0a1628] outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                                     />
                                 </div>
 
@@ -302,13 +302,13 @@ function ReviewDialog({
                         ) : (
                             <div className="space-y-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-sm font-semibold text-[#12213e]">Alasan Penolakan</label>
+                                    <label className="text-sm font-semibold text-[#0a1628]">Alasan Penolakan</label>
                                     <textarea
                                         value={reason}
                                         onChange={(e) => setReason(e.target.value)}
                                         rows={4}
                                         placeholder="Jelaskan alasan penolakan agar pemohon memahaminya…"
-                                        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-rose-400 focus:ring-4 focus:ring-rose-500/15"
+                                        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-[#0a1628] outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-500/15"
                                     />
                                 </div>
 

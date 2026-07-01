@@ -4,7 +4,6 @@ import {
     FileText,
     Award,
     HelpCircle,
-    Bell,
     Menu,
     LogOut,
     ChevronDown,
@@ -47,7 +46,9 @@ export const mahasiswaNav: MagangNavItem[] = [
     { key: 'dashboard', title: 'Dasbor', href: '/dashboard', icon: LayoutDashboard },
     { key: 'pengajuan', title: 'Pengajuan Saya', href: '/pengajuan', icon: FileText },
     { key: 'penyelesaian', title: 'Penyelesaian', href: '/penyelesaian', icon: Award },
-    { key: 'bantuan', title: 'Bantuan', href: '/bantuan', icon: HelpCircle },
+    // `?role=` menandai peran saat pratinjau (belum ada auth) supaya halaman
+    // Bantuan bersama menampilkan sidebar peran yang benar — lihat bantuan.tsx.
+    { key: 'bantuan', title: 'Bantuan', href: '/bantuan?role=mahasiswa', icon: HelpCircle },
 ];
 
 // Navigasi untuk role Admin Verifikator. Menu "Pengaturan" dihilangkan (lihat
@@ -56,7 +57,7 @@ export const verifikatorNav: MagangNavItem[] = [
     { key: 'dashboard', title: 'Dasbor', href: '/verifikator', icon: LayoutDashboard },
     { key: 'masuk', title: 'Pengajuan Masuk', href: '/verifikator/masuk', icon: Inbox },
     { key: 'riwayat', title: 'Riwayat', href: '/verifikator/riwayat', icon: History },
-    { key: 'bantuan', title: 'Bantuan', href: '/bantuan', icon: HelpCircle },
+    { key: 'bantuan', title: 'Bantuan', href: '/bantuan?role=admin_verifikator', icon: HelpCircle },
 ];
 
 // Navigasi untuk role Admin OPD. Tanpa "Pengaturan" (lihat catatan di atas).
@@ -64,7 +65,7 @@ export const opdNav: MagangNavItem[] = [
     { key: 'dashboard', title: 'Dasbor', href: '/opd', icon: LayoutDashboard },
     { key: 'keputusan', title: 'Perlu Keputusan', href: '/opd/keputusan', icon: ClipboardCheck },
     { key: 'peserta', title: 'Peserta Aktif', href: '/opd/peserta', icon: Users },
-    { key: 'bantuan', title: 'Bantuan', href: '/bantuan', icon: HelpCircle },
+    { key: 'bantuan', title: 'Bantuan', href: '/bantuan?role=admin_opd', icon: HelpCircle },
 ];
 
 const ROLE_LABEL: Record<MagangUser['role'], string> = {
@@ -146,6 +147,10 @@ export default function MagangLayout({
 }) {
     const [mobileOpen, setMobileOpen] = useState(false);
 
+    // Pratinjau belum punya auth; sertakan peran agar halaman Bantuan bersama
+    // tetap memakai sidebar peran ini (bukan default mahasiswa).
+    const bantuanHref = `/bantuan?role=${user.role}`;
+
     return (
         <div className="min-h-screen bg-slate-50 text-[#0a1628]">
             {/* ===== Sidebar desktop ===== */}
@@ -165,7 +170,7 @@ export default function MagangLayout({
                         Hubungi admin jika ada kendala atau pertanyaan seputar magang.
                     </p>
                     <Link
-                        href="/bantuan"
+                        href={bantuanHref}
                         className="flex items-center justify-center gap-2 rounded-xl bg-[#106feb] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:bg-[#0b4fb0] hover:shadow-md"
                     >
                         Hubungi Admin
@@ -198,15 +203,6 @@ export default function MagangLayout({
                         <h1 className="text-base font-bold text-[#0a1628] sm:text-lg">{title}</h1>
 
                         <div className="ml-auto flex items-center gap-1 sm:gap-2">
-                            <button
-                                type="button"
-                                className="relative inline-flex size-9 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100/80"
-                                aria-label="Notifikasi"
-                            >
-                                <Bell className="size-5" />
-                                <span className="absolute right-2 top-2 size-2 rounded-full bg-rose-500 ring-2 ring-white" />
-                            </button>
-
                             <DropdownMenu>
                                 <DropdownMenuTrigger className="flex items-center gap-2 rounded-full p-1 pr-3 transition-colors hover:bg-slate-100/80">
                                     <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-[#106feb] to-[#0b4fb0] text-sm font-bold text-white shadow-sm">
