@@ -18,9 +18,8 @@ class ForwardApplicationRequest extends FormRequest
     {
         return [
             'opd_id' => ['required', 'integer', 'exists:opds,id'],
-            'division' => ['required', 'string', 'max:255'],
-            'field_supervisor' => ['required', 'string', 'max:255'],
-            'person_in_charge' => ['required', 'string', 'max:255'],
+            // Catatan khusus Verifikator utk dibaca Admin OPD (opsional).
+            'verifikator_note' => ['nullable', 'string', 'max:2000'],
         ];
     }
 
@@ -32,9 +31,6 @@ class ForwardApplicationRequest extends FormRequest
         return [
             'opd_id.required' => 'OPD penempatan wajib dipilih.',
             'opd_id.exists' => 'OPD yang dipilih tidak valid.',
-            'division.required' => 'Bidang penempatan wajib diisi.',
-            'field_supervisor.required' => 'Nama pembimbing lapangan wajib diisi.',
-            'person_in_charge.required' => 'Nama penanggung jawab wajib diisi.',
         ];
     }
 }

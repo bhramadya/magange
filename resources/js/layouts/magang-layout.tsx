@@ -4,7 +4,6 @@ import {
     FileText,
     Award,
     HelpCircle,
-    Settings,
     Bell,
     Menu,
     LogOut,
@@ -42,30 +41,30 @@ export interface MagangNavItem {
 }
 
 // Navigasi default untuk role Mahasiswa.
+// Menu "Pengaturan" dihilangkan sepenuhnya (revisi mentor) agar tak rancu
+// mengubah data profil sendiri — berlaku untuk semua role.
 export const mahasiswaNav: MagangNavItem[] = [
     { key: 'dashboard', title: 'Dasbor', href: '/dashboard', icon: LayoutDashboard },
     { key: 'pengajuan', title: 'Pengajuan Saya', href: '/pengajuan', icon: FileText },
     { key: 'penyelesaian', title: 'Penyelesaian', href: '/penyelesaian', icon: Award },
     { key: 'bantuan', title: 'Bantuan', href: '/bantuan', icon: HelpCircle },
-    { key: 'pengaturan', title: 'Pengaturan', href: '/pengaturan', icon: Settings },
 ];
 
-// Navigasi untuk role Admin Verifikator.
+// Navigasi untuk role Admin Verifikator. Menu "Pengaturan" dihilangkan (lihat
+// catatan di atas) — sama seperti mahasiswa & OPD.
 export const verifikatorNav: MagangNavItem[] = [
     { key: 'dashboard', title: 'Dasbor', href: '/verifikator', icon: LayoutDashboard },
     { key: 'masuk', title: 'Pengajuan Masuk', href: '/verifikator/masuk', icon: Inbox },
     { key: 'riwayat', title: 'Riwayat', href: '/verifikator/riwayat', icon: History },
     { key: 'bantuan', title: 'Bantuan', href: '/bantuan', icon: HelpCircle },
-    { key: 'pengaturan', title: 'Pengaturan', href: '/pengaturan', icon: Settings },
 ];
 
-// Navigasi untuk role Admin OPD.
+// Navigasi untuk role Admin OPD. Tanpa "Pengaturan" (lihat catatan di atas).
 export const opdNav: MagangNavItem[] = [
     { key: 'dashboard', title: 'Dasbor', href: '/opd', icon: LayoutDashboard },
     { key: 'keputusan', title: 'Perlu Keputusan', href: '/opd/keputusan', icon: ClipboardCheck },
     { key: 'peserta', title: 'Peserta Aktif', href: '/opd/peserta', icon: Users },
     { key: 'bantuan', title: 'Bantuan', href: '/bantuan', icon: HelpCircle },
-    { key: 'pengaturan', title: 'Pengaturan', href: '/pengaturan', icon: Settings },
 ];
 
 const ROLE_LABEL: Record<MagangUser['role'], string> = {
@@ -85,11 +84,11 @@ function initials(name: string): string {
 function Brand() {
     return (
         <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-[#106feb] text-base font-black text-white shadow-sm">
+            <div className="flex size-10 items-center justify-center rounded-2xl bg-[#106feb] text-base font-black text-white shadow-sm">
                 eM
             </div>
             <div className="leading-tight">
-                <p className="text-sm font-bold text-[#12213e]">E-Magang</p>
+                <p className="text-sm font-bold text-[#0a1628]">E-Magang</p>
                 <p className="text-[11px] font-medium text-slate-500">Kota Madiun</p>
             </div>
         </Link>
@@ -117,10 +116,10 @@ function NavList({
                         href={item.href}
                         onClick={onNavigate}
                         className={cn(
-                            'group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                            'group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
                             isActive
-                                ? 'bg-[#106feb] text-white shadow-sm shadow-[#106feb]/30'
-                                : 'text-slate-600 hover:bg-[#cddcef]/40 hover:text-[#12213e]',
+                                ? 'bg-[#106feb] text-white shadow-md shadow-[#106feb]/20'
+                                : 'text-slate-600 hover:bg-[#cddcef]/40 hover:text-[#0a1628]',
                         )}
                     >
                         <Icon className={cn('size-[18px]', isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#106feb]')} />
@@ -148,7 +147,7 @@ export default function MagangLayout({
     const [mobileOpen, setMobileOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-slate-50 text-[#12213e]">
+        <div className="min-h-screen bg-slate-50 text-[#0a1628]">
             {/* ===== Sidebar desktop ===== */}
             <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-200 bg-white px-4 py-6 lg:flex">
                 <div className="px-2">
@@ -157,72 +156,75 @@ export default function MagangLayout({
                 <div className="mt-8 flex-1">
                     <NavList items={navItems} active={active} />
                 </div>
-                <div className="rounded-2xl bg-gradient-to-br from-[#106feb] to-[#0b4fb0] p-4 text-white">
-                    <p className="text-sm font-semibold">Butuh bantuan?</p>
-                    <p className="mt-1 text-xs text-white/80">Hubungi Dinas Kominfo Kota Madiun.</p>
-                    <Link href="/bantuan" className="mt-3 inline-flex text-xs font-semibold underline underline-offset-2">
-                        Pusat Bantuan
+                <div className="rounded-3xl border border-[#cddcef] bg-gradient-to-br from-[#e8f2fe] to-white p-5 shadow-sm">
+                    <div className="mb-3 flex size-10 items-center justify-center rounded-2xl bg-[#106feb] text-white">
+                        <Award className="size-5" />
+                    </div>
+                    <p className="mb-1 text-sm font-bold text-[#0a1628]">Butuh Bantuan?</p>
+                    <p className="mb-4 text-xs leading-relaxed text-slate-600">
+                        Hubungi admin jika ada kendala atau pertanyaan seputar magang.
+                    </p>
+                    <Link
+                        href="/bantuan"
+                        className="flex items-center justify-center gap-2 rounded-xl bg-[#106feb] px-4 py-2 text-xs font-semibold text-white shadow-sm transition-all duration-200 hover:bg-[#0b4fb0] hover:shadow-md"
+                    >
+                        Hubungi Admin
                     </Link>
                 </div>
             </aside>
 
             {/* ===== Konten ===== */}
             <div className="lg:pl-64">
-                {/* Topbar */}
-                <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/80 px-4 backdrop-blur-md sm:px-6">
-                    {/* Hamburger mobile */}
-                    <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-                        <SheetTrigger
-                            className="inline-flex size-9 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 lg:hidden"
-                            aria-label="Buka menu"
-                        >
-                            <Menu className="size-5" />
-                        </SheetTrigger>
-                        <SheetContent side="left" className="w-72 bg-white p-6">
-                            <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
-                            <Brand />
-                            <div className="mt-8">
-                                <NavList items={navItems} active={active} onNavigate={() => setMobileOpen(false)} />
-                            </div>
-                        </SheetContent>
-                    </Sheet>
+                {/* Topbar — oval glassmorphism */}
+                <header className="sticky top-0 z-20 px-4 py-3 sm:px-6">
+                    <div className="flex h-14 items-center gap-3 rounded-full border border-slate-200/60 bg-white/70 px-4 shadow-sm backdrop-blur-xl sm:px-5">
+                        {/* Hamburger mobile */}
+                        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+                            <SheetTrigger
+                                className="inline-flex size-9 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100/80 lg:hidden"
+                                aria-label="Buka menu"
+                            >
+                                <Menu className="size-5" />
+                            </SheetTrigger>
+                            <SheetContent side="left" className="w-72 bg-white p-6">
+                                <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
+                                <Brand />
+                                <div className="mt-8">
+                                    <NavList items={navItems} active={active} onNavigate={() => setMobileOpen(false)} />
+                                </div>
+                            </SheetContent>
+                        </Sheet>
 
-                    <h1 className="text-base font-bold sm:text-lg">{title}</h1>
+                        <h1 className="text-base font-bold text-[#0a1628] sm:text-lg">{title}</h1>
 
-                    <div className="ml-auto flex items-center gap-1 sm:gap-2">
-                        <button
-                            type="button"
-                            className="relative inline-flex size-9 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
-                            aria-label="Notifikasi"
-                        >
-                            <Bell className="size-5" />
-                            <span className="absolute right-2 top-2 size-2 rounded-full bg-rose-500" />
-                        </button>
+                        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+                            <button
+                                type="button"
+                                className="relative inline-flex size-9 items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-100/80"
+                                aria-label="Notifikasi"
+                            >
+                                <Bell className="size-5" />
+                                <span className="absolute right-2 top-2 size-2 rounded-full bg-rose-500 ring-2 ring-white" />
+                            </button>
 
-                        <DropdownMenu>
-                            <DropdownMenuTrigger className="flex items-center gap-2 rounded-full p-1 pr-2 hover:bg-slate-100">
-                                <span className="flex size-9 items-center justify-center rounded-full bg-[#cddcef] text-sm font-bold text-[#106feb]">
-                                    {initials(user.name)}
-                                </span>
-                                <span className="hidden text-left leading-tight sm:block">
-                                    <span className="block text-sm font-semibold">{user.name}</span>
-                                    <span className="block text-[11px] text-slate-500">{ROLE_LABEL[user.role]}</span>
-                                </span>
-                                <ChevronDown className="hidden size-4 text-slate-400 sm:block" />
-                            </DropdownMenuTrigger>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger className="flex items-center gap-2 rounded-full p-1 pr-3 transition-colors hover:bg-slate-100/80">
+                                    <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-[#106feb] to-[#0b4fb0] text-sm font-bold text-white shadow-sm">
+                                        {initials(user.name)}
+                                    </span>
+                                    <span className="hidden text-left leading-tight sm:block">
+                                        <span className="block text-sm font-semibold text-[#0a1628]">{user.name}</span>
+                                        <span className="block text-[11px] text-slate-500">{ROLE_LABEL[user.role]}</span>
+                                    </span>
+                                    <ChevronDown className="hidden size-4 text-slate-400 sm:block" />
+                                </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56">
                                 <DropdownMenuLabel>
-                                    <p className="text-sm font-semibold">{user.name}</p>
+                                    <p className="text-sm font-semibold text-[#0a1628]">{user.name}</p>
                                     <p className="text-xs font-normal text-slate-500">{user.email}</p>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem asChild>
-                                    <Link href="/pengaturan" className="cursor-pointer">
-                                        <Settings className="size-4" />
-                                        Pengaturan
-                                    </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
+                                {/* Menu "Pengaturan" dihilangkan sepenuhnya (revisi mentor) untuk semua role. */}
                                 <DropdownMenuItem asChild variant="destructive">
                                     <Link href="/logout" method="post" as="button" className="w-full cursor-pointer">
                                         <LogOut className="size-4" />
@@ -232,7 +234,8 @@ export default function MagangLayout({
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                </header>
+                </div>
+            </header>
 
                 <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:py-8">{children}</main>
             </div>

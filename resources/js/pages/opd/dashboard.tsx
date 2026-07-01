@@ -13,10 +13,15 @@ import {
     UserCog,
     Briefcase,
     ArrowRight,
+    AlertTriangle,
+    Sparkles,
+    StickyNote,
+    Users,
+    Pencil,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/status-badge';
 import {
     Dialog,
     DialogContent,
@@ -26,8 +31,7 @@ import {
 } from '@/components/ui/dialog';
 import MagangLayout, { opdNav } from '@/Layouts/magang-layout';
 import { cn } from '@/lib/utils';
-import { STATUS_META } from '@/types/magang';
-import type { ApplicationStatus, InternshipApplication, MagangUser, Opd } from '@/types/magang';
+import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
 
 /* =========================================================================
  *  DASBOR ADMIN OPD — E-MAGANG (Pemkot Madiun)
@@ -48,28 +52,8 @@ function formatDate(iso: string): string {
     return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso));
 }
 
-/* ---- Badge status ---------------------------------------------------- */
-const TONE_BADGE: Record<string, string> = {
-    amber: 'bg-amber-50 text-amber-700 border-amber-200',
-    blue: 'bg-blue-50 text-blue-700 border-blue-200',
-    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    rose: 'bg-rose-50 text-rose-700 border-rose-200',
-    violet: 'bg-violet-50 text-violet-700 border-violet-200',
-    slate: 'bg-slate-100 text-slate-600 border-slate-200',
-};
-
-function StatusBadge({ status }: { status: ApplicationStatus }) {
-    const meta = STATUS_META[status];
-
-    return (
-        <Badge variant="outline" className={cn('rounded-full font-medium', TONE_BADGE[meta.tone])}>
-            {meta.label}
-        </Badge>
-    );
-}
-
 /* ---- Data tiruan ----------------------------------------------------- */
-const THIS_OPD: Opd = { id: 1, name: 'Dinas Komunikasi dan Informatika', code: 'DISKOMINFO' };
+const THIS_OPD: Opd = { id: 1, name: 'Dinas Komunikasi dan Informatika', code: 'DISKOMINFO', quota: 10, quota_used: 4 };
 
 const MOCK_USER: MagangUser = {
     id: 2,
@@ -113,12 +97,15 @@ const MOCK_APPLICATIONS: InternshipApplication[] = [
 ];
 
 /* ---- Filter ---------------------------------------------------------- */
-type FilterKey = 'forwarded_opd' | 'active' | 'decided' | 'all';
+// Urutan kiri→kanan: Perlu Keputusan, Disetujui, Sedang Magang, Selesai, Ditolak, Semua.
+type FilterKey = 'forwarded_opd' | 'approved' | 'active' | 'completed' | 'rejected' | 'all';
 
 const FILTERS: { key: FilterKey; label: string }[] = [
     { key: 'forwarded_opd', label: 'Perlu Keputusan' },
+    { key: 'approved', label: 'Disetujui' },
     { key: 'active', label: 'Sedang Magang' },
-    { key: 'decided', label: 'Sudah Diputuskan' },
+    { key: 'completed', label: 'Selesai Magang' },
+    { key: 'rejected', label: 'Ditolak' },
     { key: 'all', label: 'Semua' },
 ];
 
@@ -131,11 +118,19 @@ function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
         return app.status === 'forwarded_opd';
     }
 
+    if (filter === 'approved') {
+        return app.status === 'approved';
+    }
+
     if (filter === 'active') {
         return ['ongoing', 'completion_submitted'].includes(app.status);
     }
 
-    return ['approved', 'rejected', 'ongoing', 'completion_submitted', 'completed'].includes(app.status);
+    if (filter === 'completed') {
+        return app.status === 'completed';
+    }
+
+    return app.status === 'rejected';
 }
 
 /* ---- Kartu statistik ------------------------------------------------- */
@@ -156,6 +151,105 @@ function StatCard({ icon: Icon, label, value, tone, delay }: { icon: typeof Clip
     );
 }
 
+/* ---- Editor kuota OPD ------------------------------------------------ */
+// Admin OPD hanya boleh mengubah kuota OPD-nya sendiri (Verifikator: semua).
+// Preview memakai simulasi; backend nyata di PATCH /kuota/{opd}.
+function QuotaEditor({ opd }: { opd: Opd }) {
+    const used = opd.quota_used ?? 0;
+    const [total, setTotal] = useState(opd.quota ?? 0);
+    const [editing, setEditing] = useState(false);
+    const [value, setValue] = useState(String(opd.quota ?? 0));
+    const [processing, setProcessing] = useState(false);
+
+    const parsed = Number(value);
+    const valid = Number.isInteger(parsed) && parsed >= used && parsed <= 1000;
+    const sisa = Math.max(0, total - used);
+    const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+
+    function save() {
+        if (!valid || processing) {
+            return;
+        }
+
+        setProcessing(true);
+        // TODO(backend): router.patch(`/kuota/${opd.id}`, { quota_total: parsed })
+        setTimeout(() => {
+            setTotal(parsed);
+            setProcessing(false);
+            setEditing(false);
+        }, 700);
+    }
+
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <p className="flex items-center gap-1.5 text-sm font-bold text-[#12213e]">
+                        <Users className="size-4 text-[#106feb]" /> Kuota Magang OPD
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                        Terpakai {used} dari {total} kursi — sisa <span className="font-semibold text-emerald-600">{sisa}</span>.
+                    </p>
+                </div>
+                {!editing && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setValue(String(total));
+                            setEditing(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-[#106feb] transition hover:bg-slate-50"
+                    >
+                        <Pencil className="size-3.5" /> Ubah Kuota
+                    </button>
+                )}
+            </div>
+
+            {/* Bar keterisian */}
+            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-[#106feb] transition-all" style={{ width: `${pct}%` }} />
+            </div>
+
+            {editing && (
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="flex-1 space-y-1.5">
+                        <label className="text-xs font-semibold text-[#12213e]">Total kuota baru</label>
+                        <input
+                            type="number"
+                            min={used}
+                            max={1000}
+                            value={value}
+                            onChange={(e) => setValue(e.target.value)}
+                            className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                        />
+                        {!valid && (
+                            <p className="text-xs text-rose-500">Kuota minimal {used} (yang sudah terpakai) dan maksimal 1000.</p>
+                        )}
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={save}
+                            disabled={!valid || processing}
+                            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#106feb] px-4 text-sm font-bold text-white transition hover:bg-[#0b4fb0] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {processing ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                            Simpan
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setEditing(false)}
+                            className="inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold text-slate-500 transition hover:bg-slate-100"
+                        >
+                            Batal
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 /* ---- Dialog keputusan ------------------------------------------------ */
 type DecisionMode = 'approve' | 'reject';
 
@@ -167,6 +261,36 @@ function DetailRow({ label, value, icon: Icon }: { label: string; value: string;
                 {label}
             </span>
             <span className="text-right font-medium text-[#12213e]">{value}</span>
+        </div>
+    );
+}
+
+function Field({
+    label,
+    value,
+    onChange,
+    placeholder,
+    icon: Icon,
+}: {
+    label: string;
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+    icon?: typeof UserCog;
+}) {
+    return (
+        <div className="space-y-1.5">
+            <label className="flex items-center gap-1.5 text-sm font-semibold text-[#12213e]">
+                {Icon && <Icon className="size-3.5 text-slate-400" />}
+                {label}
+            </label>
+            <input
+                type="text"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15"
+            />
         </div>
     );
 }
@@ -186,16 +310,23 @@ function DecisionDialog({
     const [processing, setProcessing] = useState(false);
     const [reason, setReason] = useState('');
 
+    // Penempatan kini diisi Admin OPD saat menyetujui (dipindah dari Verifikator).
+    const [division, setDivision] = useState('');
+    const [fieldSupervisor, setFieldSupervisor] = useState('');
+    const [personInCharge, setPersonInCharge] = useState('');
+
+    const approveValid = division.trim() && fieldSupervisor.trim() && personInCharge.trim();
+
     // Hanya pengajuan `forwarded_opd` yang bisa diputuskan.
     const decidable = app?.status === 'forwarded_opd';
 
     function submitApprove() {
-        if (processing || !app) {
+        if (!approveValid || processing || !app) {
             return;
         }
 
         setProcessing(true);
-        // TODO(backend): router.post(`/opd/pengajuan/${app.id}/setujui`, {})
+        // TODO(backend): router.post(`/opd/pengajuan/${app.id}/setujui`, { division, field_supervisor, person_in_charge })
         setTimeout(() => {
             setProcessing(false);
             onApproved(app.id);
@@ -225,19 +356,42 @@ function DecisionDialog({
                                 Detail Pengajuan
                                 <span className="font-mono text-sm font-normal text-slate-400">{app.ticket_number}</span>
                             </DialogTitle>
-                            <DialogDescription>Penempatan ditetapkan oleh Admin Verifikator.</DialogDescription>
+                            <DialogDescription>Penempatan peserta ditetapkan oleh Admin OPD saat menyetujui.</DialogDescription>
                         </DialogHeader>
 
-                        {/* Detail pemohon + penempatan */}
+                        {/* Detail pemohon */}
                         <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/60 px-4">
                             <DetailRow label="Asal Instansi" value={app.institution_name} />
                             <DetailRow label="Tujuan Magang" value={app.tujuan_magang} />
                             <DetailRow label="Durasi" value={`${app.duration_months} bulan`} />
                             <DetailRow label="Periode" value={`${formatDate(app.start_date)} – ${formatDate(app.end_date)}`} />
-                            <DetailRow label="Divisi / Bidang" value={app.division ?? '—'} icon={Briefcase} />
-                            <DetailRow label="Pembimbing Lapangan" value={app.field_supervisor ?? '—'} icon={UserCog} />
-                            <DetailRow label="Penanggung Jawab" value={app.person_in_charge ?? '—'} icon={UserCog} />
+                            {/* Penempatan hanya tampil read-only setelah diputuskan. */}
+                            {!decidable && (
+                                <>
+                                    <DetailRow label="Divisi / Bidang" value={app.division ?? '—'} icon={Briefcase} />
+                                    <DetailRow label="Pembimbing Lapangan" value={app.field_supervisor ?? '—'} icon={UserCog} />
+                                    <DetailRow label="Penanggung Jawab" value={app.person_in_charge ?? '—'} icon={UserCog} />
+                                </>
+                            )}
                         </div>
+
+                        {/* Keahlian peserta */}
+                        <div className="rounded-xl border border-[#cddcef] bg-[#e8f2fe]/40 px-4 py-3">
+                            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[#106feb]">
+                                <Sparkles className="size-3.5" /> Keahlian / Keterampilan
+                            </p>
+                            <p className="mt-1 text-sm font-medium text-[#12213e]">{app.skills || '—'}</p>
+                        </div>
+
+                        {/* Catatan dari Admin Verifikator */}
+                        {app.verifikator_note && (
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                                    <StickyNote className="size-3.5" /> Catatan Admin Verifikator
+                                </p>
+                                <p className="mt-1 text-sm font-medium text-amber-900">{app.verifikator_note}</p>
+                            </div>
+                        )}
 
                         {decidable ? (
                             <>
@@ -267,15 +421,28 @@ function DecisionDialog({
 
                                 {mode === 'approve' ? (
                                     <div className="space-y-4">
-                                        <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                                            Peserta akan diterima magang di{' '}
-                                            <span className="font-semibold">{app.opd?.name ?? 'OPD Anda'}</span> dan dapat mulai
-                                            pada {formatDate(app.start_date)}.
+                                        <p className="text-sm text-slate-500">
+                                            Tetapkan penempatan peserta di{' '}
+                                            <span className="font-semibold text-[#12213e]">{app.opd?.name ?? 'OPD Anda'}</span>.
+                                            Data ini dikirim ke peserta dalam email persetujuan.
                                         </p>
+
+                                        <Field label="Divisi / Bidang" value={division} onChange={setDivision} placeholder="cth. Bidang Infrastruktur TIK" icon={Briefcase} />
+                                        <Field label="Pembimbing Lapangan" value={fieldSupervisor} onChange={setFieldSupervisor} placeholder="Nama pembimbing dari OPD" icon={UserCog} />
+                                        <Field label="Penanggung Jawab" value={personInCharge} onChange={setPersonInCharge} placeholder="cth. Kepala Bidang" icon={UserCog} />
+
+                                        {/* Peringatan kedatangan peserta */}
+                                        <div className="flex gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                                            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
+                                            <p className="text-xs leading-relaxed text-amber-800">
+                                                Notif ini akan dikirim ke peserta magang. Peserta akan datang berkunjung ke kantor setelah diterima pengajuan ini.
+                                            </p>
+                                        </div>
+
                                         <button
                                             type="button"
                                             onClick={submitApprove}
-                                            disabled={processing}
+                                            disabled={!approveValid || processing}
                                             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             {processing ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
@@ -388,6 +555,9 @@ export default function OpdDashboard({
                     <StatCard icon={XCircle} label="Ditolak" value={stats.rejected} tone="bg-rose-50 text-rose-600" delay={0.15} />
                 </div>
 
+                {/* Kuota magang OPD — Admin OPD hanya boleh mengubah kuota OPD-nya sendiri. */}
+                <QuotaEditor opd={opd} />
+
                 {/* Toolbar */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-wrap gap-1.5">
@@ -492,6 +662,7 @@ export default function OpdDashboard({
             </div>
 
             <DecisionDialog
+                key={active?.id}
                 app={active}
                 onClose={() => setActive(null)}
                 onApproved={(id) => applyStatus(id, 'approved')}

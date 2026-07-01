@@ -10,6 +10,10 @@ import {
     Clock,
     Briefcase,
     UserCog,
+    GraduationCap,
+    Sparkles,
+    StickyNote,
+    AlertTriangle,
     MousePointerClick,
     ChevronRight,
 } from 'lucide-react';
@@ -66,10 +70,14 @@ function makeApp(
         end_date: '2026-09-30',
         institution_name: 'Universitas Negeri Madiun',
         campus_supervisor: 'Dr. Bambang Sutrisno',
+        major: 'Teknik Informatika',
+        skills: 'React, Laravel, REST API, PostgreSQL',
+        verifikator_note: 'Berkas lengkap & sesuai. Kandidat kuat untuk tim pengembangan aplikasi.',
         opd: THIS_OPD,
-        division: 'Bidang Infrastruktur TIK',
-        field_supervisor: 'Rudi Hartono, S.T',
-        person_in_charge: 'Kepala Bidang IT',
+        // Penempatan diisi Admin OPD saat menyetujui — null saat masih antrian.
+        division: null,
+        field_supervisor: null,
+        person_in_charge: null,
         rejection_reason: null,
         forwarded_at: '2026-06-21',
         opd_decision_at: null,
@@ -82,9 +90,9 @@ function makeApp(
 }
 
 const MOCK_APPLICATIONS: InternshipApplication[] = [
-    makeApp({ id: 31, ticket_number: 'MGG-2026-0055', tujuan_magang: 'Pengembangan aplikasi web internal', institution_name: 'Universitas Negeri Madiun', division: 'Bidang Pengembangan Aplikasi', field_supervisor: 'Sari Dewi, S.Kom', person_in_charge: 'Kasubbag Aplikasi', campus_supervisor: 'Dr. Sri Wahyuni, M.Kom', forwarded_at: '2026-06-24' }),
-    makeApp({ id: 32, ticket_number: 'MGG-2026-0053', tujuan_magang: 'Desain grafis & konten media sosial', institution_name: 'SMK Negeri 1 Madiun', division: 'Bidang Layanan Informasi Publik', field_supervisor: 'Andi Wijaya', person_in_charge: 'Kabid IKP', campus_supervisor: 'Agus Priyono, S.Kom', duration_months: 6, forwarded_at: '2026-06-23' }),
-    makeApp({ id: 33, ticket_number: 'MGG-2026-0052', tujuan_magang: 'Analisis & visualisasi data layanan publik', institution_name: 'Politeknik Negeri Madiun', division: 'Bidang Statistik & Persandian', field_supervisor: 'Nur Hidayah, S.Stat', person_in_charge: 'Kasi Statistik', campus_supervisor: 'Ir. Hadi Santoso', forwarded_at: '2026-06-21' }),
+    makeApp({ id: 31, ticket_number: 'MGG-2026-0055', tujuan_magang: 'Pengembangan aplikasi web internal', institution_name: 'Universitas Negeri Madiun', major: 'Teknik Informatika', skills: 'React, Laravel, REST API, PostgreSQL', verifikator_note: 'Berkas lengkap & sesuai. Kandidat kuat untuk tim pengembangan aplikasi.', campus_supervisor: 'Dr. Sri Wahyuni, M.Kom', forwarded_at: '2026-06-24' }),
+    makeApp({ id: 32, ticket_number: 'MGG-2026-0053', tujuan_magang: 'Desain grafis & konten media sosial', institution_name: 'SMK Negeri 1 Madiun', major: 'Multimedia', skills: 'Adobe Photoshop, Illustrator, copywriting, fotografi', verifikator_note: 'Cocok untuk bidang layanan informasi publik / media sosial.', campus_supervisor: 'Agus Priyono, S.Kom', duration_months: 6, forwarded_at: '2026-06-23' }),
+    makeApp({ id: 33, ticket_number: 'MGG-2026-0052', tujuan_magang: 'Analisis & visualisasi data layanan publik', institution_name: 'Politeknik Negeri Madiun', major: 'Statistika', skills: 'Excel lanjutan, Python, visualisasi data, Power BI', verifikator_note: 'Pertimbangkan penempatan di bidang Statistik & Persandian.', campus_supervisor: 'Ir. Hadi Santoso', forwarded_at: '2026-06-21' }),
 ];
 
 /* ---- sub-komponen ---------------------------------------------------- */
@@ -96,6 +104,36 @@ function DetailRow({ label, value, icon: Icon }: { label: string; value: string;
                 {label}
             </span>
             <span className="text-right font-medium text-[#12213e]">{value}</span>
+        </div>
+    );
+}
+
+function Field({
+    label,
+    value,
+    onChange,
+    placeholder,
+    icon: Icon,
+}: {
+    label: string;
+    value: string;
+    onChange: (v: string) => void;
+    placeholder?: string;
+    icon?: typeof UserCog;
+}) {
+    return (
+        <div className="space-y-1.5">
+            <label className="flex items-center gap-1.5 text-sm font-semibold text-[#12213e]">
+                {Icon && <Icon className="size-3.5 text-slate-400" />}
+                {label}
+            </label>
+            <input
+                type="text"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                placeholder={placeholder}
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15"
+            />
         </div>
     );
 }
@@ -116,13 +154,20 @@ function DecisionPanel({
     const [processing, setProcessing] = useState(false);
     const [reason, setReason] = useState('');
 
+    // Penempatan kini diisi Admin OPD saat menyetujui (dipindah dari Verifikator).
+    const [division, setDivision] = useState('');
+    const [fieldSupervisor, setFieldSupervisor] = useState('');
+    const [personInCharge, setPersonInCharge] = useState('');
+
+    const approveValid = division.trim() && fieldSupervisor.trim() && personInCharge.trim();
+
     function submitApprove() {
-        if (processing) {
+        if (!approveValid || processing) {
             return;
         }
 
         setProcessing(true);
-        // TODO(backend): router.post(`/opd/pengajuan/${app.id}/setujui`, {})
+        // TODO(backend): router.post(`/opd/pengajuan/${app.id}/setujui`, { division, field_supervisor, person_in_charge })
         setTimeout(() => {
             setProcessing(false);
             onApproved(app.id);
@@ -151,17 +196,29 @@ function DecisionPanel({
 
             <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/60 px-4">
                 <DetailRow label="Tujuan Magang" value={app.tujuan_magang} />
+                <DetailRow label="Jurusan" value={app.major ?? '—'} />
                 <DetailRow label="Durasi" value={`${app.duration_months} bulan`} />
                 <DetailRow label="Periode" value={`${formatDate(app.start_date)} – ${formatDate(app.end_date)}`} />
                 <DetailRow label="Pembimbing Kampus" value={app.campus_supervisor} />
-                <DetailRow label="Divisi / Bidang" value={app.division ?? '—'} icon={Briefcase} />
-                <DetailRow label="Pembimbing Lapangan" value={app.field_supervisor ?? '—'} icon={UserCog} />
-                <DetailRow label="Penanggung Jawab" value={app.person_in_charge ?? '—'} icon={UserCog} />
             </div>
 
-            <p className="rounded-lg bg-[#cddcef]/30 px-3 py-2 text-xs text-slate-500">
-                Penempatan di atas ditetapkan oleh Admin Verifikator.
-            </p>
+            {/* Keahlian peserta */}
+            <div className="rounded-xl border border-[#cddcef] bg-[#e8f2fe]/40 px-4 py-3">
+                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[#106feb]">
+                    <Sparkles className="size-3.5" /> Keahlian / Keterampilan
+                </p>
+                <p className="mt-1 text-sm font-medium text-[#12213e]">{app.skills || '—'}</p>
+            </div>
+
+            {/* Catatan dari Admin Verifikator */}
+            {app.verifikator_note && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                    <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                        <StickyNote className="size-3.5" /> Catatan Admin Verifikator
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-amber-900">{app.verifikator_note}</p>
+                </div>
+            )}
 
             {/* Toggle keputusan */}
             <div className="flex gap-2 rounded-xl bg-slate-100 p-1">
@@ -197,14 +254,27 @@ function DecisionPanel({
                         transition={{ duration: 0.18 }}
                         className="space-y-4"
                     >
-                        <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                            Peserta akan diterima magang di <span className="font-semibold">{app.opd?.name ?? 'OPD Anda'}</span> dan
-                            dapat mulai pada {formatDate(app.start_date)}.
+                        <p className="text-sm text-slate-500">
+                            Tetapkan penempatan peserta di <span className="font-semibold text-[#12213e]">{app.opd?.name ?? 'OPD Anda'}</span>.
+                            Data ini dikirim ke peserta dalam email persetujuan.
                         </p>
+
+                        <Field label="Divisi / Bidang" value={division} onChange={setDivision} placeholder="cth. Bidang Infrastruktur TIK" icon={Briefcase} />
+                        <Field label="Pembimbing Lapangan" value={fieldSupervisor} onChange={setFieldSupervisor} placeholder="Nama pembimbing dari OPD" icon={UserCog} />
+                        <Field label="Penanggung Jawab" value={personInCharge} onChange={setPersonInCharge} placeholder="cth. Kepala Bidang" icon={UserCog} />
+
+                        {/* Peringatan kedatangan peserta */}
+                        <div className="flex gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
+                            <p className="text-xs leading-relaxed text-amber-800">
+                                Notif ini akan dikirim ke peserta magang. Peserta akan datang berkunjung ke kantor setelah diterima pengajuan ini.
+                            </p>
+                        </div>
+
                         <button
                             type="button"
                             onClick={submitApprove}
-                            disabled={processing}
+                            disabled={!approveValid || processing}
                             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {processing ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
@@ -354,8 +424,13 @@ export default function OpdKeputusan({
                                                 <Building2 className="size-3.5 shrink-0 text-slate-400" /> {app.institution_name}
                                             </p>
                                             <p className="flex items-center gap-1.5 text-xs text-slate-500">
-                                                <Briefcase className="size-3.5 shrink-0" /> {app.division ?? '—'}
+                                                <GraduationCap className="size-3.5 shrink-0" /> {app.tujuan_magang}
                                             </p>
+                                            {app.skills && (
+                                                <p className="line-clamp-1 flex items-center gap-1.5 rounded-lg bg-[#e8f2fe]/60 px-2 py-1 text-[11px] font-medium text-[#106feb]">
+                                                    <Sparkles className="size-3 shrink-0" /> {app.skills}
+                                                </p>
+                                            )}
                                             <div className="flex items-center gap-4 text-xs text-slate-400">
                                                 <span className="flex items-center gap-1"><Calendar className="size-3" /> {app.forwarded_at ? formatDate(app.forwarded_at) : '—'}</span>
                                                 <span className="flex items-center gap-1"><Clock className="size-3" /> {app.duration_months} bln</span>

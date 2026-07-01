@@ -51,6 +51,11 @@ class OtpLoginController extends Controller
             ]);
         }
 
+        // Single session per browser: tolak bila browser ini sudah login akun lain.
+        if (Auth::check() && Auth::id() !== $user->id) {
+            abort(403, 'Browser ini sudah login dengan akun lain. Silakan logout terlebih dahulu.');
+        }
+
         Auth::login($user, remember: true);
 
         $request->session()->regenerate();

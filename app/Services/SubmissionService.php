@@ -36,6 +36,8 @@ class SubmissionService implements PengajuanServiceContract
      *     end_date: string,
      *     institution_name: string,
      *     campus_supervisor: string,
+     *     major?: string|null,
+     *     skills?: string|null,
      * }  $validatedData
      */
     public function submit(array $validatedData, string $ipAddress): InternshipApplication
@@ -60,6 +62,8 @@ class SubmissionService implements PengajuanServiceContract
                 'end_date' => $validatedData['end_date'],
                 'institution_name' => $validatedData['institution_name'],
                 'campus_supervisor' => $validatedData['campus_supervisor'],
+                'major' => $validatedData['major'] ?? null,
+                'skills' => $validatedData['skills'] ?? null,
                 'status' => ApplicationStatus::PendingVerifikator,
             ]);
 
@@ -77,13 +81,13 @@ class SubmissionService implements PengajuanServiceContract
     }
 
     /**
-     * Admin Verifikator meneruskan pengajuan ke OPD.
+     * Admin Verifikator meneruskan pengajuan ke OPD beserta catatan khusus.
+     * Penempatan (divisi/pembimbing/penanggung jawab) TIDAK lagi diisi di sini —
+     * itu menjadi tugas Admin OPD saat menyetujui (lihat approve()).
      *
      * @param  array{
      *     opd_id: int,
-     *     division?: string|null,
-     *     field_supervisor?: string|null,
-     *     person_in_charge?: string|null,
+     *     verifikator_note?: string|null,
      * }  $data
      */
     public function forwardToOpd(InternshipApplication $app, array $data, User $actor): void
@@ -95,9 +99,7 @@ class SubmissionService implements PengajuanServiceContract
 
             $app->update([
                 'opd_id' => $data['opd_id'],
-                'division' => $data['division'] ?? null,
-                'field_supervisor' => $data['field_supervisor'] ?? null,
-                'person_in_charge' => $data['person_in_charge'] ?? null,
+                'verifikator_note' => $data['verifikator_note'] ?? null,
                 'status' => ApplicationStatus::ForwardedOpd,
                 'forwarded_by' => $actor->id,
                 'forwarded_at' => Date::now(),
@@ -108,16 +110,26 @@ class SubmissionService implements PengajuanServiceContract
     }
 
     /**
-     * Admin OPD menyetujui pengajuan dan menambah kuota terpakai OPD.
+     * Admin OPD menyetujui pengajuan, menetapkan penempatan, dan menambah
+     * kuota terpakai OPD.
+     *
+     * @param  array{
+     *     division: string,
+     *     field_supervisor: string,
+     *     person_in_charge: string,
+     * }  $data
      */
-    public function approve(InternshipApplication $app, User $actor): void
+    public function approve(InternshipApplication $app, array $data, User $actor): void
     {
         $this->guardStatus($app, ApplicationStatus::ForwardedOpd);
 
-        DB::transaction(function () use ($app, $actor): void {
+        DB::transaction(function () use ($app, $data, $actor): void {
             $from = $app->status;
 
             $app->update([
+                'division' => $data['division'],
+                'field_supervisor' => $data['field_supervisor'],
+                'person_in_charge' => $data['person_in_charge'],
                 'status' => ApplicationStatus::Approved,
                 'opd_decision_by' => $actor->id,
                 'opd_decision_at' => Date::now(),
@@ -161,6 +173,57 @@ class SubmissionService implements PengajuanServiceContract
     }
 
     /**
+     * Mulai magang: approved → ongoing. Dipicu Sistem (cron) saat tanggal mulai
+     * tiba, atau manual oleh admin. actor null = perubahan otomatis sistem.
+     */
+    public function startOngoing(InternshipApplication $app, ?User $actor = null): void
+    {
+        $this->guardStatus($app, ApplicationStatus::Approved);
+
+        DB::transaction(function () use ($app, $actor): void {
+            $from = $app->status;
+
+            $app->update(['status' => ApplicationStatus::Ongoing]);
+
+            $this->logStatus(
+                $app,
+                $from,
+                ApplicationStatus::Ongoing,
+                $actor,
+                $actor === null ? 'Mulai magang (otomatis oleh sistem)' : 'Mulai magang',
+            );
+        });
+    }
+
+    /**
+     * Selesaikan magang → completed. Bisa dieksekusi 4 pihak: Sistem (cron,
+     * actor null), Admin Verifikator, Admin OPD, atau peserta (saat unggah
+     * laporan). Diizinkan dari status ongoing atau completion_submitted.
+     */
+    public function complete(InternshipApplication $app, ?User $actor = null, ?string $note = null): void
+    {
+        if (! in_array($app->status, [ApplicationStatus::Ongoing, ApplicationStatus::CompletionSubmitted], true)) {
+            throw new DomainException(
+                "Pengajuan berstatus {$app->status->value} tidak bisa diselesaikan.",
+            );
+        }
+
+        DB::transaction(function () use ($app, $actor, $note): void {
+            $from = $app->status;
+
+            $app->update(['status' => ApplicationStatus::Completed]);
+
+            $this->logStatus(
+                $app,
+                $from,
+                ApplicationStatus::Completed,
+                $actor,
+                $note ?? ($actor === null ? 'Selesai magang (otomatis oleh sistem)' : 'Magang diselesaikan'),
+            );
+        });
+    }
+
+    /**
      * Pastikan status saat ini sesuai yang diharapkan, atau lempar exception.
      */
     private function guardStatus(InternshipApplication $app, ApplicationStatus $expected): void
@@ -179,14 +242,14 @@ class SubmissionService implements PengajuanServiceContract
         InternshipApplication $app,
         ?ApplicationStatus $from,
         ApplicationStatus $to,
-        User $actor,
+        ?User $actor,
         ?string $notes = null,
     ): void {
         ApplicationStatusLog::create([
             'application_id' => $app->id,
             'from_status' => $from?->value,
             'to_status' => $to->value,
-            'changed_by' => $actor->id,
+            'changed_by' => $actor?->id,
             'notes' => $notes,
         ]);
     }

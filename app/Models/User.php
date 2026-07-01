@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $name
  * @property string $email
+ * @property string|null $username Username login admin (mahasiswa null)
  * @property string|null $whatsapp_number
  * @property string|null $password Hash OTP aktif – diperbarui tiap sesi login
  * @property UserRole $role
@@ -26,7 +27,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read Opd|null $opd
  */
-#[Fillable(['name', 'email', 'whatsapp_number', 'password', 'role', 'opd_id', 'is_active'])]
+#[Fillable(['name', 'email', 'username', 'whatsapp_number', 'password', 'role', 'opd_id', 'is_active'])]
 #[Hidden(['password'])]
 class User extends Authenticatable
 {

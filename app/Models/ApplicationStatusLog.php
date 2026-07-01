@@ -12,7 +12,7 @@ use Illuminate\Support\Carbon;
  * @property int $application_id
  * @property string|null $from_status
  * @property string $to_status
- * @property int $changed_by
+ * @property int|null $changed_by
  * @property string|null $notes
  * @property Carbon|null $created_at
  */

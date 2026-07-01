@@ -20,6 +20,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon $end_date
  * @property string $institution_name
  * @property string $campus_supervisor
+ * @property string|null $major
+ * @property string|null $skills
  * @property ApplicationStatus $status
  * @property int|null $opd_id
  * @property string|null $division
@@ -27,6 +29,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $person_in_charge
  * @property int|null $forwarded_by
  * @property Carbon|null $forwarded_at
+ * @property string|null $verifikator_note
  * @property int|null $opd_decision_by
  * @property Carbon|null $opd_decision_at
  * @property string|null $rejection_reason
@@ -43,6 +46,8 @@ use Illuminate\Support\Carbon;
     'end_date',
     'institution_name',
     'campus_supervisor',
+    'major',
+    'skills',
     'status',
     'opd_id',
     'division',
@@ -50,6 +55,7 @@ use Illuminate\Support\Carbon;
     'person_in_charge',
     'forwarded_by',
     'forwarded_at',
+    'verifikator_note',
     'opd_decision_by',
     'opd_decision_at',
     'rejection_reason',

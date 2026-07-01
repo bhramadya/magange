@@ -31,6 +31,9 @@ export interface Opd {
     id: number;
     name: string;
     code: string;
+    // Kuota magang — tampil di card OPD halaman utama (inisiatif UX).
+    quota?: number; // total kuota
+    quota_used?: number; // sudah terpakai
 }
 
 export interface FinalReport {
@@ -51,7 +54,14 @@ export interface InternshipApplication {
     campus_supervisor: string; // pembimbing dari kampus/sekolah (diisi siswa)
     status: ApplicationStatus;
 
-    // Diisi Admin Verifikator saat forward — null sebelum diteruskan.
+    // Diisi peserta saat mendaftar (welcome #daftar).
+    major?: string | null; // jurusan (opsional)
+    skills?: string; // keahlian/keterampilan — tampil di card verifikator
+
+    // Diisi Admin Verifikator saat meneruskan — catatan untuk dibaca Admin OPD.
+    verifikator_note?: string | null;
+
+    // Diisi Admin OPD saat menyetujui — null sebelum diputuskan OPD.
     opd: Opd | null;
     division: string | null;
     field_supervisor: string | null;
