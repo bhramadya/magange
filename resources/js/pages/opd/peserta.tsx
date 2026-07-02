@@ -165,12 +165,12 @@ function matchFilter(p: Participant, filter: FilterKey): boolean {
 /* ---- detail dialog --------------------------------------------------- */
 function DetailRow({ label, value, icon: Icon }: { label: string; value: string; icon?: typeof UserCog }) {
     return (
-        <div className="flex justify-between gap-4 py-2 text-sm">
-            <span className="flex items-center gap-1.5 text-slate-500">
-                {Icon && <Icon className="size-3.5" />}
+        <div className="flex justify-between gap-4 py-2.5 text-sm">
+            <span className="flex items-center gap-1.5 font-medium text-slate-600">
+                {Icon && <Icon className="size-3.5 text-slate-500" />}
                 {label}
             </span>
-            <span className="text-right font-medium text-[#12213e]">{value}</span>
+            <span className="text-right font-semibold text-[#0a1628]">{value}</span>
         </div>
     );
 }
@@ -236,18 +236,18 @@ function DetailDialog({ participant, onClose }: { participant: Participant | nul
 
     return (
         <Dialog open={!!participant} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+            <DialogContent className="max-h-[90vh] overflow-y-auto bg-white text-[#0a1628] sm:max-w-lg">
                 {participant && app && (
                     <>
                         <DialogHeader>
-                            <DialogTitle className="flex flex-wrap items-center gap-2">
+                            <DialogTitle className="flex flex-wrap items-center gap-2 text-[#0a1628]">
                                 {participant.student_name}
                                 <StatusBadge status={app.status} />
                             </DialogTitle>
-                            <DialogDescription className="font-mono">{app.ticket_number}</DialogDescription>
+                            <DialogDescription className="font-mono text-slate-500">{app.ticket_number}</DialogDescription>
                         </DialogHeader>
 
-                        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/60 px-4">
+                        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white px-4">
                             <DetailRow label="Asal Instansi" value={app.institution_name} />
                             <DetailRow label="Tujuan Magang" value={app.tujuan_magang} />
                             <DetailRow label="Periode" value={`${formatDate(app.start_date)} – ${formatDate(app.end_date)}`} />

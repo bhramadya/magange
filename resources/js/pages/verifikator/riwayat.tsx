@@ -126,9 +126,9 @@ function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
 /* ---- detail dialog --------------------------------------------------- */
 function DetailRow({ label, value }: { label: string; value: string }) {
     return (
-        <div className="flex justify-between gap-4 py-2 text-sm">
-            <span className="text-slate-500">{label}</span>
-            <span className="text-right font-medium text-[#12213e]">{value}</span>
+        <div className="flex justify-between gap-4 py-2.5 text-sm">
+            <span className="font-medium text-slate-600">{label}</span>
+            <span className="text-right font-semibold text-[#0a1628]">{value}</span>
         </div>
     );
 }
@@ -193,19 +193,19 @@ function DetailDialog({ app, onClose }: { app: InternshipApplication | null; onC
 
     return (
         <Dialog open={!!app} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+            <DialogContent className="max-h-[90vh] overflow-y-auto bg-white text-[#0a1628] sm:max-w-lg">
                 {app && (
                     <>
                         <DialogHeader>
-                            <DialogTitle className="flex flex-wrap items-center gap-2">
+                            <DialogTitle className="flex flex-wrap items-center gap-2 text-[#0a1628]">
                                 Detail Riwayat
                                 <span className="font-mono text-sm font-normal text-slate-400">{app.ticket_number}</span>
                                 <StatusBadge status={app.status} />
                             </DialogTitle>
-                            <DialogDescription>Arsip keputusan — hanya dapat dilihat.</DialogDescription>
+                            <DialogDescription className="text-slate-500">Arsip keputusan — hanya dapat dilihat.</DialogDescription>
                         </DialogHeader>
 
-                        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/60 px-4">
+                        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white px-4">
                             <DetailRow label="Asal Instansi" value={app.institution_name} />
                             <DetailRow label="Tujuan Magang" value={app.tujuan_magang} />
                             <DetailRow label="Pembimbing Kampus" value={app.campus_supervisor} />

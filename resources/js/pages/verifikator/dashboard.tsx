@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/select';
 import MagangLayout, { verifikatorNav } from '@/Layouts/magang-layout';
 import { cn } from '@/lib/utils';
-import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
+import type { ApplicationStatus, InternshipApplication, MagangUser, Opd } from '@/types/magang';
 
 /* =========================================================================
  *  DASBOR ADMIN VERIFIKATOR — E-MAGANG (Pemkot Madiun)
@@ -98,6 +98,7 @@ const MOCK_APPLICATIONS: InternshipApplication[] = [
     makeApp({ id: 11, ticket_number: 'MGG-2026-0051', status: 'pending_verifikator', tujuan_magang: 'Pengembangan aplikasi web', institution_name: 'Universitas Negeri Madiun', campus_supervisor: 'Dr. Sri Wahyuni', created_at: '2026-06-24' }),
     makeApp({ id: 12, ticket_number: 'MGG-2026-0050', status: 'pending_verifikator', tujuan_magang: 'Desain grafis & multimedia', institution_name: 'SMK Negeri 1 Madiun', campus_supervisor: 'Agus Priyono, S.Kom', duration_months: 6, created_at: '2026-06-23' }),
     makeApp({ id: 13, ticket_number: 'MGG-2026-0048', status: 'pending_verifikator', tujuan_magang: 'Analisis data kepegawaian', institution_name: 'Politeknik Negeri Madiun', campus_supervisor: 'Ir. Hadi Santoso', created_at: '2026-06-22' }),
+    makeApp({ id: 14, ticket_number: 'MGG-2026-0047', status: 'pending_verifikator', tujuan_magang: 'Pengelolaan arsip digital perkantoran', institution_name: 'Universitas Merdeka Madiun', campus_supervisor: 'Dra. Lestari Handayani', duration_months: 4, created_at: '2026-06-21' }),
     makeApp({ id: 9, ticket_number: 'MGG-2026-0042', status: 'forwarded_opd', tujuan_magang: 'Administrasi jaringan', institution_name: 'Universitas Negeri Madiun', opd: MOCK_OPDS[0], division: 'Bidang Infrastruktur TIK', field_supervisor: 'Rudi Hartono, S.T', person_in_charge: 'Kepala Bidang IT', forwarded_at: '2026-06-21', created_at: '2026-06-19' }),
     makeApp({ id: 7, ticket_number: 'MGG-2026-0038', status: 'approved', tujuan_magang: 'Manajemen arsip digital', institution_name: 'Universitas Merdeka Madiun', opd: MOCK_OPDS[4], division: 'Bagian Umum', forwarded_at: '2026-06-18', opd_decision_at: '2026-06-20', created_at: '2026-06-16' }),
     makeApp({ id: 5, ticket_number: 'MGG-2026-0031', status: 'rejected', tujuan_magang: 'Penelitian sosial', institution_name: 'SMA Negeri 3 Madiun', rejection_reason: 'Kuota periode ini telah penuh.', created_at: '2026-06-14' }),
@@ -111,6 +112,14 @@ const FILTERS: { key: FilterKey; label: string }[] = [
     { key: 'forwarded_opd', label: 'Diteruskan' },
     { key: 'done', label: 'Selesai Diproses' },
     { key: 'all', label: 'Semua' },
+];
+
+// Kartu statistik dipetakan 1:1 dengan filter (tanpa "Semua") agar jumlah,
+// urutan, & label kartu selalu selaras dengan chip filter di bawahnya.
+const STAT_CARDS: { key: Exclude<FilterKey, 'all'>; label: string; icon: typeof Inbox; tone: string }[] = [
+    { key: 'pending_verifikator', label: 'Menunggu Verifikasi', icon: Inbox, tone: 'bg-amber-50 text-amber-600' },
+    { key: 'forwarded_opd', label: 'Diteruskan', icon: Send, tone: 'bg-blue-50 text-blue-600' },
+    { key: 'done', label: 'Selesai Diproses', icon: CheckCircle2, tone: 'bg-emerald-50 text-emerald-600' },
 ];
 
 function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
@@ -130,20 +139,26 @@ function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
 }
 
 /* ---- Kartu statistik ------------------------------------------------- */
-function StatCard({ icon: Icon, label, value, tone, delay }: { icon: typeof Inbox; label: string; value: number; tone: string; delay: number }) {
+// Kartu berfungsi sebagai pintasan filter: klik → set filter terkait aktif.
+function StatCard({ icon: Icon, label, value, tone, delay, active, onClick }: { icon: typeof Inbox; label: string; value: number; tone: string; delay: number; active: boolean; onClick: () => void }) {
     return (
-        <motion.div
+        <motion.button
+            type="button"
+            onClick={onClick}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay, ease: 'circOut' }}
-            className="rounded-2xl border border-slate-200 bg-white p-5"
+            className={cn(
+                'rounded-2xl border bg-white p-5 text-left transition',
+                active ? 'border-[#106feb] ring-2 ring-[#106feb]/20' : 'border-slate-200 hover:border-[#106feb]/40',
+            )}
         >
             <div className={cn('mb-3 flex size-10 items-center justify-center rounded-xl', tone)}>
                 <Icon className="size-5" />
             </div>
             <p className="text-2xl font-black text-[#12213e]">{value}</p>
             <p className="mt-0.5 text-sm text-slate-500">{label}</p>
-        </motion.div>
+        </motion.button>
     );
 }
 
@@ -213,15 +228,15 @@ function ReviewDialog({
 
     return (
         <Dialog open={!!app} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+            <DialogContent className="max-h-[90vh] overflow-y-auto bg-white text-[#0a1628] sm:max-w-lg">
                 {app && (
                     <>
                         <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
+                            <DialogTitle className="flex items-center gap-2 text-[#0a1628]">
                                 Tinjau Pengajuan
                                 <span className="font-mono text-sm font-normal text-slate-400">{app.ticket_number}</span>
                             </DialogTitle>
-                            <DialogDescription>Periksa detail pemohon sebelum meneruskan atau menolak.</DialogDescription>
+                            <DialogDescription className="text-slate-500">Periksa detail pemohon sebelum meneruskan atau menolak.</DialogDescription>
                         </DialogHeader>
 
                         {/* Detail pemohon */}
@@ -262,12 +277,16 @@ function ReviewDialog({
                                 <div className="space-y-1.5">
                                     <label className="text-sm font-semibold text-[#0a1628]">OPD Tujuan</label>
                                     <Select value={opdId} onValueChange={setOpdId}>
-                                        <SelectTrigger className="w-full">
+                                        <SelectTrigger className="h-11 w-full rounded-xl border-slate-300 bg-white px-4 font-medium text-[#0a1628] shadow-none data-[placeholder]:font-normal data-[placeholder]:text-slate-400 focus-visible:border-[#106feb] focus-visible:ring-4 focus-visible:ring-[#106feb]/15 dark:bg-white dark:hover:bg-white data-[size=default]:h-11">
                                             <SelectValue placeholder="Pilih OPD…" />
                                         </SelectTrigger>
-                                        <SelectContent>
+                                        <SelectContent className="border-slate-200 bg-white text-[#0a1628]">
                                             {opds.map((opd) => (
-                                                <SelectItem key={opd.id} value={String(opd.id)}>
+                                                <SelectItem
+                                                    key={opd.id}
+                                                    value={String(opd.id)}
+                                                    className="text-[#0a1628] focus:bg-[#e8f2fe] focus:text-[#0a1628]"
+                                                >
                                                     {opd.name} ({opd.code})
                                                 </SelectItem>
                                             ))}
@@ -424,13 +443,10 @@ export default function VerifikatorDashboard({
     const [query, setQuery] = useState('');
     const [active, setActive] = useState<InternshipApplication | null>(null);
 
-    const stats = useMemo(
-        () => ({
-            pending: rows.filter((a) => a.status === 'pending_verifikator').length,
-            forwarded: rows.filter((a) => a.status === 'forwarded_opd').length,
-            approved: rows.filter((a) => a.status === 'approved').length,
-            rejected: rows.filter((a) => a.status === 'rejected').length,
-        }),
+    // Hitung per kartu memakai matchFilter yang sama dengan chip filter,
+    // sehingga angka kartu = jumlah baris yang tampil saat filter itu dipilih.
+    const counts = useMemo(
+        () => Object.fromEntries(STAT_CARDS.map((c) => [c.key, rows.filter((a) => matchFilter(a, c.key)).length])) as Record<Exclude<FilterKey, 'all'>, number>,
         [rows],
     );
 
@@ -463,12 +479,20 @@ export default function VerifikatorDashboard({
                     <p className="mt-1 text-sm text-slate-500">Tinjau pengajuan magang yang masuk dan teruskan ke OPD tujuan.</p>
                 </div>
 
-                {/* Statistik */}
-                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                    <StatCard icon={Inbox} label="Menunggu Verifikasi" value={stats.pending} tone="bg-amber-50 text-amber-600" delay={0} />
-                    <StatCard icon={Send} label="Diteruskan ke OPD" value={stats.forwarded} tone="bg-blue-50 text-blue-600" delay={0.05} />
-                    <StatCard icon={CheckCircle2} label="Disetujui OPD" value={stats.approved} tone="bg-emerald-50 text-emerald-600" delay={0.1} />
-                    <StatCard icon={XCircle} label="Ditolak" value={stats.rejected} tone="bg-rose-50 text-rose-600" delay={0.15} />
+                {/* Statistik — selaras 1:1 dengan chip filter (klik untuk memfilter). */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    {STAT_CARDS.map((c, i) => (
+                        <StatCard
+                            key={c.key}
+                            icon={c.icon}
+                            label={c.label}
+                            value={counts[c.key]}
+                            tone={c.tone}
+                            delay={i * 0.05}
+                            active={filter === c.key}
+                            onClick={() => setFilter(c.key)}
+                        />
+                    ))}
                 </div>
 
                 {/* Toolbar */}

@@ -18,6 +18,7 @@ import {
     StickyNote,
     Users,
     Pencil,
+    Award,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
@@ -31,7 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import MagangLayout, { opdNav } from '@/Layouts/magang-layout';
 import { cn } from '@/lib/utils';
-import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
+import type { ApplicationStatus, InternshipApplication, MagangUser, Opd } from '@/types/magang';
 
 /* =========================================================================
  *  DASBOR ADMIN OPD — E-MAGANG (Pemkot Madiun)
@@ -91,6 +92,7 @@ function makeApp(
 const MOCK_APPLICATIONS: InternshipApplication[] = [
     makeApp({ id: 21, ticket_number: 'MGG-2026-0051', status: 'forwarded_opd', tujuan_magang: 'Pengembangan aplikasi web', institution_name: 'Universitas Negeri Madiun', division: 'Bidang Pengembangan Aplikasi', field_supervisor: 'Sari Dewi, S.Kom', person_in_charge: 'Kasubbag Aplikasi', forwarded_at: '2026-06-24' }),
     makeApp({ id: 22, ticket_number: 'MGG-2026-0050', status: 'forwarded_opd', tujuan_magang: 'Desain grafis & multimedia', institution_name: 'SMK Negeri 1 Madiun', division: 'Bidang Layanan Informasi Publik', field_supervisor: 'Andi Wijaya', person_in_charge: 'Kabid IKP', duration_months: 6, forwarded_at: '2026-06-23' }),
+    makeApp({ id: 26, ticket_number: 'MGG-2026-0052', status: 'forwarded_opd', tujuan_magang: 'Analisis & visualisasi data layanan publik', institution_name: 'Politeknik Negeri Madiun', division: 'Bidang Statistik & Persandian', field_supervisor: 'Yudha Pratama, S.Si', person_in_charge: 'Kabid Statistik', forwarded_at: '2026-06-21' }),
     makeApp({ id: 23, ticket_number: 'MGG-2026-0042', status: 'ongoing', tujuan_magang: 'Administrasi jaringan', institution_name: 'Universitas Negeri Madiun', start_date: '2026-06-01', end_date: '2026-08-31', opd_decision_at: '2026-05-28', forwarded_at: '2026-05-25' }),
     makeApp({ id: 24, ticket_number: 'MGG-2026-0039', status: 'approved', tujuan_magang: 'Manajemen media sosial', institution_name: 'Universitas Merdeka Madiun', division: 'Bidang IKP', opd_decision_at: '2026-06-22', forwarded_at: '2026-06-20' }),
     makeApp({ id: 25, ticket_number: 'MGG-2026-0033', status: 'rejected', tujuan_magang: 'Riset keamanan siber', institution_name: 'Politeknik Negeri Madiun', rejection_reason: 'Bidang tidak tersedia pada periode ini.', opd_decision_at: '2026-06-18', forwarded_at: '2026-06-15' }),
@@ -107,6 +109,16 @@ const FILTERS: { key: FilterKey; label: string }[] = [
     { key: 'completed', label: 'Selesai Magang' },
     { key: 'rejected', label: 'Ditolak' },
     { key: 'all', label: 'Semua' },
+];
+
+// Kartu statistik dipetakan 1:1 dengan filter (tanpa "Semua") agar jumlah,
+// urutan, & label kartu selalu selaras dengan chip filter di bawahnya.
+const STAT_CARDS: { key: Exclude<FilterKey, 'all'>; label: string; icon: typeof ClipboardCheck; tone: string }[] = [
+    { key: 'forwarded_opd', label: 'Perlu Keputusan', icon: ClipboardCheck, tone: 'bg-amber-50 text-amber-600' },
+    { key: 'approved', label: 'Disetujui', icon: CheckCircle2, tone: 'bg-emerald-50 text-emerald-600' },
+    { key: 'active', label: 'Sedang Magang', icon: Activity, tone: 'bg-violet-50 text-violet-600' },
+    { key: 'completed', label: 'Selesai Magang', icon: Award, tone: 'bg-sky-50 text-sky-600' },
+    { key: 'rejected', label: 'Ditolak', icon: XCircle, tone: 'bg-rose-50 text-rose-600' },
 ];
 
 function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
@@ -134,20 +146,26 @@ function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
 }
 
 /* ---- Kartu statistik ------------------------------------------------- */
-function StatCard({ icon: Icon, label, value, tone, delay }: { icon: typeof ClipboardCheck; label: string; value: number; tone: string; delay: number }) {
+// Kartu berfungsi sebagai pintasan filter: klik → set filter terkait aktif.
+function StatCard({ icon: Icon, label, value, tone, delay, active, onClick }: { icon: typeof ClipboardCheck; label: string; value: number; tone: string; delay: number; active: boolean; onClick: () => void }) {
     return (
-        <motion.div
+        <motion.button
+            type="button"
+            onClick={onClick}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay, ease: 'circOut' }}
-            className="rounded-2xl border border-slate-200 bg-white p-5"
+            className={cn(
+                'rounded-2xl border bg-white p-5 text-left transition',
+                active ? 'border-[#106feb] ring-2 ring-[#106feb]/20' : 'border-slate-200 hover:border-[#106feb]/40',
+            )}
         >
             <div className={cn('mb-3 flex size-10 items-center justify-center rounded-xl', tone)}>
                 <Icon className="size-5" />
             </div>
             <p className="text-2xl font-black text-[#12213e]">{value}</p>
             <p className="mt-0.5 text-sm text-slate-500">{label}</p>
-        </motion.div>
+        </motion.button>
     );
 }
 
@@ -348,15 +366,15 @@ function DecisionDialog({
 
     return (
         <Dialog open={!!app} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+            <DialogContent className="max-h-[90vh] overflow-y-auto bg-white text-[#0a1628] sm:max-w-lg">
                 {app && (
                     <>
                         <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
+                            <DialogTitle className="flex items-center gap-2 text-[#0a1628]">
                                 Detail Pengajuan
                                 <span className="font-mono text-sm font-normal text-slate-400">{app.ticket_number}</span>
                             </DialogTitle>
-                            <DialogDescription>Penempatan peserta ditetapkan oleh Admin OPD saat menyetujui.</DialogDescription>
+                            <DialogDescription className="text-slate-500">Penempatan peserta ditetapkan oleh Admin OPD saat menyetujui.</DialogDescription>
                         </DialogHeader>
 
                         {/* Detail pemohon */}
@@ -506,13 +524,10 @@ export default function OpdDashboard({
     const [query, setQuery] = useState('');
     const [active, setActive] = useState<InternshipApplication | null>(null);
 
-    const stats = useMemo(
-        () => ({
-            pending: rows.filter((a) => a.status === 'forwarded_opd').length,
-            approved: rows.filter((a) => ['approved', 'ongoing', 'completion_submitted', 'completed'].includes(a.status)).length,
-            ongoing: rows.filter((a) => ['ongoing', 'completion_submitted'].includes(a.status)).length,
-            rejected: rows.filter((a) => a.status === 'rejected').length,
-        }),
+    // Hitung per kartu memakai matchFilter yang sama dengan chip filter,
+    // sehingga angka kartu = jumlah baris yang tampil saat filter itu dipilih.
+    const counts = useMemo(
+        () => Object.fromEntries(STAT_CARDS.map((c) => [c.key, rows.filter((a) => matchFilter(a, c.key)).length])) as Record<Exclude<FilterKey, 'all'>, number>,
         [rows],
     );
 
@@ -547,12 +562,20 @@ export default function OpdDashboard({
                     </p>
                 </div>
 
-                {/* Statistik */}
-                <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-                    <StatCard icon={ClipboardCheck} label="Perlu Keputusan" value={stats.pending} tone="bg-amber-50 text-amber-600" delay={0} />
-                    <StatCard icon={CheckCircle2} label="Disetujui" value={stats.approved} tone="bg-emerald-50 text-emerald-600" delay={0.05} />
-                    <StatCard icon={Activity} label="Sedang Magang" value={stats.ongoing} tone="bg-violet-50 text-violet-600" delay={0.1} />
-                    <StatCard icon={XCircle} label="Ditolak" value={stats.rejected} tone="bg-rose-50 text-rose-600" delay={0.15} />
+                {/* Statistik — selaras 1:1 dengan chip filter (klik untuk memfilter). */}
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                    {STAT_CARDS.map((c, i) => (
+                        <StatCard
+                            key={c.key}
+                            icon={c.icon}
+                            label={c.label}
+                            value={counts[c.key]}
+                            tone={c.tone}
+                            delay={i * 0.05}
+                            active={filter === c.key}
+                            onClick={() => setFilter(c.key)}
+                        />
+                    ))}
                 </div>
 
                 {/* Kuota magang OPD — Admin OPD hanya boleh mengubah kuota OPD-nya sendiri. */}
