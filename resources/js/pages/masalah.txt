@@ -1,0 +1,2 @@
+1. dasbor verifikator terdapat banyak masalah contohnya pada menu dasbor filter menunggu verifikasi terapat 3 pengajuan sedangkan pada menu pengajuan masuk terdapat 4 pengajuan, dan setiap filter pada menu dasbor memiliki aksi yang sama, berbeda dengan dasbor OPD yang rapi sesuai dengan filternya.
+2. pada dasbor OPD terdapat 6 filter dan diatasnya terdapat 4 card yang berisi informasi jumlah setiap filternya, namun belum ada untuk filter "selesai magang" dan urutannya tidak sama dengan urutan filter dibawahnya.

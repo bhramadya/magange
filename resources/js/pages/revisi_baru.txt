@@ -1,0 +1,3 @@
+1. Hapus ikon notifikasi pada semua dasbor
+2. perbaiki desain pop up "Detail Pengajuan" admin OPD dan pop up "Tinjau Pengajuan" admin verifikator agar mudah dibaca, saat ini desain susah dibaca karean nama setiap kolom memiliki warna yang mirip dengan background juga warna tulisan pada kolom input sama, sehingga mempersulit bahkan membuat bingung saat admin OPD menginputkan informasi.
+3. ada masalah ketika masuk di dasbor admin OPD dan Verifikator, yaitu saat klik menu bantuan pada sidebar, dasbor otomatis berpindah ke dasbor peserta magang. 

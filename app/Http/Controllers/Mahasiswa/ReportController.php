@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Mahasiswa;
 
+use App\Contracts\PengajuanServiceContract;
+use App\Enums\ApplicationStatus;
 use App\Enums\ReportStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Mahasiswa\UploadReportRequest;
@@ -12,6 +14,8 @@ use Illuminate\Support\Facades\Date;
 
 class ReportController extends Controller
 {
+    public function __construct(private PengajuanServiceContract $submissionService) {}
+
     public function store(UploadReportRequest $request, InternshipApplication $application): RedirectResponse
     {
         $this->authorize('update', $application);
@@ -34,6 +38,17 @@ class ReportController extends Controller
             'status' => ReportStatus::Pending,
             'submitted_at' => Date::now(),
         ]);
+
+        // Aktor "Selesai" #4: peserta menekan tombol selesai saat unggah laporan.
+        // Hanya bila magang sedang berjalan / penyelesaian sudah diajukan.
+        if (
+            $validated['is_confirmed']
+            && in_array($application->status, [ApplicationStatus::Ongoing, ApplicationStatus::CompletionSubmitted], true)
+        ) {
+            $this->submissionService->complete($application, $request->user(), 'Diselesaikan oleh peserta saat unggah laporan');
+
+            return back()->with('success', 'Laporan akhir terkirim & magang ditandai selesai.');
+        }
 
         return back()->with('success', 'Laporan akhir berhasil diunggah dan menunggu review.');
     }

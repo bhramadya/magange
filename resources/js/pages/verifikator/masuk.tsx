@@ -9,6 +9,7 @@ import {
     GraduationCap,
     Calendar,
     Clock,
+    Sparkles,
     MousePointerClick,
     ChevronRight,
 } from 'lucide-react';
@@ -77,6 +78,9 @@ function makeApp(
         end_date: '2026-09-30',
         institution_name: 'Universitas Negeri Madiun',
         campus_supervisor: 'Dr. Bambang Sutrisno',
+        major: 'Teknik Informatika',
+        skills: 'React, Laravel, desain UI/UX, manajemen basis data',
+        verifikator_note: null,
         opd: null,
         division: null,
         field_supervisor: null,
@@ -93,10 +97,10 @@ function makeApp(
 }
 
 const MOCK_APPLICATIONS: InternshipApplication[] = [
-    makeApp({ id: 21, ticket_number: 'MGG-2026-0054', tujuan_magang: 'Pengembangan aplikasi web internal', institution_name: 'Universitas Negeri Madiun', campus_supervisor: 'Dr. Sri Wahyuni, M.Kom', created_at: '2026-06-24' }),
-    makeApp({ id: 22, ticket_number: 'MGG-2026-0053', tujuan_magang: 'Desain grafis & konten media sosial', institution_name: 'SMK Negeri 1 Madiun', campus_supervisor: 'Agus Priyono, S.Kom', duration_months: 6, created_at: '2026-06-23' }),
-    makeApp({ id: 23, ticket_number: 'MGG-2026-0052', tujuan_magang: 'Analisis data kepegawaian', institution_name: 'Politeknik Negeri Madiun', campus_supervisor: 'Ir. Hadi Santoso', created_at: '2026-06-21' }),
-    makeApp({ id: 24, ticket_number: 'MGG-2026-0049', tujuan_magang: 'Pengelolaan arsip digital perkantoran', institution_name: 'Universitas Merdeka Madiun', campus_supervisor: 'Dra. Lestari Handayani', duration_months: 4, created_at: '2026-06-19' }),
+    makeApp({ id: 21, ticket_number: 'MGG-2026-0054', tujuan_magang: 'Pengembangan aplikasi web internal', institution_name: 'Universitas Negeri Madiun', campus_supervisor: 'Dr. Sri Wahyuni, M.Kom', major: 'Teknik Informatika', skills: 'React, Laravel, REST API, PostgreSQL', created_at: '2026-06-24' }),
+    makeApp({ id: 22, ticket_number: 'MGG-2026-0053', tujuan_magang: 'Desain grafis & konten media sosial', institution_name: 'SMK Negeri 1 Madiun', campus_supervisor: 'Agus Priyono, S.Kom', major: 'Multimedia', skills: 'Adobe Photoshop, Illustrator, copywriting, fotografi', duration_months: 6, created_at: '2026-06-23' }),
+    makeApp({ id: 23, ticket_number: 'MGG-2026-0052', tujuan_magang: 'Analisis data kepegawaian', institution_name: 'Politeknik Negeri Madiun', campus_supervisor: 'Ir. Hadi Santoso', major: 'Statistika', skills: 'Excel lanjutan, Python, visualisasi data, Power BI', created_at: '2026-06-21' }),
+    makeApp({ id: 24, ticket_number: 'MGG-2026-0049', tujuan_magang: 'Pengelolaan arsip digital perkantoran', institution_name: 'Universitas Merdeka Madiun', campus_supervisor: 'Dra. Lestari Handayani', major: 'Administrasi Perkantoran', skills: 'Manajemen arsip, Microsoft Office, ketelitian dokumen', duration_months: 4, created_at: '2026-06-19' }),
 ];
 
 /* ---- sub-komponen ---------------------------------------------------- */
@@ -105,31 +109,6 @@ function DetailRow({ label, value }: { label: string; value: string }) {
         <div className="flex justify-between gap-4 py-2 text-sm">
             <span className="text-slate-500">{label}</span>
             <span className="text-right font-medium text-[#12213e]">{value}</span>
-        </div>
-    );
-}
-
-function Field({
-    label,
-    value,
-    onChange,
-    placeholder,
-}: {
-    label: string;
-    value: string;
-    onChange: (v: string) => void;
-    placeholder?: string;
-}) {
-    return (
-        <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-[#12213e]">{label}</label>
-            <input
-                type="text"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                placeholder={placeholder}
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
-            />
         </div>
     );
 }
@@ -152,12 +131,10 @@ function ReviewPanel({
     const [processing, setProcessing] = useState(false);
 
     const [opdId, setOpdId] = useState('');
-    const [division, setDivision] = useState('');
-    const [fieldSupervisor, setFieldSupervisor] = useState('');
-    const [personInCharge, setPersonInCharge] = useState('');
+    const [note, setNote] = useState('');
     const [reason, setReason] = useState('');
 
-    const forwardValid = opdId && division.trim() && fieldSupervisor.trim() && personInCharge.trim();
+    const forwardValid = Boolean(opdId);
 
     function submitForward() {
         if (!forwardValid || processing) {
@@ -165,7 +142,7 @@ function ReviewPanel({
         }
 
         setProcessing(true);
-        // TODO(backend): router.post(`/verifikator/pengajuan/${app.id}/teruskan`, { opd_id, division, field_supervisor, person_in_charge })
+        // TODO(backend): router.post(`/verifikator/pengajuan/${app.id}/teruskan`, { opd_id, verifikator_note: note })
         setTimeout(() => {
             setProcessing(false);
             onForwarded(app.id);
@@ -194,10 +171,19 @@ function ReviewPanel({
 
             <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/60 px-4">
                 <DetailRow label="Tujuan Magang" value={app.tujuan_magang} />
+                <DetailRow label="Jurusan" value={app.major ?? '—'} />
                 <DetailRow label="Durasi" value={`${app.duration_months} bulan`} />
                 <DetailRow label="Periode" value={`${formatDate(app.start_date)} – ${formatDate(app.end_date)}`} />
                 <DetailRow label="Pembimbing Kampus" value={app.campus_supervisor} />
                 <DetailRow label="Masuk" value={formatDate(app.created_at)} />
+            </div>
+
+            {/* Keahlian / keterampilan peserta — diisi saat mendaftar. */}
+            <div className="rounded-xl border border-[#cddcef] bg-[#e8f2fe]/40 px-4 py-3">
+                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[#106feb]">
+                    <GraduationCap className="size-3.5" /> Keahlian / Keterampilan
+                </p>
+                <p className="mt-1 text-sm font-medium text-[#12213e]">{app.skills || '—'}</p>
             </div>
 
             {/* Toggle mode */}
@@ -250,9 +236,19 @@ function ReviewPanel({
                             </Select>
                         </div>
 
-                        <Field label="Divisi / Bidang" value={division} onChange={setDivision} placeholder="cth. Bidang Infrastruktur TIK" />
-                        <Field label="Pembimbing Lapangan" value={fieldSupervisor} onChange={setFieldSupervisor} placeholder="Nama pembimbing dari OPD" />
-                        <Field label="Penanggung Jawab" value={personInCharge} onChange={setPersonInCharge} placeholder="cth. Kepala Bidang" />
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-[#12213e]">
+                                Catatan khusus dari Admin Verifikator
+                                <span className="ml-1 font-normal text-slate-400">(opsional)</span>
+                            </label>
+                            <textarea
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
+                                rows={4}
+                                placeholder="Catatan ini akan dibaca Admin OPD saat menerima pengajuan, mis. rekomendasi penempatan atau hal yang perlu diperhatikan…"
+                                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                            />
+                        </div>
 
                         <button
                             type="button"
@@ -412,6 +408,11 @@ export default function VerifikatorMasuk({
                                             <p className="flex items-center gap-1.5 text-xs text-slate-500">
                                                 <GraduationCap className="size-3.5 shrink-0" /> {app.tujuan_magang}
                                             </p>
+                                            {app.skills && (
+                                                <p className="line-clamp-1 flex items-center gap-1.5 rounded-lg bg-[#e8f2fe]/60 px-2 py-1 text-[11px] font-medium text-[#106feb]">
+                                                    <Sparkles className="size-3 shrink-0" /> {app.skills}
+                                                </p>
+                                            )}
                                             <div className="flex items-center gap-4 text-xs text-slate-400">
                                                 <span className="flex items-center gap-1"><Calendar className="size-3" /> {formatDate(app.created_at)}</span>
                                                 <span className="flex items-center gap-1"><Clock className="size-3" /> {app.duration_months} bln</span>

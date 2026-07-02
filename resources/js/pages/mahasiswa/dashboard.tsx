@@ -15,8 +15,9 @@ import {
     GraduationCap,
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { StatusBadge } from '@/components/status-badge';
 import MagangLayout from '@/layouts/magang-layout';
-import type { ApplicationStatus, InternshipApplication, MagangUser } from '@/types/magang';
+import type { InternshipApplication, MagangUser } from '@/types/magang';
 import { STATUS_META } from '@/types/magang';
 
 /* =========================================================================
@@ -67,28 +68,6 @@ const MOCK_APPLICATION: InternshipApplication = {
 
 function formatDate(iso: string): string {
     return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(iso));
-}
-
-const TONE_BADGE: Record<string, string> = {
-    amber: 'bg-amber-100 text-amber-700 ring-amber-200',
-    blue: 'bg-blue-100 text-blue-700 ring-blue-200',
-    emerald: 'bg-emerald-100 text-emerald-700 ring-emerald-200',
-    rose: 'bg-rose-100 text-rose-700 ring-rose-200',
-    violet: 'bg-violet-100 text-violet-700 ring-violet-200',
-    slate: 'bg-slate-100 text-slate-600 ring-slate-200',
-};
-
-function StatusBadge({ status }: { status: ApplicationStatus }) {
-    const meta = STATUS_META[status];
-
-    return (
-        <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${TONE_BADGE[meta.tone]}`}
-        >
-            <span className="size-1.5 rounded-full bg-current" />
-            {meta.label}
-        </span>
-    );
 }
 
 /* --------------------------------- timeline -------------------------------- */

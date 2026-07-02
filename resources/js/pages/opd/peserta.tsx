@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     Search,
     Users,
@@ -9,10 +9,12 @@ import {
     CalendarDays,
     FileCheck2,
     Award,
+    CheckCircle2,
+    Loader2,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/status-badge';
 import {
     Dialog,
     DialogContent,
@@ -22,8 +24,7 @@ import {
 } from '@/components/ui/dialog';
 import MagangLayout, { opdNav } from '@/Layouts/magang-layout';
 import { cn } from '@/lib/utils';
-import { STATUS_META } from '@/types/magang';
-import type { ApplicationStatus, InternshipApplication, MagangUser, Opd } from '@/types/magang';
+import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
 
 /* =========================================================================
  *  OPD — PESERTA AKTIF (opd/peserta)
@@ -76,25 +77,6 @@ function progressPct(app: InternshipApplication): number {
     }
 
     return Math.round(((now - start) / (end - start)) * 100);
-}
-
-const TONE_BADGE: Record<string, string> = {
-    amber: 'bg-amber-50 text-amber-700 border-amber-200',
-    blue: 'bg-blue-50 text-blue-700 border-blue-200',
-    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    rose: 'bg-rose-50 text-rose-700 border-rose-200',
-    violet: 'bg-violet-50 text-violet-700 border-violet-200',
-    slate: 'bg-slate-100 text-slate-600 border-slate-200',
-};
-
-function StatusBadge({ status }: { status: ApplicationStatus }) {
-    const meta = STATUS_META[status];
-
-    return (
-        <Badge variant="outline" className={cn('rounded-full font-medium', TONE_BADGE[meta.tone])}>
-            {meta.label}
-        </Badge>
-    );
 }
 
 /* ---- mock ------------------------------------------------------------ */
@@ -183,33 +165,89 @@ function matchFilter(p: Participant, filter: FilterKey): boolean {
 /* ---- detail dialog --------------------------------------------------- */
 function DetailRow({ label, value, icon: Icon }: { label: string; value: string; icon?: typeof UserCog }) {
     return (
-        <div className="flex justify-between gap-4 py-2 text-sm">
-            <span className="flex items-center gap-1.5 text-slate-500">
-                {Icon && <Icon className="size-3.5" />}
+        <div className="flex justify-between gap-4 py-2.5 text-sm">
+            <span className="flex items-center gap-1.5 font-medium text-slate-600">
+                {Icon && <Icon className="size-3.5 text-slate-500" />}
                 {label}
             </span>
-            <span className="text-right font-medium text-[#12213e]">{value}</span>
+            <span className="text-right font-semibold text-[#0a1628]">{value}</span>
+        </div>
+    );
+}
+
+/* ---- aksi tandai selesai (aktor "Selesai" #3: Admin OPD) ------------- */
+function CompleteAction({ endpoint, onDone }: { endpoint: string; onDone: () => void }) {
+    const [confirming, setConfirming] = useState(false);
+    const [processing, setProcessing] = useState(false);
+
+    function submit() {
+        setProcessing(true);
+        router.post(endpoint, {}, {
+            preserveScroll: true,
+            onSuccess: onDone,
+            onFinish: () => setProcessing(false),
+        });
+    }
+
+    if (!confirming) {
+        return (
+            <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            >
+                <CheckCircle2 className="size-4" /> Tandai Magang Selesai
+            </button>
+        );
+    }
+
+    return (
+        <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-sm text-emerald-800">
+                Yakin menandai magang ini <strong>selesai</strong>? Peserta akan menerima notifikasi
+                penyelesaian dan e-sertifikat diterbitkan.
+            </p>
+            <div className="flex gap-2">
+                <button
+                    type="button"
+                    onClick={submit}
+                    disabled={processing}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                >
+                    {processing ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                    Ya, selesaikan
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setConfirming(false)}
+                    disabled={processing}
+                    className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-white disabled:opacity-50"
+                >
+                    Batal
+                </button>
+            </div>
         </div>
     );
 }
 
 function DetailDialog({ participant, onClose }: { participant: Participant | null; onClose: () => void }) {
     const app = participant?.application ?? null;
+    const canComplete = app?.status === 'ongoing' || app?.status === 'completion_submitted';
 
     return (
         <Dialog open={!!participant} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+            <DialogContent className="max-h-[90vh] overflow-y-auto bg-white text-[#0a1628] sm:max-w-lg">
                 {participant && app && (
                     <>
                         <DialogHeader>
-                            <DialogTitle className="flex flex-wrap items-center gap-2">
+                            <DialogTitle className="flex flex-wrap items-center gap-2 text-[#0a1628]">
                                 {participant.student_name}
                                 <StatusBadge status={app.status} />
                             </DialogTitle>
-                            <DialogDescription className="font-mono">{app.ticket_number}</DialogDescription>
+                            <DialogDescription className="font-mono text-slate-500">{app.ticket_number}</DialogDescription>
                         </DialogHeader>
 
-                        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/60 px-4">
+                        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white px-4">
                             <DetailRow label="Asal Instansi" value={app.institution_name} />
                             <DetailRow label="Tujuan Magang" value={app.tujuan_magang} />
                             <DetailRow label="Periode" value={`${formatDate(app.start_date)} – ${formatDate(app.end_date)}`} />
@@ -240,6 +278,14 @@ function DetailDialog({ participant, onClose }: { participant: Participant | nul
                             <p className="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
                                 <Award className="size-4" /> Magang selesai — e-sertifikat telah terbit.
                             </p>
+                        )}
+
+                        {canComplete && (
+                            <CompleteAction
+                                key={app.id}
+                                endpoint={`/opd/pengajuan/${app.id}/complete`}
+                                onDone={onClose}
+                            />
                         )}
                     </>
                 )}

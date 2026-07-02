@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     Search,
     History,
@@ -8,9 +8,11 @@ import {
     GraduationCap,
     Calendar,
     ArrowRight,
+    CheckCircle2,
+    Loader2,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/status-badge';
 import {
     Dialog,
     DialogContent,
@@ -20,8 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import MagangLayout, { verifikatorNav } from '@/Layouts/magang-layout';
 import { cn } from '@/lib/utils';
-import { STATUS_META } from '@/types/magang';
-import type { ApplicationStatus, InternshipApplication, MagangUser, Opd } from '@/types/magang';
+import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
 
 /* =========================================================================
  *  VERIFIKATOR — RIWAYAT (verifikator/riwayat)
@@ -35,25 +36,6 @@ import type { ApplicationStatus, InternshipApplication, MagangUser, Opd } from '
 /* ---- util ------------------------------------------------------------ */
 function formatDate(iso: string): string {
     return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso));
-}
-
-const TONE_BADGE: Record<string, string> = {
-    amber: 'bg-amber-50 text-amber-700 border-amber-200',
-    blue: 'bg-blue-50 text-blue-700 border-blue-200',
-    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    rose: 'bg-rose-50 text-rose-700 border-rose-200',
-    violet: 'bg-violet-50 text-violet-700 border-violet-200',
-    slate: 'bg-slate-100 text-slate-600 border-slate-200',
-};
-
-function StatusBadge({ status }: { status: ApplicationStatus }) {
-    const meta = STATUS_META[status];
-
-    return (
-        <Badge variant="outline" className={cn('rounded-full font-medium', TONE_BADGE[meta.tone])}>
-            {meta.label}
-        </Badge>
-    );
 }
 
 // Keputusan yang diambil verifikator atas sebuah pengajuan.
@@ -144,29 +126,86 @@ function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
 /* ---- detail dialog --------------------------------------------------- */
 function DetailRow({ label, value }: { label: string; value: string }) {
     return (
-        <div className="flex justify-between gap-4 py-2 text-sm">
-            <span className="text-slate-500">{label}</span>
-            <span className="text-right font-medium text-[#12213e]">{value}</span>
+        <div className="flex justify-between gap-4 py-2.5 text-sm">
+            <span className="font-medium text-slate-600">{label}</span>
+            <span className="text-right font-semibold text-[#0a1628]">{value}</span>
+        </div>
+    );
+}
+
+/* ---- aksi tandai selesai (aktor "Selesai" #2: Admin Verifikator) ----- */
+function CompleteAction({ endpoint, onDone }: { endpoint: string; onDone: () => void }) {
+    const [confirming, setConfirming] = useState(false);
+    const [processing, setProcessing] = useState(false);
+
+    function submit() {
+        setProcessing(true);
+        router.post(endpoint, {}, {
+            preserveScroll: true,
+            onSuccess: onDone,
+            onFinish: () => setProcessing(false),
+        });
+    }
+
+    if (!confirming) {
+        return (
+            <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            >
+                <CheckCircle2 className="size-4" /> Tandai Magang Selesai
+            </button>
+        );
+    }
+
+    return (
+        <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-sm text-emerald-800">
+                Yakin menandai magang ini <strong>selesai</strong>? Peserta akan menerima notifikasi
+                penyelesaian dan e-sertifikat diterbitkan.
+            </p>
+            <div className="flex gap-2">
+                <button
+                    type="button"
+                    onClick={submit}
+                    disabled={processing}
+                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                >
+                    {processing ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                    Ya, selesaikan
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setConfirming(false)}
+                    disabled={processing}
+                    className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-white disabled:opacity-50"
+                >
+                    Batal
+                </button>
+            </div>
         </div>
     );
 }
 
 function DetailDialog({ app, onClose }: { app: InternshipApplication | null; onClose: () => void }) {
+    const canComplete = app?.status === 'ongoing' || app?.status === 'completion_submitted';
+
     return (
         <Dialog open={!!app} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+            <DialogContent className="max-h-[90vh] overflow-y-auto bg-white text-[#0a1628] sm:max-w-lg">
                 {app && (
                     <>
                         <DialogHeader>
-                            <DialogTitle className="flex flex-wrap items-center gap-2">
+                            <DialogTitle className="flex flex-wrap items-center gap-2 text-[#0a1628]">
                                 Detail Riwayat
                                 <span className="font-mono text-sm font-normal text-slate-400">{app.ticket_number}</span>
                                 <StatusBadge status={app.status} />
                             </DialogTitle>
-                            <DialogDescription>Arsip keputusan — hanya dapat dilihat.</DialogDescription>
+                            <DialogDescription className="text-slate-500">Arsip keputusan — hanya dapat dilihat.</DialogDescription>
                         </DialogHeader>
 
-                        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/60 px-4">
+                        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white px-4">
                             <DetailRow label="Asal Instansi" value={app.institution_name} />
                             <DetailRow label="Tujuan Magang" value={app.tujuan_magang} />
                             <DetailRow label="Pembimbing Kampus" value={app.campus_supervisor} />
@@ -183,6 +222,14 @@ function DetailDialog({ app, onClose }: { app: InternshipApplication | null; onC
                                 <p className="text-xs font-bold uppercase tracking-wide text-rose-600">Alasan Penolakan</p>
                                 <p className="mt-1 text-sm text-rose-700">{app.rejection_reason}</p>
                             </div>
+                        )}
+
+                        {canComplete && (
+                            <CompleteAction
+                                key={app.id}
+                                endpoint={`/verifikator/pengajuan/${app.id}/complete`}
+                                onDone={onClose}
+                            />
                         )}
                     </>
                 )}

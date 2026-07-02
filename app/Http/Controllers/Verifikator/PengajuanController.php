@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Verifikator;
 
 use App\Contracts\PengajuanServiceContract;
-use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Verifikator\ForwardApplicationRequest;
 use App\Http\Requests\Verifikator\RejectApplicationRequest;
@@ -76,5 +75,15 @@ class PengajuanController extends Controller
         $this->submissionService->reject($application, $request->user(), $validated['rejection_reason']);
 
         return back()->with('success', 'Pengajuan berhasil ditolak.');
+    }
+
+    /**
+     * Tandai magang selesai (salah satu dari 4 aktor: Admin Verifikator).
+     */
+    public function complete(Request $request, InternshipApplication $application): RedirectResponse
+    {
+        $this->submissionService->complete($application, $request->user(), 'Diselesaikan oleh Admin Verifikator');
+
+        return back()->with('success', 'Magang ditandai selesai.');
     }
 }

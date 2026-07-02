@@ -69,16 +69,16 @@ test('forwardToOpd moves a pending application to the OPD', function () {
 
     $this->service->forwardToOpd($app, [
         'opd_id' => $opd->id,
-        'division' => 'IT',
-        'field_supervisor' => 'Pak Joko',
-        'person_in_charge' => 'Bu Sari',
+        'verifikator_note' => 'Kandidat kuat, berkas lengkap.',
     ], $verifikator);
 
     $app->refresh();
 
     expect($app->status)->toBe(ApplicationStatus::ForwardedOpd)
         ->and($app->opd_id)->toBe($opd->id)
-        ->and($app->division)->toBe('IT')
+        ->and($app->verifikator_note)->toBe('Kandidat kuat, berkas lengkap.')
+        // Penempatan belum diisi di tahap ini — itu tugas Admin OPD saat approve.
+        ->and($app->division)->toBeNull()
         ->and($app->forwarded_by)->toBe($verifikator->id)
         ->and($app->forwarded_at)->not->toBeNull();
 });
@@ -101,11 +101,18 @@ test('approve accepts a forwarded application and increments the OPD quota', fun
     $app = $this->service->submit(pengajuanPayload(), '127.0.0.1');
     $this->service->forwardToOpd($app, ['opd_id' => $opd->id], $verifikator);
 
-    $this->service->approve($app, $opdAdmin);
+    $this->service->approve($app, [
+        'division' => 'Bidang Aplikasi',
+        'field_supervisor' => 'Pak Joko',
+        'person_in_charge' => 'Bu Sari',
+    ], $opdAdmin);
 
     $app->refresh();
 
     expect($app->status)->toBe(ApplicationStatus::Approved)
+        ->and($app->division)->toBe('Bidang Aplikasi')
+        ->and($app->field_supervisor)->toBe('Pak Joko')
+        ->and($app->person_in_charge)->toBe('Bu Sari')
         ->and($app->opd_decision_by)->toBe($opdAdmin->id)
         ->and($app->opd_decision_at)->not->toBeNull()
         ->and($opd->refresh()->quota_used)->toBe(1);
@@ -118,7 +125,11 @@ test('approve rejects an application not forwarded to the OPD', function () {
     $opdAdmin = User::factory()->create();
     $app = $this->service->submit(pengajuanPayload(), '127.0.0.1');
 
-    $this->service->approve($app, $opdAdmin);
+    $this->service->approve($app, [
+        'division' => 'Bidang Aplikasi',
+        'field_supervisor' => 'Pak Joko',
+        'person_in_charge' => 'Bu Sari',
+    ], $opdAdmin);
 })->throws(DomainException::class);
 
 test('reject marks a pending application rejected with a reason', function () {
