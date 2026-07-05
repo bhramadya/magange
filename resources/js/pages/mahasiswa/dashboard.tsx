@@ -17,7 +17,7 @@ import {
 import { motion } from 'motion/react';
 import { StatusBadge } from '@/components/status-badge';
 import MagangLayout from '@/layouts/magang-layout';
-import type { InternshipApplication, MagangUser } from '@/types/magang';
+import type { ApplicationStatus, InternshipApplication, MagangUser } from '@/types/magang';
 import { STATUS_META } from '@/types/magang';
 
 /* =========================================================================

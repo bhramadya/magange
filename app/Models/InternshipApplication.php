@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Enums\ApplicationStatus;
+use Database\Factories\InternshipApplicationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -63,6 +65,9 @@ use Illuminate\Support\Carbon;
 ])]
 class InternshipApplication extends Model
 {
+    /** @use HasFactory<InternshipApplicationFactory> */
+    use HasFactory;
+
     /**
      * @return array<string, string>
      */
@@ -155,5 +160,16 @@ class InternshipApplication extends Model
     public function survey(): HasOne
     {
         return $this->hasOne(SatisfactionSurvey::class, 'application_id');
+    }
+
+    /**
+     * Sertifikat magang (1:1). Tersedia setelah verifikator mengunggah &
+     * membuka kunci unduhan (is_download_locked = false).
+     *
+     * @return HasOne<Certificate, $this>
+     */
+    public function certificate(): HasOne
+    {
+        return $this->hasOne(Certificate::class, 'application_id');
     }
 }

@@ -20,7 +20,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import MagangLayout, { verifikatorNav } from '@/Layouts/magang-layout';
+import MagangLayout, { verifikatorNav } from '@/layouts/magang-layout';
 import { cn } from '@/lib/utils';
 import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
 

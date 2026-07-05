@@ -13,6 +13,7 @@ import {
     ArrowRight,
     Users,
     Pencil,
+    Sparkles,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
@@ -31,7 +32,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import MagangLayout, { verifikatorNav } from '@/Layouts/magang-layout';
+import MagangLayout, { verifikatorNav } from '@/layouts/magang-layout';
 import { cn } from '@/lib/utils';
 import type { ApplicationStatus, InternshipApplication, MagangUser, Opd } from '@/types/magang';
 
@@ -544,7 +545,14 @@ export default function VerifikatorDashboard({
                                 <tr key={app.id} className="transition hover:bg-slate-50/60">
                                     <td className="px-5 py-3.5 font-mono text-xs font-semibold text-[#12213e]">{app.ticket_number}</td>
                                     <td className="px-5 py-3.5">{app.institution_name}</td>
-                                    <td className="px-5 py-3.5 text-slate-600">{app.tujuan_magang}</td>
+                                    <td className="px-5 py-3.5 text-slate-600">
+                                        {app.tujuan_magang}
+                                        {app.skills && (
+                                            <span className="mt-1 flex items-center gap-1 text-xs font-medium text-[#106feb]">
+                                                <Sparkles className="size-3 shrink-0" /> {app.skills}
+                                            </span>
+                                        )}
+                                    </td>
                                     <td className="px-5 py-3.5 text-slate-500">{formatDate(app.created_at)}</td>
                                     <td className="px-5 py-3.5"><StatusBadge status={app.status} /></td>
                                     <td className="px-5 py-3.5 text-right">
@@ -581,6 +589,11 @@ export default function VerifikatorDashboard({
                                 <p className="flex items-center gap-1.5 text-xs text-slate-500">
                                     <GraduationCap className="size-3.5" /> {app.tujuan_magang}
                                 </p>
+                                {app.skills && (
+                                    <p className="flex items-center gap-1.5 text-xs font-medium text-[#106feb]">
+                                        <Sparkles className="size-3.5 shrink-0" /> {app.skills}
+                                    </p>
+                                )}
                                 <div className="flex items-center gap-4 text-xs text-slate-400">
                                     <span className="flex items-center gap-1"><Calendar className="size-3" /> {formatDate(app.created_at)}</span>
                                     <span className="flex items-center gap-1"><Clock className="size-3" /> {app.duration_months} bln</span>

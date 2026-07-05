@@ -4,11 +4,15 @@ namespace App\Providers;
 
 use App\Contracts\OtpServiceContract;
 use App\Contracts\PengajuanServiceContract;
+use App\Models\InternshipApplication;
+use App\Policies\InternshipApplicationPolicy;
 use App\Services\OtpService;
 use App\Services\SubmissionService;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 
@@ -37,9 +41,9 @@ class AppServiceProvider extends ServiceProvider
      */
     protected function registerPolicies(): void
     {
-        \Illuminate\Support\Facades\Gate::policy(
-            \App\Models\InternshipApplication::class,
-            \App\Policies\InternshipApplicationPolicy::class,
+        Gate::policy(
+            InternshipApplication::class,
+            InternshipApplicationPolicy::class,
         );
     }
 
@@ -49,6 +53,11 @@ class AppServiceProvider extends ServiceProvider
     protected function configureDefaults(): void
     {
         Date::use(CarbonImmutable::class);
+
+        // Props Inertia memakai API Resource langsung sebagai array (mis.
+        // `applications: InternshipApplication[]`), jadi buang bungkus `data`
+        // agar bentuknya persis tipe di resources/js/types/magang.ts.
+        JsonResource::withoutWrapping();
 
         DB::prohibitDestructiveCommands(
             app()->isProduction(),

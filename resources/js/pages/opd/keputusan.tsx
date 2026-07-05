@@ -20,7 +20,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import MagangLayout, { opdNav } from '@/Layouts/magang-layout';
+import MagangLayout, { opdNav } from '@/layouts/magang-layout';
 import { cn } from '@/lib/utils';
 import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
 
@@ -132,7 +132,7 @@ function Field({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15"
+                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-[#0a1628] placeholder:text-slate-400 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15"
             />
         </div>
     );
@@ -297,7 +297,7 @@ function DecisionPanel({
                                 onChange={(e) => setReason(e.target.value)}
                                 rows={4}
                                 placeholder="Jelaskan alasan penolakan agar pemohon memahaminya…"
-                                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-rose-400 focus:ring-4 focus:ring-rose-500/15"
+                                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#0a1628] placeholder:text-slate-400 outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15"
                             />
                         </div>
                         <button

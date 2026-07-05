@@ -23,7 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import MagangLayout, { verifikatorNav } from '@/Layouts/magang-layout';
+import MagangLayout, { verifikatorNav } from '@/layouts/magang-layout';
 import { cn } from '@/lib/utils';
 import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
 
@@ -246,7 +246,7 @@ function ReviewPanel({
                                 onChange={(e) => setNote(e.target.value)}
                                 rows={4}
                                 placeholder="Catatan ini akan dibaca Admin OPD saat menerima pengajuan, mis. rekomendasi penempatan atau hal yang perlu diperhatikan…"
-                                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#0a1628] placeholder:text-slate-400 outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                             />
                         </div>
 
@@ -276,7 +276,7 @@ function ReviewPanel({
                                 onChange={(e) => setReason(e.target.value)}
                                 rows={4}
                                 placeholder="Jelaskan alasan penolakan agar pemohon memahaminya…"
-                                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-rose-400 focus:ring-4 focus:ring-rose-500/15"
+                                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#0a1628] placeholder:text-slate-400 outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15"
                             />
                         </div>
 

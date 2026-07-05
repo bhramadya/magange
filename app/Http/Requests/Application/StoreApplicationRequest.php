@@ -26,6 +26,8 @@ class StoreApplicationRequest extends FormRequest
             'end_date' => ['required', 'date', 'after:start_date'],
             'institution_name' => ['required', 'string', 'max:255'],
             'campus_supervisor' => ['required', 'string', 'max:255'],
+            'major' => ['nullable', 'string', 'max:255'],
+            'skills' => ['nullable', 'string', 'max:2000'],
         ];
     }
 

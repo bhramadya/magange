@@ -2,9 +2,13 @@
 
 use App\Http\Controllers\Auth\AdminLoginController;
 use App\Http\Controllers\Auth\OtpLoginController;
+use App\Http\Controllers\Mahasiswa\ApplicationController;
+use App\Http\Controllers\Mahasiswa\DashboardController as MahasiswaDashboardController;
 use App\Http\Controllers\Mahasiswa\ReportController;
+use App\Http\Controllers\Opd\DashboardController as OpdDashboardController;
 use App\Http\Controllers\Opd\SubmissionController as OpdSubmissionController;
 use App\Http\Controllers\OpdQuotaController;
+use App\Http\Controllers\Verifikator\DashboardController as VerifikatorDashboardController;
 use App\Http\Controllers\Verifikator\PengajuanController;
 use Illuminate\Support\Facades\Route;
 
@@ -27,26 +31,37 @@ Route::inertia('/', 'welcome')->name('home');
 Route::inertia('login-otp', 'auth/otp-login')->name('login.otp');  // Login OTP (/login asli dikelola Fortify)
 Route::post('otp/send', [OtpLoginController::class, 'sendOtp'])->name('otp.send');
 Route::post('otp/verify', [OtpLoginController::class, 'verifyOtp'])->name('otp.verify');
-Route::inertia('lacak', 'lacak')->name('lacak');                   // Lacak status publik (pendaftaran lewat form di welcome #daftar)
+Route::get('lacak', [ApplicationController::class, 'track'])->name('lacak'); // Lacak status publik (via ?email=)
+
+// Pengajuan publik (tanpa login): kirim pengajuan dari form welcome #daftar.
+// Catatan: halaman form khusus `pengajuan/baru` (mahasiswa/application/create)
+// belum dibuat — form hidup ada di welcome.tsx, jadi rutenya belum dipasang.
+Route::post('pengajuan', [ApplicationController::class, 'store'])->name('pengajuan.store');
 
 // --- Login Admin (Username + Password, terpisah dari OTP mahasiswa) ---
 Route::get('admin/login', [AdminLoginController::class, 'showForm'])->name('admin.login');
 Route::post('admin/login', [AdminLoginController::class, 'authenticate'])->name('admin.login.attempt');
 
-// --- Dasbor Mahasiswa ---
-Route::inertia('dashboard', 'mahasiswa/dashboard')->name('dashboard'); // Dasbor mahasiswa
-Route::inertia('pengajuan', 'mahasiswa/pengajuan');                // Pengajuan Saya
-Route::inertia('penyelesaian', 'mahasiswa/penyelesaian');          // Penyelesaian & sertifikat
+// --- Dasbor Mahasiswa (tersambung: auth + role) ---
+Route::middleware(['auth', 'role:mahasiswa'])->group(function () {
+    Route::get('dashboard', [MahasiswaDashboardController::class, 'index'])->name('dashboard');
+    Route::get('pengajuan', [MahasiswaDashboardController::class, 'pengajuan'])->name('mahasiswa.pengajuan');
+    Route::get('penyelesaian', [MahasiswaDashboardController::class, 'penyelesaian'])->name('mahasiswa.penyelesaian');
+});
 
-// --- Dasbor Verifikator ---
-Route::inertia('verifikator', 'verifikator/dashboard');            // Dasbor verifikator
-Route::inertia('verifikator/masuk', 'verifikator/masuk');          // Pengajuan masuk
-Route::inertia('verifikator/riwayat', 'verifikator/riwayat');      // Riwayat keputusan
+// --- Dasbor Verifikator (tersambung: auth + role) ---
+Route::middleware(['auth', 'role:admin_verifikator'])->group(function () {
+    Route::get('verifikator', [VerifikatorDashboardController::class, 'index'])->name('verifikator.dashboard');
+    Route::get('verifikator/masuk', [VerifikatorDashboardController::class, 'masuk'])->name('verifikator.masuk');
+    Route::get('verifikator/riwayat', [VerifikatorDashboardController::class, 'riwayat'])->name('verifikator.riwayat');
+});
 
-// --- Dasbor OPD ---
-Route::inertia('opd', 'opd/dashboard');                            // Dasbor OPD
-Route::inertia('opd/keputusan', 'opd/keputusan');                  // Perlu keputusan
-Route::inertia('opd/peserta', 'opd/peserta');                      // Peserta aktif
+// --- Dasbor OPD (tersambung: auth + role) ---
+Route::middleware(['auth', 'role:admin_opd'])->group(function () {
+    Route::get('opd', [OpdDashboardController::class, 'index'])->name('opd.dashboard');
+    Route::get('opd/keputusan', [OpdDashboardController::class, 'keputusan'])->name('opd.keputusan');
+    Route::get('opd/peserta', [OpdDashboardController::class, 'peserta'])->name('opd.peserta');
+});
 
 // --- Bersama semua role ---
 Route::inertia('bantuan', 'bantuan')->name('bantuan');             // Pusat Bantuan

@@ -30,7 +30,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import MagangLayout, { opdNav } from '@/Layouts/magang-layout';
+import MagangLayout, { opdNav } from '@/layouts/magang-layout';
 import { cn } from '@/lib/utils';
 import type { ApplicationStatus, InternshipApplication, MagangUser, Opd } from '@/types/magang';
 
