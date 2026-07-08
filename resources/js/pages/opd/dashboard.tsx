@@ -32,7 +32,12 @@ import {
 } from '@/components/ui/dialog';
 import MagangLayout, { opdNav } from '@/layouts/magang-layout';
 import { cn } from '@/lib/utils';
-import type { ApplicationStatus, InternshipApplication, MagangUser, Opd } from '@/types/magang';
+import type {
+    ApplicationStatus,
+    InternshipApplication,
+    MagangUser,
+    Opd,
+} from '@/types/magang';
 
 /* =========================================================================
  *  DASBOR ADMIN OPD — E-MAGANG (Pemkot Madiun)
@@ -49,11 +54,21 @@ import type { ApplicationStatus, InternshipApplication, MagangUser, Opd } from '
 
 /* ---- Util tanggal ---------------------------------------------------- */
 function formatDate(iso: string): string {
-    return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso));
+    return new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    }).format(new Date(iso));
 }
 
 /* ---- Data tiruan ----------------------------------------------------- */
-const THIS_OPD: Opd = { id: 1, name: 'Dinas Komunikasi dan Informatika', code: 'DISKOMINFO', quota: 10, quota_used: 4 };
+const THIS_OPD: Opd = {
+    id: 1,
+    name: 'Dinas Komunikasi dan Informatika',
+    code: 'DISKOMINFO',
+    quota: 10,
+    quota_used: 4,
+};
 
 const MOCK_USER: MagangUser = {
     id: 2,
@@ -64,7 +79,8 @@ const MOCK_USER: MagangUser = {
 };
 
 function makeApp(
-    partial: Partial<InternshipApplication> & Pick<InternshipApplication, 'id' | 'ticket_number' | 'status'>,
+    partial: Partial<InternshipApplication> &
+        Pick<InternshipApplication, 'id' | 'ticket_number' | 'status'>,
 ): InternshipApplication {
     return {
         applicant_name: 'Peserta Magang',
@@ -96,17 +112,82 @@ function makeApp(
 }
 
 const MOCK_APPLICATIONS: InternshipApplication[] = [
-    makeApp({ id: 21, ticket_number: 'MGG-2026-0051', status: 'forwarded_opd', tujuan_magang: 'Pengembangan aplikasi web', institution_name: 'Universitas Negeri Madiun', division: 'Bidang Pengembangan Aplikasi', field_supervisor: 'Sari Dewi, S.Kom', person_in_charge: 'Kasubbag Aplikasi', forwarded_at: '2026-06-24' }),
-    makeApp({ id: 22, ticket_number: 'MGG-2026-0050', status: 'forwarded_opd', tujuan_magang: 'Desain grafis & multimedia', institution_name: 'SMK Negeri 1 Madiun', division: 'Bidang Layanan Informasi Publik', field_supervisor: 'Andi Wijaya', person_in_charge: 'Kabid IKP', duration_months: 6, forwarded_at: '2026-06-23' }),
-    makeApp({ id: 26, ticket_number: 'MGG-2026-0052', status: 'forwarded_opd', tujuan_magang: 'Analisis & visualisasi data layanan publik', institution_name: 'Politeknik Negeri Madiun', division: 'Bidang Statistik & Persandian', field_supervisor: 'Yudha Pratama, S.Si', person_in_charge: 'Kabid Statistik', forwarded_at: '2026-06-21' }),
-    makeApp({ id: 23, ticket_number: 'MGG-2026-0042', status: 'ongoing', tujuan_magang: 'Administrasi jaringan', institution_name: 'Universitas Negeri Madiun', start_date: '2026-06-01', end_date: '2026-08-31', opd_decision_at: '2026-05-28', forwarded_at: '2026-05-25' }),
-    makeApp({ id: 24, ticket_number: 'MGG-2026-0039', status: 'approved', tujuan_magang: 'Manajemen media sosial', institution_name: 'Universitas Merdeka Madiun', division: 'Bidang IKP', opd_decision_at: '2026-06-22', forwarded_at: '2026-06-20' }),
-    makeApp({ id: 25, ticket_number: 'MGG-2026-0033', status: 'rejected', tujuan_magang: 'Riset keamanan siber', institution_name: 'Politeknik Negeri Madiun', rejection_reason: 'Bidang tidak tersedia pada periode ini.', opd_decision_at: '2026-06-18', forwarded_at: '2026-06-15' }),
+    makeApp({
+        id: 21,
+        ticket_number: 'MGG-2026-0051',
+        status: 'forwarded_opd',
+        tujuan_magang: 'Pengembangan aplikasi web',
+        institution_name: 'Universitas Negeri Madiun',
+        division: 'Bidang Pengembangan Aplikasi',
+        field_supervisor: 'Sari Dewi, S.Kom',
+        person_in_charge: 'Kasubbag Aplikasi',
+        forwarded_at: '2026-06-24',
+    }),
+    makeApp({
+        id: 22,
+        ticket_number: 'MGG-2026-0050',
+        status: 'forwarded_opd',
+        tujuan_magang: 'Desain grafis & multimedia',
+        institution_name: 'SMK Negeri 1 Madiun',
+        division: 'Bidang Layanan Informasi Publik',
+        field_supervisor: 'Andi Wijaya',
+        person_in_charge: 'Kabid IKP',
+        duration_months: 6,
+        forwarded_at: '2026-06-23',
+    }),
+    makeApp({
+        id: 26,
+        ticket_number: 'MGG-2026-0052',
+        status: 'forwarded_opd',
+        tujuan_magang: 'Analisis & visualisasi data layanan publik',
+        institution_name: 'Politeknik Negeri Madiun',
+        division: 'Bidang Statistik & Persandian',
+        field_supervisor: 'Yudha Pratama, S.Si',
+        person_in_charge: 'Kabid Statistik',
+        forwarded_at: '2026-06-21',
+    }),
+    makeApp({
+        id: 23,
+        ticket_number: 'MGG-2026-0042',
+        status: 'ongoing',
+        tujuan_magang: 'Administrasi jaringan',
+        institution_name: 'Universitas Negeri Madiun',
+        start_date: '2026-06-01',
+        end_date: '2026-08-31',
+        opd_decision_at: '2026-05-28',
+        forwarded_at: '2026-05-25',
+    }),
+    makeApp({
+        id: 24,
+        ticket_number: 'MGG-2026-0039',
+        status: 'approved',
+        tujuan_magang: 'Manajemen media sosial',
+        institution_name: 'Universitas Merdeka Madiun',
+        division: 'Bidang IKP',
+        opd_decision_at: '2026-06-22',
+        forwarded_at: '2026-06-20',
+    }),
+    makeApp({
+        id: 25,
+        ticket_number: 'MGG-2026-0033',
+        status: 'rejected',
+        tujuan_magang: 'Riset keamanan siber',
+        institution_name: 'Politeknik Negeri Madiun',
+        rejection_reason: 'Bidang tidak tersedia pada periode ini.',
+        opd_decision_at: '2026-06-18',
+        forwarded_at: '2026-06-15',
+    }),
 ];
 
 /* ---- Filter ---------------------------------------------------------- */
 // Urutan kiri→kanan: Perlu Keputusan, Disetujui, Sedang Magang, Selesai, Ditolak, Semua.
-type FilterKey = 'forwarded_opd' | 'approved' | 'active' | 'completed' | 'rejected' | 'all';
+type FilterKey =
+    | 'forwarded_opd'
+    | 'approved'
+    | 'active'
+    | 'completed'
+    | 'rejected'
+    | 'all';
 
 const FILTERS: { key: FilterKey; label: string }[] = [
     { key: 'forwarded_opd', label: 'Perlu Keputusan' },
@@ -119,12 +200,42 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 
 // Kartu statistik dipetakan 1:1 dengan filter (tanpa "Semua") agar jumlah,
 // urutan, & label kartu selalu selaras dengan chip filter di bawahnya.
-const STAT_CARDS: { key: Exclude<FilterKey, 'all'>; label: string; icon: typeof ClipboardCheck; tone: string }[] = [
-    { key: 'forwarded_opd', label: 'Perlu Keputusan', icon: ClipboardCheck, tone: 'bg-amber-50 text-amber-600' },
-    { key: 'approved', label: 'Disetujui', icon: CheckCircle2, tone: 'bg-emerald-50 text-emerald-600' },
-    { key: 'active', label: 'Sedang Magang', icon: Activity, tone: 'bg-violet-50 text-violet-600' },
-    { key: 'completed', label: 'Selesai Magang', icon: Award, tone: 'bg-sky-50 text-sky-600' },
-    { key: 'rejected', label: 'Ditolak', icon: XCircle, tone: 'bg-rose-50 text-rose-600' },
+const STAT_CARDS: {
+    key: Exclude<FilterKey, 'all'>;
+    label: string;
+    icon: typeof ClipboardCheck;
+    tone: string;
+}[] = [
+    {
+        key: 'forwarded_opd',
+        label: 'Perlu Keputusan',
+        icon: ClipboardCheck,
+        tone: 'bg-amber-50 text-amber-600',
+    },
+    {
+        key: 'approved',
+        label: 'Disetujui',
+        icon: CheckCircle2,
+        tone: 'bg-emerald-50 text-emerald-600',
+    },
+    {
+        key: 'active',
+        label: 'Sedang Magang',
+        icon: Activity,
+        tone: 'bg-violet-50 text-violet-600',
+    },
+    {
+        key: 'completed',
+        label: 'Selesai Magang',
+        icon: Award,
+        tone: 'bg-sky-50 text-sky-600',
+    },
+    {
+        key: 'rejected',
+        label: 'Ditolak',
+        icon: XCircle,
+        tone: 'bg-rose-50 text-rose-600',
+    },
 ];
 
 function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
@@ -153,7 +264,23 @@ function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
 
 /* ---- Kartu statistik ------------------------------------------------- */
 // Kartu berfungsi sebagai pintasan filter: klik → set filter terkait aktif.
-function StatCard({ icon: Icon, label, value, tone, delay, active, onClick }: { icon: typeof ClipboardCheck; label: string; value: number; tone: string; delay: number; active: boolean; onClick: () => void }) {
+function StatCard({
+    icon: Icon,
+    label,
+    value,
+    tone,
+    delay,
+    active,
+    onClick,
+}: {
+    icon: typeof ClipboardCheck;
+    label: string;
+    value: number;
+    tone: string;
+    delay: number;
+    active: boolean;
+    onClick: () => void;
+}) {
     return (
         <motion.button
             type="button"
@@ -163,10 +290,17 @@ function StatCard({ icon: Icon, label, value, tone, delay, active, onClick }: { 
             transition={{ duration: 0.4, delay, ease: 'circOut' }}
             className={cn(
                 'rounded-2xl border bg-white p-5 text-left transition',
-                active ? 'border-[#106feb] ring-2 ring-[#106feb]/20' : 'border-slate-200 hover:border-[#106feb]/40',
+                active
+                    ? 'border-[#106feb] ring-2 ring-[#106feb]/20'
+                    : 'border-slate-200 hover:border-[#106feb]/40',
             )}
         >
-            <div className={cn('mb-3 flex size-10 items-center justify-center rounded-xl', tone)}>
+            <div
+                className={cn(
+                    'mb-3 flex size-10 items-center justify-center rounded-xl',
+                    tone,
+                )}
+            >
                 <Icon className="size-5" />
             </div>
             <p className="text-2xl font-black text-[#12213e]">{value}</p>
@@ -209,10 +343,15 @@ function QuotaEditor({ opd }: { opd: Opd }) {
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <p className="flex items-center gap-1.5 text-sm font-bold text-[#12213e]">
-                        <Users className="size-4 text-[#106feb]" /> Kuota Magang OPD
+                        <Users className="size-4 text-[#106feb]" /> Kuota Magang
+                        OPD
                     </p>
                     <p className="mt-0.5 text-xs text-slate-500">
-                        Terpakai {used} dari {total} kursi — sisa <span className="font-semibold text-emerald-600">{sisa}</span>.
+                        Terpakai {used} dari {total} kursi — sisa{' '}
+                        <span className="font-semibold text-emerald-600">
+                            {sisa}
+                        </span>
+                        .
                     </p>
                 </div>
                 {!editing && (
@@ -231,23 +370,31 @@ function QuotaEditor({ opd }: { opd: Opd }) {
 
             {/* Bar keterisian */}
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                <div className="h-full rounded-full bg-[#106feb] transition-all" style={{ width: `${pct}%` }} />
+                <div
+                    className="h-full rounded-full bg-[#106feb] transition-all"
+                    style={{ width: `${pct}%` }}
+                />
             </div>
 
             {editing && (
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
                     <div className="flex-1 space-y-1.5">
-                        <label className="text-xs font-semibold text-[#12213e]">Total kuota baru</label>
+                        <label className="text-xs font-semibold text-[#12213e]">
+                            Total kuota baru
+                        </label>
                         <input
                             type="number"
                             min={used}
                             max={1000}
                             value={value}
                             onChange={(e) => setValue(e.target.value)}
-                            className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                            className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                         />
                         {!valid && (
-                            <p className="text-xs text-rose-500">Kuota minimal {used} (yang sudah terpakai) dan maksimal 1000.</p>
+                            <p className="text-xs text-rose-500">
+                                Kuota minimal {used} (yang sudah terpakai) dan
+                                maksimal 1000.
+                            </p>
                         )}
                     </div>
                     <div className="flex gap-2">
@@ -257,7 +404,11 @@ function QuotaEditor({ opd }: { opd: Opd }) {
                             disabled={!valid || processing}
                             className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#106feb] px-4 text-sm font-bold text-white transition hover:bg-[#0b4fb0] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            {processing ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                            {processing ? (
+                                <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                                <CheckCircle2 className="size-4" />
+                            )}
                             Simpan
                         </button>
                         <button
@@ -277,14 +428,24 @@ function QuotaEditor({ opd }: { opd: Opd }) {
 /* ---- Dialog keputusan ------------------------------------------------ */
 type DecisionMode = 'approve' | 'reject';
 
-function DetailRow({ label, value, icon: Icon }: { label: string; value: string; icon?: typeof UserCog }) {
+function DetailRow({
+    label,
+    value,
+    icon: Icon,
+}: {
+    label: string;
+    value: string;
+    icon?: typeof UserCog;
+}) {
     return (
         <div className="flex justify-between gap-4 py-2.5 text-sm">
             <span className="flex items-center gap-1.5 font-medium text-slate-600">
                 {Icon && <Icon className="size-3.5 text-slate-500" />}
                 {label}
             </span>
-            <span className="text-right font-semibold text-[#0a1628]">{value}</span>
+            <span className="text-right font-semibold text-[#0a1628]">
+                {value}
+            </span>
         </div>
     );
 }
@@ -313,7 +474,7 @@ function Field({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-[#0a1628] outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15"
+                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-[#0a1628] transition outline-none placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15"
             />
         </div>
     );
@@ -342,14 +503,16 @@ function DecisionDialog({
     const [fieldSupervisor, setFieldSupervisor] = useState('');
     const [personInCharge, setPersonInCharge] = useState('');
 
-    const approveValid = division.trim() && fieldSupervisor.trim() && personInCharge.trim();
+    const approveValid =
+        division.trim() && fieldSupervisor.trim() && personInCharge.trim();
 
     // Hanya pengajuan `forwarded_opd` yang bisa diputuskan.
     const decidable = app?.status === 'forwarded_opd';
 
     // Aktor "Selesai" #3 (Admin OPD): boleh menandai selesai saat peserta sudah
     // magang (ongoing) atau telah mengajukan penyelesaian (completion_submitted).
-    const completable = app?.status === 'ongoing' || app?.status === 'completion_submitted';
+    const completable =
+        app?.status === 'ongoing' || app?.status === 'completion_submitted';
 
     function submitApprove() {
         if (!approveValid || processing || !app) {
@@ -393,7 +556,10 @@ function DecisionDialog({
             {
                 preserveScroll: true,
                 onSuccess: () => onRejected(app.id),
-                onError: (errs) => setError(errs.rejection_reason ?? 'Gagal menolak pengajuan.'),
+                onError: (errs) =>
+                    setError(
+                        errs.rejection_reason ?? 'Gagal menolak pengajuan.',
+                    ),
                 onFinish: () => setProcessing(false),
             },
         );
@@ -412,7 +578,8 @@ function DecisionDialog({
             {
                 preserveScroll: true,
                 onSuccess: () => onCompleted(app.id),
-                onError: (errs) => setError(errs.status ?? 'Gagal menandai magang selesai.'),
+                onError: (errs) =>
+                    setError(errs.status ?? 'Gagal menandai magang selesai.'),
                 onFinish: () => setProcessing(false),
             },
         );
@@ -426,9 +593,14 @@ function DecisionDialog({
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2 text-[#0a1628]">
                                 Detail Pengajuan
-                                <span className="font-mono text-sm font-normal text-slate-400">{app.ticket_number}</span>
+                                <span className="font-mono text-sm font-normal text-slate-400">
+                                    {app.ticket_number}
+                                </span>
                             </DialogTitle>
-                            <DialogDescription className="text-slate-500">Penempatan peserta ditetapkan oleh Admin OPD saat menyetujui.</DialogDescription>
+                            <DialogDescription className="text-slate-500">
+                                Penempatan peserta ditetapkan oleh Admin OPD
+                                saat menyetujui.
+                            </DialogDescription>
                         </DialogHeader>
 
                         {/* Pas foto pemohon */}
@@ -444,43 +616,97 @@ function DecisionDialog({
 
                         {/* Detail pemohon — seluruh data peserta magang */}
                         <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white px-4">
-                            <DetailRow label="NIS / NIM" value={app.nis || '—'} />
-                            <DetailRow label="Nama Lengkap" value={app.applicant_name || '—'} />
-                            <DetailRow label="Asal Instansi" value={app.institution_name} />
-                            <DetailRow label="Tujuan Magang" value={app.tujuan_magang} />
-                            <DetailRow label="Jurusan" value={app.major || '—'} />
-                            <DetailRow label="Alamat" value={app.address || '—'} />
-                            <DetailRow label="Durasi" value={`${app.duration_months} bulan`} />
-                            <DetailRow label="Periode" value={`${formatDate(app.start_date)} – ${formatDate(app.end_date)}`} />
-                            <DetailRow label="Pembimbing Kampus" value={app.campus_supervisor} />
-                            <DetailRow label="Penanggung Jawab" value={app.guardian_name || '—'} />
-                            <DetailRow label="No. WhatsApp" value={app.applicant_whatsapp || '—'} />
-                            <DetailRow label="Email" value={app.applicant_email || '—'} />
+                            <DetailRow
+                                label="NIS / NIM"
+                                value={app.nis || '—'}
+                            />
+                            <DetailRow
+                                label="Nama Lengkap"
+                                value={app.applicant_name || '—'}
+                            />
+                            <DetailRow
+                                label="Asal Instansi"
+                                value={app.institution_name}
+                            />
+                            <DetailRow
+                                label="Tujuan Magang"
+                                value={app.tujuan_magang}
+                            />
+                            <DetailRow
+                                label="Jurusan"
+                                value={app.major || '—'}
+                            />
+                            <DetailRow
+                                label="Alamat"
+                                value={app.address || '—'}
+                            />
+                            <DetailRow
+                                label="Durasi"
+                                value={`${app.duration_months} bulan`}
+                            />
+                            <DetailRow
+                                label="Periode"
+                                value={`${formatDate(app.start_date)} – ${formatDate(app.end_date)}`}
+                            />
+                            <DetailRow
+                                label="Pembimbing Kampus"
+                                value={app.campus_supervisor}
+                            />
+                            <DetailRow
+                                label="Penanggung Jawab"
+                                value={app.guardian_name || '—'}
+                            />
+                            <DetailRow
+                                label="No. WhatsApp"
+                                value={app.applicant_whatsapp || '—'}
+                            />
+                            <DetailRow
+                                label="Email"
+                                value={app.applicant_email || '—'}
+                            />
                             {/* Penempatan hanya tampil read-only setelah diputuskan. */}
                             {!decidable && (
                                 <>
-                                    <DetailRow label="Divisi / Bidang" value={app.division ?? '—'} icon={Briefcase} />
-                                    <DetailRow label="Pembimbing Lapangan" value={app.field_supervisor ?? '—'} icon={UserCog} />
-                                    <DetailRow label="Penanggung Jawab (OPD)" value={app.person_in_charge ?? '—'} icon={UserCog} />
+                                    <DetailRow
+                                        label="Divisi / Bidang"
+                                        value={app.division ?? '—'}
+                                        icon={Briefcase}
+                                    />
+                                    <DetailRow
+                                        label="Pembimbing Lapangan"
+                                        value={app.field_supervisor ?? '—'}
+                                        icon={UserCog}
+                                    />
+                                    <DetailRow
+                                        label="Penanggung Jawab (OPD)"
+                                        value={app.person_in_charge ?? '—'}
+                                        icon={UserCog}
+                                    />
                                 </>
                             )}
                         </div>
 
                         {/* Keahlian peserta */}
                         <div className="rounded-xl border border-[#cddcef] bg-[#e8f2fe]/40 px-4 py-3">
-                            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[#106feb]">
-                                <Sparkles className="size-3.5" /> Keahlian / Keterampilan
+                            <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-[#106feb] uppercase">
+                                <Sparkles className="size-3.5" /> Keahlian /
+                                Keterampilan
                             </p>
-                            <p className="mt-1 text-sm font-medium text-[#12213e]">{app.skills || '—'}</p>
+                            <p className="mt-1 text-sm font-medium text-[#12213e]">
+                                {app.skills || '—'}
+                            </p>
                         </div>
 
                         {/* Catatan dari Admin Verifikator */}
                         {app.verifikator_note && (
                             <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700">
-                                    <StickyNote className="size-3.5" /> Catatan Admin Verifikator
+                                <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-amber-700 uppercase">
+                                    <StickyNote className="size-3.5" /> Catatan
+                                    Admin Verifikator
                                 </p>
-                                <p className="mt-1 text-sm font-medium text-amber-900">{app.verifikator_note}</p>
+                                <p className="mt-1 text-sm font-medium text-amber-900">
+                                    {app.verifikator_note}
+                                </p>
                             </div>
                         )}
 
@@ -493,7 +719,9 @@ function DecisionDialog({
                                         onClick={() => setMode('approve')}
                                         className={cn(
                                             'flex-1 rounded-lg py-2 text-sm font-semibold transition',
-                                            mode === 'approve' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500',
+                                            mode === 'approve'
+                                                ? 'bg-white text-emerald-600 shadow-sm'
+                                                : 'text-slate-500',
                                         )}
                                     >
                                         Setujui
@@ -503,7 +731,9 @@ function DecisionDialog({
                                         onClick={() => setMode('reject')}
                                         className={cn(
                                             'flex-1 rounded-lg py-2 text-sm font-semibold transition',
-                                            mode === 'reject' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500',
+                                            mode === 'reject'
+                                                ? 'bg-white text-rose-600 shadow-sm'
+                                                : 'text-slate-500',
                                         )}
                                     >
                                         Tolak
@@ -514,55 +744,103 @@ function DecisionDialog({
                                     <div className="space-y-4">
                                         <p className="text-sm text-slate-500">
                                             Tetapkan penempatan peserta di{' '}
-                                            <span className="font-semibold text-[#12213e]">{app.opd?.name ?? 'OPD Anda'}</span>.
-                                            Data ini dikirim ke peserta dalam email persetujuan.
+                                            <span className="font-semibold text-[#12213e]">
+                                                {app.opd?.name ?? 'OPD Anda'}
+                                            </span>
+                                            . Data ini dikirim ke peserta dalam
+                                            email persetujuan.
                                         </p>
 
-                                        <Field label="Divisi / Bidang" value={division} onChange={setDivision} placeholder="cth. Bidang Infrastruktur TIK" icon={Briefcase} />
-                                        <Field label="Pembimbing Lapangan" value={fieldSupervisor} onChange={setFieldSupervisor} placeholder="Nama pembimbing dari OPD" icon={UserCog} />
-                                        <Field label="Penanggung Jawab" value={personInCharge} onChange={setPersonInCharge} placeholder="cth. Kepala Bidang" icon={UserCog} />
+                                        <Field
+                                            label="Divisi / Bidang"
+                                            value={division}
+                                            onChange={setDivision}
+                                            placeholder="cth. Bidang Infrastruktur TIK"
+                                            icon={Briefcase}
+                                        />
+                                        <Field
+                                            label="Pembimbing Lapangan"
+                                            value={fieldSupervisor}
+                                            onChange={setFieldSupervisor}
+                                            placeholder="Nama pembimbing dari OPD"
+                                            icon={UserCog}
+                                        />
+                                        <Field
+                                            label="Penanggung Jawab"
+                                            value={personInCharge}
+                                            onChange={setPersonInCharge}
+                                            placeholder="cth. Kepala Bidang"
+                                            icon={UserCog}
+                                        />
 
                                         {/* Peringatan kedatangan peserta */}
                                         <div className="flex gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                                             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
                                             <p className="text-xs leading-relaxed text-amber-800">
-                                                Notif ini akan dikirim ke peserta magang. Peserta akan datang berkunjung ke kantor setelah diterima pengajuan ini.
+                                                Notif ini akan dikirim ke
+                                                peserta magang. Peserta akan
+                                                datang berkunjung ke kantor
+                                                setelah diterima pengajuan ini.
                                             </p>
                                         </div>
 
-                                        {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
+                                        {error && (
+                                            <p className="text-sm font-medium text-rose-600">
+                                                {error}
+                                            </p>
+                                        )}
 
                                         <button
                                             type="button"
                                             onClick={submitApprove}
-                                            disabled={!approveValid || processing}
+                                            disabled={
+                                                !approveValid || processing
+                                            }
                                             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
-                                            {processing ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                                            {processing ? (
+                                                <Loader2 className="size-4 animate-spin" />
+                                            ) : (
+                                                <CheckCircle2 className="size-4" />
+                                            )}
                                             Setujui Pengajuan
                                         </button>
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
                                         <div className="space-y-1.5">
-                                            <label className="text-sm font-semibold text-[#0a1628]">Alasan Penolakan</label>
+                                            <label className="text-sm font-semibold text-[#0a1628]">
+                                                Alasan Penolakan
+                                            </label>
                                             <textarea
                                                 value={reason}
-                                                onChange={(e) => setReason(e.target.value)}
+                                                onChange={(e) =>
+                                                    setReason(e.target.value)
+                                                }
                                                 rows={4}
                                                 placeholder="Jelaskan alasan penolakan agar pemohon memahaminya…"
-                                                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-[#0a1628] outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-500/15"
+                                                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-[#0a1628] transition outline-none placeholder:font-normal placeholder:text-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-500/15"
                                             />
                                         </div>
-                                        {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
+                                        {error && (
+                                            <p className="text-sm font-medium text-rose-600">
+                                                {error}
+                                            </p>
+                                        )}
 
                                         <button
                                             type="button"
                                             onClick={submitReject}
-                                            disabled={!reason.trim() || processing}
+                                            disabled={
+                                                !reason.trim() || processing
+                                            }
                                             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-rose-600 text-sm font-bold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
-                                            {processing ? <Loader2 className="size-4 animate-spin" /> : <XCircle className="size-4" />}
+                                            {processing ? (
+                                                <Loader2 className="size-4 animate-spin" />
+                                            ) : (
+                                                <XCircle className="size-4" />
+                                            )}
                                             Tolak Pengajuan
                                         </button>
                                     </div>
@@ -570,26 +848,41 @@ function DecisionDialog({
                             </>
                         ) : (
                             <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-                                <p className="mb-2 text-sm font-semibold text-[#12213e]">Status saat ini</p>
+                                <p className="mb-2 text-sm font-semibold text-[#12213e]">
+                                    Status saat ini
+                                </p>
                                 <StatusBadge status={app.status} />
-                                {app.status === 'rejected' && app.rejection_reason && (
-                                    <p className="mt-3 text-sm text-rose-600">Alasan: {app.rejection_reason}</p>
-                                )}
+                                {app.status === 'rejected' &&
+                                    app.rejection_reason && (
+                                        <p className="mt-3 text-sm text-rose-600">
+                                            Alasan: {app.rejection_reason}
+                                        </p>
+                                    )}
 
                                 {/* Aktor "Selesai" #3: Admin OPD menandai magang selesai. */}
                                 {completable && (
                                     <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
                                         <p className="text-xs text-slate-500">
-                                            Tandai magang peserta ini telah selesai. Status berubah menjadi “Selesai Magang”.
+                                            Tandai magang peserta ini telah
+                                            selesai. Status berubah menjadi
+                                            “Selesai Magang”.
                                         </p>
-                                        {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
+                                        {error && (
+                                            <p className="text-sm font-medium text-rose-600">
+                                                {error}
+                                            </p>
+                                        )}
                                         <button
                                             type="button"
                                             onClick={submitComplete}
                                             disabled={processing}
                                             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
-                                            {processing ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                                            {processing ? (
+                                                <Loader2 className="size-4 animate-spin" />
+                                            ) : (
+                                                <CheckCircle2 className="size-4" />
+                                            )}
                                             Tandai Selesai Magang
                                         </button>
                                     </div>
@@ -623,7 +916,13 @@ export default function OpdDashboard({
     // Hitung per kartu memakai matchFilter yang sama dengan chip filter,
     // sehingga angka kartu = jumlah baris yang tampil saat filter itu dipilih.
     const counts = useMemo(
-        () => Object.fromEntries(STAT_CARDS.map((c) => [c.key, rows.filter((a) => matchFilter(a, c.key)).length])) as Record<Exclude<FilterKey, 'all'>, number>,
+        () =>
+            Object.fromEntries(
+                STAT_CARDS.map((c) => [
+                    c.key,
+                    rows.filter((a) => matchFilter(a, c.key)).length,
+                ]),
+            ) as Record<Exclude<FilterKey, 'all'>, number>,
         [rows],
     );
 
@@ -643,17 +942,26 @@ export default function OpdDashboard({
 
     // Optimistic update (rekan backend mengganti dengan reload props Inertia).
     function applyStatus(id: number, status: ApplicationStatus) {
-        setRows((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
+        setRows((prev) =>
+            prev.map((a) => (a.id === id ? { ...a, status } : a)),
+        );
         setActive(null);
     }
 
     return (
-        <MagangLayout user={user} title="Pengajuan Masuk OPD" active="dashboard" navItems={opdNav}>
+        <MagangLayout
+            user={user}
+            title="Pengajuan Masuk OPD"
+            active="dashboard"
+            navItems={opdNav}
+        >
             <Head title="Dasbor OPD — E-Magang" />
 
             <div className="space-y-6">
                 <div>
-                    <h2 className="text-xl font-black text-[#12213e]">Selamat datang, {user.name.split(' ')[0]} 👋</h2>
+                    <h2 className="text-xl font-black text-[#12213e]">
+                        Selamat datang, {user.name.split(' ')[0]} 👋
+                    </h2>
                     <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
                         <Building2 className="size-4" /> {opd.name} ({opd.code})
                     </p>
@@ -688,7 +996,9 @@ export default function OpdDashboard({
                                 onClick={() => setFilter(f.key)}
                                 className={cn(
                                     'rounded-full px-3.5 py-1.5 text-sm font-medium transition',
-                                    filter === f.key ? 'bg-[#106feb] text-white shadow-sm' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50',
+                                    filter === f.key
+                                        ? 'bg-[#106feb] text-white shadow-sm'
+                                        : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50',
                                 )}
                             >
                                 {f.label}
@@ -697,13 +1007,13 @@ export default function OpdDashboard({
                     </div>
 
                     <div className="relative sm:w-64">
-                        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
                         <input
                             type="search"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="Cari tiket / instansi…"
-                            className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                            className="h-10 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-sm transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                         />
                     </div>
                 </div>
@@ -712,33 +1022,66 @@ export default function OpdDashboard({
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                     {/* Desktop */}
                     <table className="hidden w-full text-left text-sm md:table">
-                        <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                        <thead className="border-b border-slate-200 bg-slate-50 text-xs tracking-wide text-slate-500 uppercase">
                             <tr>
-                                <th className="px-5 py-3 font-semibold">No. Tiket</th>
-                                <th className="px-5 py-3 font-semibold">Nama Lengkap</th>
-                                <th className="px-5 py-3 font-semibold">Asal Instansi</th>
-                                <th className="px-5 py-3 font-semibold">Divisi</th>
-                                <th className="px-5 py-3 font-semibold">Diteruskan</th>
-                                <th className="px-5 py-3 font-semibold">Status</th>
-                                <th className="px-5 py-3 text-right font-semibold">Aksi</th>
+                                <th className="px-5 py-3 font-semibold">
+                                    No. Tiket
+                                </th>
+                                <th className="px-5 py-3 font-semibold">
+                                    Nama Lengkap
+                                </th>
+                                <th className="px-5 py-3 font-semibold">
+                                    Asal Instansi
+                                </th>
+                                <th className="px-5 py-3 font-semibold">
+                                    Divisi
+                                </th>
+                                <th className="px-5 py-3 font-semibold">
+                                    Diteruskan
+                                </th>
+                                <th className="px-5 py-3 font-semibold">
+                                    Status
+                                </th>
+                                <th className="px-5 py-3 text-right font-semibold">
+                                    Aksi
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {filtered.map((app) => (
-                                <tr key={app.id} className="transition hover:bg-slate-50/60">
-                                    <td className="px-5 py-3.5 font-mono text-xs font-semibold text-[#12213e]">{app.ticket_number}</td>
-                                    <td className="px-5 py-3.5 font-medium text-[#12213e]">{app.applicant_name ?? '—'}</td>
-                                    <td className="px-5 py-3.5">{app.institution_name}</td>
-                                    <td className="px-5 py-3.5 text-slate-600">{app.division ?? '—'}</td>
-                                    <td className="px-5 py-3.5 text-slate-500">{app.forwarded_at ? formatDate(app.forwarded_at) : '—'}</td>
-                                    <td className="px-5 py-3.5"><StatusBadge status={app.status} /></td>
+                                <tr
+                                    key={app.id}
+                                    className="transition hover:bg-slate-50/60"
+                                >
+                                    <td className="px-5 py-3.5 font-mono text-xs font-semibold text-[#12213e]">
+                                        {app.ticket_number}
+                                    </td>
+                                    <td className="px-5 py-3.5 font-medium text-[#12213e]">
+                                        {app.applicant_name ?? '—'}
+                                    </td>
+                                    <td className="px-5 py-3.5">
+                                        {app.institution_name}
+                                    </td>
+                                    <td className="px-5 py-3.5 text-slate-600">
+                                        {app.division ?? '—'}
+                                    </td>
+                                    <td className="px-5 py-3.5 text-slate-500">
+                                        {app.forwarded_at
+                                            ? formatDate(app.forwarded_at)
+                                            : '—'}
+                                    </td>
+                                    <td className="px-5 py-3.5">
+                                        <StatusBadge status={app.status} />
+                                    </td>
                                     <td className="px-5 py-3.5 text-right">
                                         <button
                                             type="button"
                                             onClick={() => setActive(app)}
                                             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-[#106feb] transition hover:bg-[#cddcef]/40"
                                         >
-                                            {app.status === 'forwarded_opd' ? 'Putuskan' : 'Detail'}
+                                            {app.status === 'forwarded_opd'
+                                                ? 'Putuskan'
+                                                : 'Detail'}
                                             <ArrowRight className="size-3.5" />
                                         </button>
                                     </td>
@@ -757,19 +1100,33 @@ export default function OpdDashboard({
                                 className="flex w-full flex-col gap-2 px-4 py-4 text-left transition hover:bg-slate-50/60"
                             >
                                 <div className="flex items-center justify-between gap-2">
-                                    <span className="font-mono text-xs font-semibold text-[#12213e]">{app.ticket_number}</span>
+                                    <span className="font-mono text-xs font-semibold text-[#12213e]">
+                                        {app.ticket_number}
+                                    </span>
                                     <StatusBadge status={app.status} />
                                 </div>
-                                <p className="text-sm font-bold text-[#12213e]">{app.applicant_name ?? '—'}</p>
+                                <p className="text-sm font-bold text-[#12213e]">
+                                    {app.applicant_name ?? '—'}
+                                </p>
                                 <p className="flex items-center gap-1.5 text-sm font-medium text-[#12213e]">
-                                    <Building2 className="size-3.5 text-slate-400" /> {app.institution_name}
+                                    <Building2 className="size-3.5 text-slate-400" />{' '}
+                                    {app.institution_name}
                                 </p>
                                 <p className="flex items-center gap-1.5 text-xs text-slate-500">
-                                    <GraduationCap className="size-3.5" /> {app.tujuan_magang}
+                                    <GraduationCap className="size-3.5" />{' '}
+                                    {app.tujuan_magang}
                                 </p>
                                 <div className="flex items-center gap-4 text-xs text-slate-400">
-                                    <span className="flex items-center gap-1"><Calendar className="size-3" /> {app.forwarded_at ? formatDate(app.forwarded_at) : '—'}</span>
-                                    <span className="flex items-center gap-1"><Clock className="size-3" /> {app.duration_months} bln</span>
+                                    <span className="flex items-center gap-1">
+                                        <Calendar className="size-3" />{' '}
+                                        {app.forwarded_at
+                                            ? formatDate(app.forwarded_at)
+                                            : '—'}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                        <Clock className="size-3" />{' '}
+                                        {app.duration_months} bln
+                                    </span>
                                 </div>
                             </button>
                         ))}
@@ -778,7 +1135,9 @@ export default function OpdDashboard({
                     {filtered.length === 0 && (
                         <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
                             <ClipboardCheck className="size-10 text-slate-300" />
-                            <p className="text-sm font-medium text-slate-500">Tidak ada pengajuan pada filter ini.</p>
+                            <p className="text-sm font-medium text-slate-500">
+                                Tidak ada pengajuan pada filter ini.
+                            </p>
                         </div>
                     )}
                 </div>

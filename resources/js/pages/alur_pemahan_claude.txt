@@ -363,33 +363,112 @@ Urutan = prioritas. [BLOKER] = tanpa ini aplikasi tidak bisa dipakai end-to-end.
            - Verifikasi: phpstan 0 error, types:check LULUS, pint PASSED,
              FULL SUITE 91 lulus / 4 skip / 0 gagal.
 
-[ ] 13. Bersihkan / lengkapi dead code:
+[x] 13. Bersihkan / lengkapi dead code:
         - Opd\SubmissionController@index/@show & Verifikator\PengajuanController@
           index/@show merender halaman opd/pengajuan/* & verifikator/pengajuan/*
           yang TIDAK ADA dan tak punya route. Hapus, atau buat halamannya bila
           memang dipakai.
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 15:45 WIB.
+           - Dikonfirmasi: hanya forward/reject/complete (verifikator) &
+             approve/reject/complete (opd) yang berrute; index/show tak berrute
+             & halamannya tidak ada, tak direferensikan tes -> DIHAPUS.
+           - Verifikator\PengajuanController: hapus index()+show(); buang import
+             tak terpakai (Opd, Inertia, Response).
+           - Opd\SubmissionController: hapus index()+show(); buang import tak
+             terpakai (Inertia, Response). (Request tetap dipakai complete().)
+           - Verifikasi: pint PASSED, phpstan 0 error, FULL SUITE 91 lulus /
+             4 skip / 0 gagal.
 
-[ ] 14. Pastikan method OpdDashboardController@keputusan & @peserta ada (nav
+[x] 14. Pastikan method OpdDashboardController@keputusan & @peserta ada (nav
         /opd/keputusan & /opd/peserta menunjuk ke sana).
+        >> DIVERIFIKASI OLEH CLAUDE pada 2026-07-07, pukul 15:55 WIB.
+           - Kedua method SUDAH ADA di Opd\DashboardController (keputusan ->
+             render 'opd/keputusan' filter forwarded_opd; peserta -> render
+             'opd/peserta' bentuk Participant{student_name, application}).
+           - Halaman opd/keputusan.tsx & opd/peserta.tsx ADA & ter-bundle.
+           - Verifikasi: smoke test (GET /opd/keputusan & /opd/peserta -> 200 +
+             component benar) LULUS. Tidak ada perubahan kode diperlukan.
 
-[ ] 15. Survei kepuasan: UI penyelesaian.tsx punya 5 pertanyaan bintang tapi
+[x] 15. Survei kepuasan: UI penyelesaian.tsx punya 5 pertanyaan bintang tapi
         tabel satisfaction_surveys hanya simpan 1 rating (dirata-rata di klien,
         :303). Putuskan: cukup rata-rata, atau tambah kolom per-pertanyaan.
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 16:20 WIB.
+           - KEPUTUSAN: simpan rincian per-aspek (lebih faithful) SEKALIGUS
+             pertahankan agregat.
+           - Migration 2026_07_08_000000: kolom JSON `ratings` (nullable) di
+             satisfaction_surveys. Model: fillable + cast 'array'.
+           - SubmitSurveyRequest: terima `ratings` (array size 5, tiap 1-5);
+             `rating` TIDAK lagi dari klien.
+           - CertificateController@submitSurvey: hitung agregat = round(avg 5
+             aspek) server-side, simpan rating (agregat) + ratings (rincian).
+             Testimonial tetap pakai `rating` (tanpa perubahan).
+           - penyelesaian.tsx: kirim { ratings: {aspek: nilai}, comment } (tak
+             lagi merata-rata di klien).
+           - Tes CompletionFlowTest disesuaikan (post ratings). Smoke test baru:
+             rincian tersimpan + agregat 3.6->4 benar + tanpa ratings ditolak &
+             sertifikat tetap terkunci.
+           - Verifikasi: migrate DONE, phpstan 0, types LULUS, pint PASSED,
+             build sukses, FULL SUITE 91 lulus / 4 skip / 0 gagal.
 
 
 === P3. VERIFIKASI AKHIR SEBELUM DEMO/TES ===
 
-[ ] 16. Uji alur end-to-end manual:
+[x] 16. Uji alur end-to-end manual:
         daftar publik -> OTP masuk -> verifikator forward -> OPD approve (cek
         email + PDF) -> cron ubah ke Sedang Magang/Selesai -> mahasiswa unggah
         laporan -> verifikator unggah sertifikat -> mahasiswa isi survei ->
         unduh sertifikat -> testimonial muncul di welcome.
-[ ] 17. Uji jalur tolak di verifikator & OPD (email penolakan terkirim, status
+        >> DIOTOMASI OLEH CLAUDE pada 2026-07-07, pukul 16:45 WIB.
+           - Dibuat test E2E Pest (tests/Feature/Feature/Penyelesaian/
+             EndToEndFlowTest.php) yang menjalankan alur penuh 8 tahap: submit
+             publik -> verifikator forward -> OPD approve (assert kuota++ &
+             GenerateJobAcceptanceLetter dispatched) -> cron magang:transition-
+             statuses (Ongoing) -> unggah laporan (Completed) -> verifikator
+             approve laporan + unggah sertifikat (terkunci) -> survei (buka
+             kunci) -> unduh sertifikat 200.
+           - CATATAN: langkah login OTP via UI diuji terpisah (suite Otp, 15
+             lulus); di E2E memakai actingAs. Testimonial welcome sudah diverif
+             di #5 (query tinker).
+[x] 17. Uji jalur tolak di verifikator & OPD (email penolakan terkirim, status
         Ditolak).
-[ ] 18. Jalankan: composer test (pint + phpstan + artisan test), npm run
+        >> DIOTOMASI OLEH CLAUDE pada 2026-07-07, pukul 16:45 WIB.
+           - 2 test di EndToEndFlowTest: tolak verifikator & tolak OPD -> status
+             Rejected + SendJobRejectionEmail dispatched. LULUS.
+        >> Verifikasi #16+#17: 3 test E2E LULUS; FULL SUITE naik ke 98 (94 lulus
+           / 4 skip / 0 gagal); pint PASSED.
+[x] 18. Jalankan: composer test (pint + phpstan + artisan test), npm run
         types:check, npm run lint, npm run build.
-[ ] 19. Seed data demo (AdminSeeder, OpdSeeder, FaqSeeder) + minimal beberapa
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 17:10 WIB.
+           - `composer ci:check` HIJAU PENUH: eslint OK, prettier format:check OK
+             ("All matched files use Prettier code style!"), tsc OK, pint OK,
+             phpstan 0 error, pest 94 lulus / 4 skip / 0 gagal.
+           - PERBAIKAN eslint: refactor otp-login.tsx (hapus setState-in-effect
+             -> derive `shownError`) memenuhi rule react-hooks/set-state-in-effect.
+           - PRETTIER: utang lama 23 file tak tersentuh; atas persetujuan user
+             dijalankan `npm run format` (prettier --write) repo-wide -> resources/
+             kini 100% prettier-clean.
+           - CATATAN LINGKUNGAN: sempat PostgreSQL (magang_test:5432) mati saat
+             run -> semua test error "Connection refused". Diselesaikan dengan
+             start ulang Postgres Laragon (pg_ctl; recovery WAL). Bukan isu kode:
+             sebelum & sesudah DB up, test 94 lulus konsisten.
+[x] 19. Seed data demo (AdminSeeder, OpdSeeder, FaqSeeder) + minimal beberapa
         pengajuan contoh untuk pengujian dasbor.
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 17:30 WIB.
+           - AdminSeeder/OpdSeeder/FaqSeeder sudah ada. DITAMBAH ApplicationSeeder
+             (database/seeders/ApplicationSeeder.php) + didaftarkan di
+             DatabaseSeeder (urutan terakhir, butuh OPD+admin).
+           - Membuat 9 pengajuan demo (nama/data Indonesia realistis, mayoritas
+             di DISKOMINFO) menutup SEMUA status: 2 pending_verifikator, 3
+             forwarded_opd, 1 approved, 1 ongoing, 1 rejected, 1 completed.
+             Yang completed lengkap: FinalReport(approved) + Certificate(terbuka)
+             + SatisfactionSurvey(rating 5 + komentar) -> juga jadi testimonial
+             landing. Idempotent (skip bila sudah ada pengajuan).
+           - Verifikasi: `php artisan db:seed --force` -> 35 OPD, 36 admin, 6 FAQ,
+             9 pengajuan (spread status benar), 1 report, 1 cert terbuka, 1
+             testimonial. phpstan 0, pint PASSED.
+           - Kredensial admin demo: verifikator@madiunkota.go.id / password;
+             admin OPD: {slug-kode}@opd.madiunkota.go.id / password (mis.
+             diskominfo@opd.madiunkota.go.id). Mahasiswa demo login via OTP.
 [ ] 20. Pastikan queue worker jalan (composer dev) — tanpa worker, job email/PDF
         tidak diproses.
 

@@ -58,20 +58,44 @@ interface ReportsProps {
 
 /* ---- util ------------------------------------------------------------ */
 function formatDate(iso: string): string {
-    return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso));
+    return new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    }).format(new Date(iso));
 }
 
-const STATUS_META: Record<ReportStatus, { label: string; tone: string; Icon: typeof Clock }> = {
-    pending: { label: 'Menunggu Review', tone: 'bg-blue-50 text-blue-700 ring-blue-200', Icon: Clock },
-    approved: { label: 'Disetujui', tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200', Icon: CheckCircle2 },
-    rejected: { label: 'Perlu Revisi', tone: 'bg-rose-50 text-rose-700 ring-rose-200', Icon: XCircle },
+const STATUS_META: Record<
+    ReportStatus,
+    { label: string; tone: string; Icon: typeof Clock }
+> = {
+    pending: {
+        label: 'Menunggu Review',
+        tone: 'bg-blue-50 text-blue-700 ring-blue-200',
+        Icon: Clock,
+    },
+    approved: {
+        label: 'Disetujui',
+        tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
+        Icon: CheckCircle2,
+    },
+    rejected: {
+        label: 'Perlu Revisi',
+        tone: 'bg-rose-50 text-rose-700 ring-rose-200',
+        Icon: XCircle,
+    },
 };
 
 function ReportStatusBadge({ status }: { status: ReportStatus }) {
     const { label, tone, Icon } = STATUS_META[status];
 
     return (
-        <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1', tone)}>
+        <span
+            className={cn(
+                'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1',
+                tone,
+            )}
+        >
             <Icon className="size-3.5" /> {label}
         </span>
     );
@@ -99,7 +123,10 @@ const MOCK_REPORTS: Paginated<ReportRow> = {
                 ticket_number: 'MGG-2026-0042',
                 institution_name: 'Universitas Negeri Madiun',
                 user: { name: 'Rangga Saputra' },
-                opd: { name: 'Dinas Komunikasi dan Informatika', code: 'DISKOMINFO' },
+                opd: {
+                    name: 'Dinas Komunikasi dan Informatika',
+                    code: 'DISKOMINFO',
+                },
             },
         },
         {
@@ -125,10 +152,14 @@ function ApproveButton({ reportId }: { reportId: number }) {
 
     function submit() {
         setProcessing(true);
-        router.post(`/verifikator/laporan/${reportId}/approve`, {}, {
-            preserveScroll: true,
-            onFinish: () => setProcessing(false),
-        });
+        router.post(
+            `/verifikator/laporan/${reportId}/approve`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setProcessing(false),
+            },
+        );
     }
 
     return (
@@ -138,7 +169,11 @@ function ApproveButton({ reportId }: { reportId: number }) {
             disabled={processing}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
         >
-            {processing ? <Loader2 className="size-4 animate-spin" /> : <ClipboardCheck className="size-4" />}
+            {processing ? (
+                <Loader2 className="size-4 animate-spin" />
+            ) : (
+                <ClipboardCheck className="size-4" />
+            )}
             Setujui Laporan
         </button>
     );
@@ -146,7 +181,9 @@ function ApproveButton({ reportId }: { reportId: number }) {
 
 /* ---- aksi: unggah sertifikat (multipart) ----------------------------- */
 function UploadCertificate({ reportId }: { reportId: number }) {
-    const { setData, post, processing, reset } = useForm<{ file: File | null }>({ file: null });
+    const { setData, post, processing, reset } = useForm<{ file: File | null }>(
+        { file: null },
+    );
     const [fileName, setFileName] = useState<string | null>(null);
 
     function onFile(e: ChangeEvent<HTMLInputElement>) {
@@ -173,21 +210,34 @@ function UploadCertificate({ reportId }: { reportId: number }) {
     }
 
     return (
-        <form onSubmit={submit} className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <form
+            onSubmit={submit}
+            className="flex flex-col gap-2 sm:flex-row sm:items-center"
+        >
             <label
                 htmlFor={`cert-${reportId}`}
                 className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:border-[#106feb] hover:bg-[#cddcef]/20"
             >
                 <Upload className="size-4 text-[#106feb]" />
                 {fileName ?? 'Pilih PDF sertifikat'}
-                <input id={`cert-${reportId}`} type="file" accept="application/pdf" className="hidden" onChange={onFile} />
+                <input
+                    id={`cert-${reportId}`}
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    onChange={onFile}
+                />
             </label>
             <button
                 type="submit"
                 disabled={!fileName || processing}
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#106feb] px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-[#0b4fb0] disabled:cursor-not-allowed disabled:opacity-50"
             >
-                {processing ? <Loader2 className="size-4 animate-spin" /> : <Award className="size-4" />}
+                {processing ? (
+                    <Loader2 className="size-4 animate-spin" />
+                ) : (
+                    <Award className="size-4" />
+                )}
                 Terbitkan Sertifikat
             </button>
         </form>
@@ -204,18 +254,28 @@ const FILTERS: { key: FilterKey; label: string }[] = [
     { key: 'rejected', label: 'Perlu Revisi' },
 ];
 
-export default function VerifikatorReports({ user = MOCK_USER, reports = MOCK_REPORTS, filters = {} }: ReportsProps) {
-    const [filter, setFilter] = useState<FilterKey>((filters.status as FilterKey) ?? 'all');
+export default function VerifikatorReports({
+    user = MOCK_USER,
+    reports = MOCK_REPORTS,
+    filters = {},
+}: ReportsProps) {
+    const [filter, setFilter] = useState<FilterKey>(
+        (filters.status as FilterKey) ?? 'all',
+    );
     const [query, setQuery] = useState('');
 
     // Filter status difilter server-side lewat ?status=; ganti tab → kunjungi ulang.
     function changeFilter(key: FilterKey) {
         setFilter(key);
-        router.get('/verifikator/laporan', key === 'all' ? {} : { status: key }, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        router.get(
+            '/verifikator/laporan',
+            key === 'all' ? {} : { status: key },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
     }
 
     const rows = useMemo(() => {
@@ -238,14 +298,23 @@ export default function VerifikatorReports({ user = MOCK_USER, reports = MOCK_RE
     }, [reports.data, query]);
 
     return (
-        <MagangLayout user={user} title="Laporan" active="laporan" navItems={verifikatorNav}>
+        <MagangLayout
+            user={user}
+            title="Laporan"
+            active="laporan"
+            navItems={verifikatorNav}
+        >
             <Head title="Review Laporan — Verifikator" />
 
             <div className="space-y-6">
                 <div>
-                    <h2 className="text-xl font-black text-[#12213e]">Review Laporan Akhir</h2>
+                    <h2 className="text-xl font-black text-[#12213e]">
+                        Review Laporan Akhir
+                    </h2>
                     <p className="mt-1 text-sm text-slate-500">
-                        Tinjau laporan peserta, setujui, lalu terbitkan e-sertifikat. Sertifikat terkunci sampai peserta mengisi survei.
+                        Tinjau laporan peserta, setujui, lalu terbitkan
+                        e-sertifikat. Sertifikat terkunci sampai peserta mengisi
+                        survei.
                     </p>
                 </div>
 
@@ -259,7 +328,9 @@ export default function VerifikatorReports({ user = MOCK_USER, reports = MOCK_RE
                                 onClick={() => changeFilter(f.key)}
                                 className={cn(
                                     'rounded-full px-3.5 py-1.5 text-sm font-medium transition',
-                                    filter === f.key ? 'bg-[#106feb] text-white shadow-sm' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50',
+                                    filter === f.key
+                                        ? 'bg-[#106feb] text-white shadow-sm'
+                                        : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50',
                                 )}
                             >
                                 {f.label}
@@ -268,13 +339,13 @@ export default function VerifikatorReports({ user = MOCK_USER, reports = MOCK_RE
                     </div>
 
                     <div className="relative sm:w-64">
-                        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
                         <input
                             type="search"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="Cari peserta / tiket…"
-                            className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                            className="h-10 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-sm transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                         />
                     </div>
                 </div>
@@ -282,12 +353,16 @@ export default function VerifikatorReports({ user = MOCK_USER, reports = MOCK_RE
                 {/* Daftar laporan */}
                 <div className="space-y-4">
                     {rows.map((r) => (
-                        <div key={r.id} className="rounded-2xl border border-slate-200 bg-white p-5">
+                        <div
+                            key={r.id}
+                            className="rounded-2xl border border-slate-200 bg-white p-5"
+                        >
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="min-w-0 space-y-2">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className="font-mono text-xs font-semibold text-[#12213e]">
-                                            {r.application?.ticket_number ?? '—'}
+                                            {r.application?.ticket_number ??
+                                                '—'}
                                         </span>
                                         <ReportStatusBadge status={r.status} />
                                     </div>
@@ -297,7 +372,9 @@ export default function VerifikatorReports({ user = MOCK_USER, reports = MOCK_RE
                                     </p>
                                     <p className="flex items-center gap-1.5 text-xs text-slate-500">
                                         <Building2 className="size-3.5" />
-                                        {r.application?.opd?.name ?? r.application?.institution_name ?? '—'}
+                                        {r.application?.opd?.name ??
+                                            r.application?.institution_name ??
+                                            '—'}
                                     </p>
                                     <a
                                         href={`/verifikator/laporan/${r.id}/berkas`}
@@ -305,16 +382,25 @@ export default function VerifikatorReports({ user = MOCK_USER, reports = MOCK_RE
                                         className="inline-flex items-center gap-1.5 text-xs font-medium text-[#106feb]"
                                         title="Berkas laporan"
                                     >
-                                        <FileText className="size-3.5" /> {r.file_name}
+                                        <FileText className="size-3.5" />{' '}
+                                        {r.file_name}
                                     </a>
-                                    <p className="text-xs text-slate-400">Diunggah {formatDate(r.submitted_at)}</p>
+                                    <p className="text-xs text-slate-400">
+                                        Diunggah {formatDate(r.submitted_at)}
+                                    </p>
                                 </div>
 
                                 <div className="shrink-0">
-                                    {r.status === 'pending' && <ApproveButton reportId={r.id} />}
-                                    {r.status === 'approved' && <UploadCertificate reportId={r.id} />}
+                                    {r.status === 'pending' && (
+                                        <ApproveButton reportId={r.id} />
+                                    )}
+                                    {r.status === 'approved' && (
+                                        <UploadCertificate reportId={r.id} />
+                                    )}
                                     {r.status === 'rejected' && (
-                                        <span className="text-xs font-medium text-rose-500">Menunggu revisi peserta</span>
+                                        <span className="text-xs font-medium text-rose-500">
+                                            Menunggu revisi peserta
+                                        </span>
                                     )}
                                 </div>
                             </div>
@@ -324,7 +410,9 @@ export default function VerifikatorReports({ user = MOCK_USER, reports = MOCK_RE
                     {rows.length === 0 && (
                         <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
                             <FileText className="size-10 text-slate-300" />
-                            <p className="text-sm font-medium text-slate-500">Belum ada laporan pada filter ini.</p>
+                            <p className="text-sm font-medium text-slate-500">
+                                Belum ada laporan pada filter ini.
+                            </p>
                         </div>
                     )}
                 </div>

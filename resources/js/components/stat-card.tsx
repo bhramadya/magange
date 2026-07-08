@@ -8,7 +8,13 @@ interface StatCardProps {
     trendUp?: boolean;
 }
 
-export function StatCard({ icon: Icon, label, value, trend, trendUp }: StatCardProps) {
+export function StatCard({
+    icon: Icon,
+    label,
+    value,
+    trend,
+    trendUp,
+}: StatCardProps) {
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
             <div className="flex items-center justify-between">
@@ -16,7 +22,9 @@ export function StatCard({ icon: Icon, label, value, trend, trendUp }: StatCardP
                     <Icon className="size-6" />
                 </span>
                 {trend && (
-                    <span className={`text-xs font-medium ${trendUp ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    <span
+                        className={`text-xs font-medium ${trendUp ? 'text-emerald-600' : 'text-rose-600'}`}
+                    >
                         {trend}
                     </span>
                 )}

@@ -40,7 +40,11 @@ import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
 
 /* ---- util ------------------------------------------------------------ */
 function formatDate(iso: string): string {
-    return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso));
+    return new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    }).format(new Date(iso));
 }
 
 function waitingDays(iso: string): number {
@@ -68,7 +72,8 @@ const MOCK_OPDS: Opd[] = [
 ];
 
 function makeApp(
-    partial: Partial<InternshipApplication> & Pick<InternshipApplication, 'id' | 'ticket_number'>,
+    partial: Partial<InternshipApplication> &
+        Pick<InternshipApplication, 'id' | 'ticket_number'>,
 ): InternshipApplication {
     return {
         status: 'pending_verifikator',
@@ -97,10 +102,48 @@ function makeApp(
 }
 
 const MOCK_APPLICATIONS: InternshipApplication[] = [
-    makeApp({ id: 21, ticket_number: 'MGG-2026-0054', tujuan_magang: 'Pengembangan aplikasi web internal', institution_name: 'Universitas Negeri Madiun', campus_supervisor: 'Dr. Sri Wahyuni, M.Kom', major: 'Teknik Informatika', skills: 'React, Laravel, REST API, PostgreSQL', created_at: '2026-06-24' }),
-    makeApp({ id: 22, ticket_number: 'MGG-2026-0053', tujuan_magang: 'Desain grafis & konten media sosial', institution_name: 'SMK Negeri 1 Madiun', campus_supervisor: 'Agus Priyono, S.Kom', major: 'Multimedia', skills: 'Adobe Photoshop, Illustrator, copywriting, fotografi', duration_months: 6, created_at: '2026-06-23' }),
-    makeApp({ id: 23, ticket_number: 'MGG-2026-0052', tujuan_magang: 'Analisis data kepegawaian', institution_name: 'Politeknik Negeri Madiun', campus_supervisor: 'Ir. Hadi Santoso', major: 'Statistika', skills: 'Excel lanjutan, Python, visualisasi data, Power BI', created_at: '2026-06-21' }),
-    makeApp({ id: 24, ticket_number: 'MGG-2026-0049', tujuan_magang: 'Pengelolaan arsip digital perkantoran', institution_name: 'Universitas Merdeka Madiun', campus_supervisor: 'Dra. Lestari Handayani', major: 'Administrasi Perkantoran', skills: 'Manajemen arsip, Microsoft Office, ketelitian dokumen', duration_months: 4, created_at: '2026-06-19' }),
+    makeApp({
+        id: 21,
+        ticket_number: 'MGG-2026-0054',
+        tujuan_magang: 'Pengembangan aplikasi web internal',
+        institution_name: 'Universitas Negeri Madiun',
+        campus_supervisor: 'Dr. Sri Wahyuni, M.Kom',
+        major: 'Teknik Informatika',
+        skills: 'React, Laravel, REST API, PostgreSQL',
+        created_at: '2026-06-24',
+    }),
+    makeApp({
+        id: 22,
+        ticket_number: 'MGG-2026-0053',
+        tujuan_magang: 'Desain grafis & konten media sosial',
+        institution_name: 'SMK Negeri 1 Madiun',
+        campus_supervisor: 'Agus Priyono, S.Kom',
+        major: 'Multimedia',
+        skills: 'Adobe Photoshop, Illustrator, copywriting, fotografi',
+        duration_months: 6,
+        created_at: '2026-06-23',
+    }),
+    makeApp({
+        id: 23,
+        ticket_number: 'MGG-2026-0052',
+        tujuan_magang: 'Analisis data kepegawaian',
+        institution_name: 'Politeknik Negeri Madiun',
+        campus_supervisor: 'Ir. Hadi Santoso',
+        major: 'Statistika',
+        skills: 'Excel lanjutan, Python, visualisasi data, Power BI',
+        created_at: '2026-06-21',
+    }),
+    makeApp({
+        id: 24,
+        ticket_number: 'MGG-2026-0049',
+        tujuan_magang: 'Pengelolaan arsip digital perkantoran',
+        institution_name: 'Universitas Merdeka Madiun',
+        campus_supervisor: 'Dra. Lestari Handayani',
+        major: 'Administrasi Perkantoran',
+        skills: 'Manajemen arsip, Microsoft Office, ketelitian dokumen',
+        duration_months: 4,
+        created_at: '2026-06-19',
+    }),
 ];
 
 /* ---- sub-komponen ---------------------------------------------------- */
@@ -108,7 +151,9 @@ function DetailRow({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex justify-between gap-4 py-2 text-sm">
             <span className="text-slate-500">{label}</span>
-            <span className="text-right font-medium text-[#12213e]">{value}</span>
+            <span className="text-right font-medium text-[#12213e]">
+                {value}
+            </span>
         </div>
     );
 }
@@ -165,25 +210,41 @@ function ReviewPanel({
     return (
         <div className="space-y-5">
             <div>
-                <p className="font-mono text-xs font-semibold text-slate-400">{app.ticket_number}</p>
-                <h3 className="mt-0.5 text-lg font-bold text-[#12213e]">{app.institution_name}</h3>
+                <p className="font-mono text-xs font-semibold text-slate-400">
+                    {app.ticket_number}
+                </p>
+                <h3 className="mt-0.5 text-lg font-bold text-[#12213e]">
+                    {app.institution_name}
+                </h3>
             </div>
 
             <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/60 px-4">
                 <DetailRow label="Tujuan Magang" value={app.tujuan_magang} />
                 <DetailRow label="Jurusan" value={app.major ?? '—'} />
-                <DetailRow label="Durasi" value={`${app.duration_months} bulan`} />
-                <DetailRow label="Periode" value={`${formatDate(app.start_date)} – ${formatDate(app.end_date)}`} />
-                <DetailRow label="Pembimbing Kampus" value={app.campus_supervisor} />
+                <DetailRow
+                    label="Durasi"
+                    value={`${app.duration_months} bulan`}
+                />
+                <DetailRow
+                    label="Periode"
+                    value={`${formatDate(app.start_date)} – ${formatDate(app.end_date)}`}
+                />
+                <DetailRow
+                    label="Pembimbing Kampus"
+                    value={app.campus_supervisor}
+                />
                 <DetailRow label="Masuk" value={formatDate(app.created_at)} />
             </div>
 
             {/* Keahlian / keterampilan peserta — diisi saat mendaftar. */}
             <div className="rounded-xl border border-[#cddcef] bg-[#e8f2fe]/40 px-4 py-3">
-                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[#106feb]">
-                    <GraduationCap className="size-3.5" /> Keahlian / Keterampilan
+                <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-[#106feb] uppercase">
+                    <GraduationCap className="size-3.5" /> Keahlian /
+                    Keterampilan
                 </p>
-                <p className="mt-1 text-sm font-medium text-[#12213e]">{app.skills || '—'}</p>
+                <p className="mt-1 text-sm font-medium text-[#12213e]">
+                    {app.skills || '—'}
+                </p>
             </div>
 
             {/* Toggle mode */}
@@ -193,7 +254,9 @@ function ReviewPanel({
                     onClick={() => setMode('forward')}
                     className={cn(
                         'flex-1 rounded-lg py-2 text-sm font-semibold transition',
-                        mode === 'forward' ? 'bg-white text-[#106feb] shadow-sm' : 'text-slate-500',
+                        mode === 'forward'
+                            ? 'bg-white text-[#106feb] shadow-sm'
+                            : 'text-slate-500',
                     )}
                 >
                     Teruskan ke OPD
@@ -203,7 +266,9 @@ function ReviewPanel({
                     onClick={() => setMode('reject')}
                     className={cn(
                         'flex-1 rounded-lg py-2 text-sm font-semibold transition',
-                        mode === 'reject' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500',
+                        mode === 'reject'
+                            ? 'bg-white text-rose-600 shadow-sm'
+                            : 'text-slate-500',
                     )}
                 >
                     Tolak
@@ -221,14 +286,19 @@ function ReviewPanel({
                         className="space-y-4"
                     >
                         <div className="space-y-1.5">
-                            <label className="text-sm font-semibold text-[#12213e]">OPD Tujuan</label>
+                            <label className="text-sm font-semibold text-[#12213e]">
+                                OPD Tujuan
+                            </label>
                             <Select value={opdId} onValueChange={setOpdId}>
                                 <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Pilih OPD…" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {opds.map((opd) => (
-                                        <SelectItem key={opd.id} value={String(opd.id)}>
+                                        <SelectItem
+                                            key={opd.id}
+                                            value={String(opd.id)}
+                                        >
                                             {opd.name} ({opd.code})
                                         </SelectItem>
                                     ))}
@@ -239,14 +309,16 @@ function ReviewPanel({
                         <div className="space-y-1.5">
                             <label className="text-sm font-semibold text-[#12213e]">
                                 Catatan khusus dari Admin Verifikator
-                                <span className="ml-1 font-normal text-slate-400">(opsional)</span>
+                                <span className="ml-1 font-normal text-slate-400">
+                                    (opsional)
+                                </span>
                             </label>
                             <textarea
                                 value={note}
                                 onChange={(e) => setNote(e.target.value)}
                                 rows={4}
                                 placeholder="Catatan ini akan dibaca Admin OPD saat menerima pengajuan, mis. rekomendasi penempatan atau hal yang perlu diperhatikan…"
-                                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#0a1628] placeholder:text-slate-400 outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#0a1628] transition outline-none placeholder:text-slate-400 focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                             />
                         </div>
 
@@ -256,7 +328,11 @@ function ReviewPanel({
                             disabled={!forwardValid || processing}
                             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#106feb] text-sm font-bold text-white transition hover:bg-[#0b4fb0] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            {processing ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+                            {processing ? (
+                                <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                                <Send className="size-4" />
+                            )}
                             Teruskan ke OPD
                         </button>
                     </motion.div>
@@ -270,13 +346,15 @@ function ReviewPanel({
                         className="space-y-4"
                     >
                         <div className="space-y-1.5">
-                            <label className="text-sm font-semibold text-[#12213e]">Alasan Penolakan</label>
+                            <label className="text-sm font-semibold text-[#12213e]">
+                                Alasan Penolakan
+                            </label>
                             <textarea
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value)}
                                 rows={4}
                                 placeholder="Jelaskan alasan penolakan agar pemohon memahaminya…"
-                                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#0a1628] placeholder:text-slate-400 outline-none transition focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15"
+                                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#0a1628] transition outline-none placeholder:text-slate-400 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15"
                             />
                         </div>
 
@@ -286,7 +364,11 @@ function ReviewPanel({
                             disabled={!reason.trim() || processing}
                             className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-rose-600 text-sm font-bold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            {processing ? <Loader2 className="size-4 animate-spin" /> : <XCircle className="size-4" />}
+                            {processing ? (
+                                <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                                <XCircle className="size-4" />
+                            )}
                             Tolak Pengajuan
                         </button>
                     </motion.div>
@@ -316,7 +398,9 @@ export default function VerifikatorMasuk({
 
     const [queue, setQueue] = useState(initialQueue);
     const [query, setQuery] = useState('');
-    const [selectedId, setSelectedId] = useState<number | null>(initialQueue[0]?.id ?? null);
+    const [selectedId, setSelectedId] = useState<number | null>(
+        initialQueue[0]?.id ?? null,
+    );
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -345,15 +429,23 @@ export default function VerifikatorMasuk({
     }
 
     return (
-        <MagangLayout user={user} title="Kotak Masuk" active="masuk" navItems={verifikatorNav}>
+        <MagangLayout
+            user={user}
+            title="Kotak Masuk"
+            active="masuk"
+            navItems={verifikatorNav}
+        >
             <Head title="Kotak Masuk — Verifikator" />
 
             <div className="space-y-6">
                 <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
-                        <h2 className="text-xl font-black text-[#12213e]">Kotak Masuk</h2>
+                        <h2 className="text-xl font-black text-[#12213e]">
+                            Kotak Masuk
+                        </h2>
                         <p className="mt-1 text-sm text-slate-500">
-                            Pengajuan baru yang menunggu verifikasi. Tinjau lalu teruskan ke OPD atau tolak.
+                            Pengajuan baru yang menunggu verifikasi. Tinjau lalu
+                            teruskan ke OPD atau tolak.
                         </p>
                     </div>
                     <span className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3.5 py-1.5 text-sm font-semibold text-amber-700 ring-1 ring-amber-200">
@@ -366,13 +458,13 @@ export default function VerifikatorMasuk({
                     {/* ===== Daftar antrian ===== */}
                     <div className="space-y-3">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
                             <input
                                 type="search"
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 placeholder="Cari tiket / instansi…"
-                                className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                                className="h-10 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-sm transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                             />
                         </div>
 
@@ -386,7 +478,9 @@ export default function VerifikatorMasuk({
                                         <button
                                             key={app.id}
                                             type="button"
-                                            onClick={() => setSelectedId(app.id)}
+                                            onClick={() =>
+                                                setSelectedId(app.id)
+                                            }
                                             className={cn(
                                                 'flex w-full flex-col gap-2 rounded-2xl border bg-white p-4 text-left transition',
                                                 isActive
@@ -395,7 +489,9 @@ export default function VerifikatorMasuk({
                                             )}
                                         >
                                             <div className="flex items-center justify-between gap-2">
-                                                <span className="font-mono text-xs font-semibold text-[#12213e]">{app.ticket_number}</span>
+                                                <span className="font-mono text-xs font-semibold text-[#12213e]">
+                                                    {app.ticket_number}
+                                                </span>
                                                 {days >= 3 && (
                                                     <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-600">
                                                         {days} hari
@@ -403,20 +499,36 @@ export default function VerifikatorMasuk({
                                                 )}
                                             </div>
                                             <p className="flex items-center gap-1.5 text-sm font-semibold text-[#12213e]">
-                                                <Building2 className="size-3.5 shrink-0 text-slate-400" /> {app.institution_name}
+                                                <Building2 className="size-3.5 shrink-0 text-slate-400" />{' '}
+                                                {app.institution_name}
                                             </p>
                                             <p className="flex items-center gap-1.5 text-xs text-slate-500">
-                                                <GraduationCap className="size-3.5 shrink-0" /> {app.tujuan_magang}
+                                                <GraduationCap className="size-3.5 shrink-0" />{' '}
+                                                {app.tujuan_magang}
                                             </p>
                                             {app.skills && (
                                                 <p className="line-clamp-1 flex items-center gap-1.5 rounded-lg bg-[#e8f2fe]/60 px-2 py-1 text-[11px] font-medium text-[#106feb]">
-                                                    <Sparkles className="size-3 shrink-0" /> {app.skills}
+                                                    <Sparkles className="size-3 shrink-0" />{' '}
+                                                    {app.skills}
                                                 </p>
                                             )}
                                             <div className="flex items-center gap-4 text-xs text-slate-400">
-                                                <span className="flex items-center gap-1"><Calendar className="size-3" /> {formatDate(app.created_at)}</span>
-                                                <span className="flex items-center gap-1"><Clock className="size-3" /> {app.duration_months} bln</span>
-                                                <ChevronRight className={cn('ml-auto size-4', isActive ? 'text-[#106feb]' : 'text-slate-300')} />
+                                                <span className="flex items-center gap-1">
+                                                    <Calendar className="size-3" />{' '}
+                                                    {formatDate(app.created_at)}
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                    <Clock className="size-3" />{' '}
+                                                    {app.duration_months} bln
+                                                </span>
+                                                <ChevronRight
+                                                    className={cn(
+                                                        'ml-auto size-4',
+                                                        isActive
+                                                            ? 'text-[#106feb]'
+                                                            : 'text-slate-300',
+                                                    )}
+                                                />
                                             </div>
                                         </button>
                                     );
@@ -426,10 +538,14 @@ export default function VerifikatorMasuk({
                             <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
                                 <Inbox className="size-10 text-slate-300" />
                                 <p className="text-sm font-semibold text-[#12213e]">
-                                    {queue.length === 0 ? 'Kotak masuk kosong 🎉' : 'Tidak ada hasil pencarian'}
+                                    {queue.length === 0
+                                        ? 'Kotak masuk kosong 🎉'
+                                        : 'Tidak ada hasil pencarian'}
                                 </p>
                                 <p className="text-sm text-slate-500">
-                                    {queue.length === 0 ? 'Semua pengajuan sudah ditinjau.' : 'Coba kata kunci lain.'}
+                                    {queue.length === 0
+                                        ? 'Semua pengajuan sudah ditinjau.'
+                                        : 'Coba kata kunci lain.'}
                                 </p>
                             </div>
                         )}
@@ -443,17 +559,30 @@ export default function VerifikatorMasuk({
                                     key={selected.id}
                                     app={selected}
                                     opds={opds}
-                                    onForwarded={(id) => removeFromQueue(id, 'Pengajuan diteruskan ke OPD.')}
-                                    onRejected={(id) => removeFromQueue(id, 'Pengajuan ditolak.')}
+                                    onForwarded={(id) =>
+                                        removeFromQueue(
+                                            id,
+                                            'Pengajuan diteruskan ke OPD.',
+                                        )
+                                    }
+                                    onRejected={(id) =>
+                                        removeFromQueue(
+                                            id,
+                                            'Pengajuan ditolak.',
+                                        )
+                                    }
                                 />
                             ) : (
                                 <div className="flex flex-col items-center gap-3 py-16 text-center">
                                     <span className="flex size-14 items-center justify-center rounded-2xl bg-[#cddcef]/40 text-[#106feb]">
                                         <MousePointerClick className="size-6" />
                                     </span>
-                                    <p className="text-sm font-semibold text-[#12213e]">Pilih pengajuan untuk ditinjau</p>
+                                    <p className="text-sm font-semibold text-[#12213e]">
+                                        Pilih pengajuan untuk ditinjau
+                                    </p>
                                     <p className="max-w-xs text-sm text-slate-500">
-                                        Detail pemohon dan formulir keputusan akan muncul di sini.
+                                        Detail pemohon dan formulir keputusan
+                                        akan muncul di sini.
                                     </p>
                                 </div>
                             )}

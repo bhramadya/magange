@@ -53,9 +53,15 @@ class CertificateController extends Controller
 
         $validated = $request->validated();
 
+        // Rating agregat (rata-rata dibulatkan) dari 5 aspek — dipakai
+        // testimonial & tampilan ringkas; rincian per-aspek disimpan di `ratings`.
+        $ratings = $validated['ratings'];
+        $average = (int) round(array_sum($ratings) / count($ratings));
+
         SatisfactionSurvey::create([
             'application_id' => $application->id,
-            'rating' => $validated['rating'],
+            'rating' => $average,
+            'ratings' => $ratings,
             'comment' => $validated['comment'] ?? null,
             'submitted_at' => Date::now(),
         ]);

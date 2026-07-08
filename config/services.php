@@ -37,8 +37,8 @@ return [
 
     // Google reCAPTCHA v2 (checkbox) — gerbang anti-bot form pendaftaran publik.
     'recaptcha' => [
-        'site_key' => env('RECAPTCHA_SITE_KEY'),
-        'secret' => env('RECAPTCHA_SECRET_KEY'),
+        'site_key' => env('6LdkU0otAAAAAGli3uatAl-ZUoVGOuWCom5iESLo'),
+        'secret' => env('6LdkU0otAAAAAFdDrRwYYhTlWcq_VaGcGZ0ByGCi'),
     ],
 
 ];

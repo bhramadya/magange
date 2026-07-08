@@ -9,46 +9,10 @@ use App\Http\Requests\Verifikator\RejectApplicationRequest;
 use App\Models\InternshipApplication;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class SubmissionController extends Controller
 {
     public function __construct(private PengajuanServiceContract $submissionService) {}
-
-    public function index(Request $request): Response
-    {
-        $user = $request->user();
-        $status = $request->query('status');
-
-        $query = InternshipApplication::query()
-            ->with(['user', 'opd', 'forwardedBy'])
-            ->where('opd_id', $user->opd_id);
-
-        if ($status !== null && $status !== '') {
-            $query->where('status', $status);
-        }
-
-        $applications = $query->latest()->paginate(20);
-
-        return Inertia::render('opd/pengajuan/index', [
-            'applications' => $applications,
-            'filters' => [
-                'status' => $status,
-            ],
-        ]);
-    }
-
-    public function show(InternshipApplication $application): Response
-    {
-        $this->authorize('view', $application);
-
-        $application->load(['user', 'opd', 'forwardedBy', 'opdDecisionBy', 'statusLogs.changedBy']);
-
-        return Inertia::render('opd/pengajuan/show', [
-            'application' => $application,
-        ]);
-    }
 
     public function approve(ApproveApplicationRequest $request, InternshipApplication $application): RedirectResponse
     {

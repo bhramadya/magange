@@ -26,7 +26,11 @@ import { Label } from '@/components/ui/label';
 import { useAppearance } from '@/hooks/use-appearance';
 import type { Appearance } from '@/hooks/use-appearance';
 import type { MagangNavItem } from '@/layouts/magang-layout';
-import MagangLayout, { mahasiswaNav, verifikatorNav, opdNav } from '@/layouts/magang-layout';
+import MagangLayout, {
+    mahasiswaNav,
+    verifikatorNav,
+    opdNav,
+} from '@/layouts/magang-layout';
 import type { MagangUser, UserRole } from '@/types/magang';
 
 /* =========================================================================
@@ -80,16 +84,52 @@ interface ExtraField {
 // Field tambahan di luar nama/email/WhatsApp, berbeda tiap role.
 const EXTRA_FIELDS: Record<UserRole, ExtraField[]> = {
     mahasiswa: [
-        { key: 'institution', label: 'Asal Instansi', icon: Building2, placeholder: 'Universitas / Sekolah', value: 'Universitas Negeri Madiun' },
-        { key: 'major', label: 'Program Studi / Jurusan', icon: GraduationCap, placeholder: 'Jurusan', value: 'Teknik Informatika' },
+        {
+            key: 'institution',
+            label: 'Asal Instansi',
+            icon: Building2,
+            placeholder: 'Universitas / Sekolah',
+            value: 'Universitas Negeri Madiun',
+        },
+        {
+            key: 'major',
+            label: 'Program Studi / Jurusan',
+            icon: GraduationCap,
+            placeholder: 'Jurusan',
+            value: 'Teknik Informatika',
+        },
     ],
     admin_verifikator: [
-        { key: 'position', label: 'Jabatan', icon: Briefcase, placeholder: 'Jabatan', value: 'Staf Verifikasi' },
-        { key: 'unit', label: 'Unit Kerja', icon: Building2, placeholder: 'Unit kerja', value: 'Dinas Kominfo Kota Madiun' },
+        {
+            key: 'position',
+            label: 'Jabatan',
+            icon: Briefcase,
+            placeholder: 'Jabatan',
+            value: 'Staf Verifikasi',
+        },
+        {
+            key: 'unit',
+            label: 'Unit Kerja',
+            icon: Building2,
+            placeholder: 'Unit kerja',
+            value: 'Dinas Kominfo Kota Madiun',
+        },
     ],
     admin_opd: [
-        { key: 'position', label: 'Jabatan', icon: Briefcase, placeholder: 'Jabatan', value: 'Kepala Sub Bagian' },
-        { key: 'opd', label: 'OPD', icon: Building2, placeholder: 'Organisasi Perangkat Daerah', value: 'Dinas Komunikasi dan Informatika' },
+        {
+            key: 'position',
+            label: 'Jabatan',
+            icon: Briefcase,
+            placeholder: 'Jabatan',
+            value: 'Kepala Sub Bagian',
+        },
+        {
+            key: 'opd',
+            label: 'OPD',
+            icon: Building2,
+            placeholder: 'Organisasi Perangkat Daerah',
+            value: 'Dinas Komunikasi dan Informatika',
+        },
     ],
 };
 
@@ -122,7 +162,9 @@ function SectionCard({
                     <Icon className="size-5" />
                 </span>
                 <div>
-                    <h2 className="text-base font-bold text-[#12213e]">{title}</h2>
+                    <h2 className="text-base font-bold text-[#12213e]">
+                        {title}
+                    </h2>
                     <p className="text-sm text-slate-500">{desc}</p>
                 </div>
             </div>
@@ -132,7 +174,15 @@ function SectionCard({
 }
 
 // Toggle on/off (pengganti shadcn switch yang belum tersedia).
-function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+function Toggle({
+    checked,
+    onChange,
+    label,
+}: {
+    checked: boolean;
+    onChange: (v: boolean) => void;
+    label: string;
+}) {
     return (
         <button
             type="button"
@@ -165,7 +215,7 @@ function Field({
 }) {
     return (
         <div className="space-y-1.5">
-            <Label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <Label className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-slate-500 uppercase">
                 <Icon className="size-3.5" />
                 {label}
             </Label>
@@ -196,7 +246,9 @@ export default function Pengaturan({ user = MOCK_USER }: PengaturanProps) {
     const [name, setName] = useState(user.name);
     const [whatsapp, setWhatsapp] = useState(user.whatsapp_number ?? '');
     const [extra, setExtra] = useState<Record<string, string>>(() =>
-        Object.fromEntries(EXTRA_FIELDS[user.role].map((f) => [f.key, f.value])),
+        Object.fromEntries(
+            EXTRA_FIELDS[user.role].map((f) => [f.key, f.value]),
+        ),
     );
     const [savingProfile, setSavingProfile] = useState(false);
 
@@ -214,25 +266,34 @@ export default function Pengaturan({ user = MOCK_USER }: PengaturanProps) {
         }, 800);
     }
 
-    function saveNotif(next: { email?: boolean; reminder?: boolean; ringkasan?: boolean }) {
+    function saveNotif(next: {
+        email?: boolean;
+        reminder?: boolean;
+        ringkasan?: boolean;
+    }) {
         // TODO(backend): router.patch('/pengaturan/notifikasi', { email_status, reminder_laporan, ringkasan })
         if (next.email !== undefined) {
-setNotifEmailStatus(next.email);
-}
+            setNotifEmailStatus(next.email);
+        }
 
         if (next.reminder !== undefined) {
-setNotifReminder(next.reminder);
-}
+            setNotifReminder(next.reminder);
+        }
 
         if (next.ringkasan !== undefined) {
-setNotifRingkasan(next.ringkasan);
-}
+            setNotifRingkasan(next.ringkasan);
+        }
 
         toast.success('Preferensi notifikasi disimpan.');
     }
 
     return (
-        <MagangLayout user={user} title="Pengaturan" active="pengaturan" navItems={navItems}>
+        <MagangLayout
+            user={user}
+            title="Pengaturan"
+            active="pengaturan"
+            navItems={navItems}
+        >
             <Head title="Pengaturan" />
 
             <div className="space-y-6">
@@ -248,7 +309,9 @@ setNotifRingkasan(next.ringkasan);
                             {initials(user.name)}
                         </span>
                         <div>
-                            <h1 className="text-xl font-black sm:text-2xl">{user.name}</h1>
+                            <h1 className="text-xl font-black sm:text-2xl">
+                                {user.name}
+                            </h1>
                             <p className="text-sm text-white/80">
                                 {ROLE_LABEL[user.role]} &middot; {user.email}
                             </p>
@@ -257,10 +320,18 @@ setNotifRingkasan(next.ringkasan);
                 </motion.div>
 
                 {/* ===== Profil ===== */}
-                <SectionCard icon={User} title="Profil" desc="Perbarui informasi data diri Anda.">
+                <SectionCard
+                    icon={User}
+                    title="Profil"
+                    desc="Perbarui informasi data diri Anda."
+                >
                     <div className="grid gap-4 sm:grid-cols-2">
                         <Field icon={User} label="Nama Lengkap">
-                            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nama lengkap" />
+                            <Input
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Nama lengkap"
+                            />
                         </Field>
 
                         <Field icon={Mail} label="Email">
@@ -285,7 +356,12 @@ setNotifRingkasan(next.ringkasan);
                             <Field key={f.key} icon={f.icon} label={f.label}>
                                 <Input
                                     value={extra[f.key] ?? ''}
-                                    onChange={(e) => setExtra((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                                    onChange={(e) =>
+                                        setExtra((prev) => ({
+                                            ...prev,
+                                            [f.key]: e.target.value,
+                                        }))
+                                    }
                                     placeholder={f.placeholder}
                                 />
                             </Field>
@@ -293,7 +369,10 @@ setNotifRingkasan(next.ringkasan);
                     </div>
 
                     <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                        <p className="text-xs text-slate-400">Email tidak dapat diubah karena dipakai untuk login OTP.</p>
+                        <p className="text-xs text-slate-400">
+                            Email tidak dapat diubah karena dipakai untuk login
+                            OTP.
+                        </p>
                         <Button
                             onClick={saveProfile}
                             disabled={savingProfile}
@@ -306,7 +385,11 @@ setNotifRingkasan(next.ringkasan);
                 </SectionCard>
 
                 {/* ===== Tampilan ===== */}
-                <SectionCard icon={Palette} title="Tampilan" desc="Pilih tema antarmuka sesuai kenyamanan Anda.">
+                <SectionCard
+                    icon={Palette}
+                    title="Tampilan"
+                    desc="Pilih tema antarmuka sesuai kenyamanan Anda."
+                >
                     <div className="grid gap-3 sm:grid-cols-3">
                         {THEME_OPTIONS.map((opt) => {
                             const Icon = opt.icon;
@@ -325,13 +408,19 @@ setNotifRingkasan(next.ringkasan);
                                 >
                                     <span
                                         className={`flex size-9 items-center justify-center rounded-lg ${
-                                            isActive ? 'bg-[#106feb] text-white' : 'bg-slate-100 text-slate-500'
+                                            isActive
+                                                ? 'bg-[#106feb] text-white'
+                                                : 'bg-slate-100 text-slate-500'
                                         }`}
                                     >
                                         <Icon className="size-[18px]" />
                                     </span>
-                                    <span className="text-sm font-semibold text-[#12213e]">{opt.label}</span>
-                                    {isActive && <Check className="ml-auto size-4 text-[#106feb]" />}
+                                    <span className="text-sm font-semibold text-[#12213e]">
+                                        {opt.label}
+                                    </span>
+                                    {isActive && (
+                                        <Check className="ml-auto size-4 text-[#106feb]" />
+                                    )}
                                 </button>
                             );
                         })}
@@ -339,7 +428,11 @@ setNotifRingkasan(next.ringkasan);
                 </SectionCard>
 
                 {/* ===== Notifikasi ===== */}
-                <SectionCard icon={Bell} title="Notifikasi" desc="Atur pemberitahuan yang ingin Anda terima.">
+                <SectionCard
+                    icon={Bell}
+                    title="Notifikasi"
+                    desc="Atur pemberitahuan yang ingin Anda terima."
+                >
                     <div className="divide-y divide-slate-100">
                         <NotifRow
                             title="Status pengajuan via email"
@@ -363,24 +456,40 @@ setNotifRingkasan(next.ringkasan);
                 </SectionCard>
 
                 {/* ===== Keamanan & Akun ===== */}
-                <SectionCard icon={ShieldCheck} title="Keamanan & Akun" desc="Login akun ini menggunakan kode OTP via email.">
+                <SectionCard
+                    icon={ShieldCheck}
+                    title="Keamanan & Akun"
+                    desc="Login akun ini menggunakan kode OTP via email."
+                >
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                         <div className="flex items-center gap-3">
                             <span className="flex size-10 items-center justify-center rounded-lg bg-emerald-100 text-emerald-600">
                                 <ShieldCheck className="size-5" />
                             </span>
                             <div>
-                                <p className="text-sm font-semibold text-[#12213e]">Login tanpa kata sandi</p>
+                                <p className="text-sm font-semibold text-[#12213e]">
+                                    Login tanpa kata sandi
+                                </p>
                                 <p className="text-xs text-slate-500">
-                                    Kode verifikasi dikirim ke <span className="font-medium">{user.email}</span> setiap masuk.
+                                    Kode verifikasi dikirim ke{' '}
+                                    <span className="font-medium">
+                                        {user.email}
+                                    </span>{' '}
+                                    setiap masuk.
                                 </p>
                             </div>
                         </div>
                     </div>
 
                     <div className="mt-4 flex items-center justify-between gap-3">
-                        <p className="text-xs text-slate-400">Keluar dari sesi pada perangkat ini.</p>
-                        <Button asChild variant="outline" className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700">
+                        <p className="text-xs text-slate-400">
+                            Keluar dari sesi pada perangkat ini.
+                        </p>
+                        <Button
+                            asChild
+                            variant="outline"
+                            className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                        >
                             <Link href="/logout" method="post" as="button">
                                 <LogOut className="size-4" />
                                 Keluar

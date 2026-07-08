@@ -30,8 +30,20 @@ const MOCK_USER: MagangUser = {
 
 const MOCK_FAQS: Paginated<Faq> = {
     data: [
-        { id: 1, question: 'Apa itu E-Magang Kota Madiun?', answer: 'Platform digital resmi untuk pendaftaran magang.', sort_order: 1, is_active: true },
-        { id: 2, question: 'Apakah pendaftaran dikenakan biaya?', answer: 'Tidak. Seluruh layanan gratis.', sort_order: 2, is_active: true },
+        {
+            id: 1,
+            question: 'Apa itu E-Magang Kota Madiun?',
+            answer: 'Platform digital resmi untuk pendaftaran magang.',
+            sort_order: 1,
+            is_active: true,
+        },
+        {
+            id: 2,
+            question: 'Apakah pendaftaran dikenakan biaya?',
+            answer: 'Tidak. Seluruh layanan gratis.',
+            sort_order: 2,
+            is_active: true,
+        },
     ],
 };
 
@@ -78,16 +90,28 @@ function DeleteButton({ faqId }: { faqId: number }) {
     );
 }
 
-export default function FaqIndex({ user = MOCK_USER, faqs = MOCK_FAQS }: FaqIndexProps) {
+export default function FaqIndex({
+    user = MOCK_USER,
+    faqs = MOCK_FAQS,
+}: FaqIndexProps) {
     return (
-        <MagangLayout user={user} title="Kelola FAQ" active="faq" navItems={verifikatorNav}>
+        <MagangLayout
+            user={user}
+            title="Kelola FAQ"
+            active="faq"
+            navItems={verifikatorNav}
+        >
             <Head title="Kelola FAQ — Verifikator" />
 
             <div className="space-y-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <h2 className="text-xl font-black text-[#12213e]">Kelola FAQ</h2>
-                        <p className="mt-1 text-sm text-slate-500">Pertanyaan yang tampil di halaman utama publik.</p>
+                        <h2 className="text-xl font-black text-[#12213e]">
+                            Kelola FAQ
+                        </h2>
+                        <p className="mt-1 text-sm text-slate-500">
+                            Pertanyaan yang tampil di halaman utama publik.
+                        </p>
                     </div>
                     <Link
                         href="/verifikator/faq/create"
@@ -99,11 +123,16 @@ export default function FaqIndex({ user = MOCK_USER, faqs = MOCK_FAQS }: FaqInde
 
                 <div className="space-y-3">
                     {faqs.data.map((faq) => (
-                        <div key={faq.id} className="rounded-2xl border border-slate-200 bg-white p-5">
+                        <div
+                            key={faq.id}
+                            className="rounded-2xl border border-slate-200 bg-white p-5"
+                        >
                             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="min-w-0 space-y-1.5">
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">#{faq.sort_order}</span>
+                                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">
+                                            #{faq.sort_order}
+                                        </span>
                                         <span
                                             className={cn(
                                                 'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1',
@@ -112,12 +141,22 @@ export default function FaqIndex({ user = MOCK_USER, faqs = MOCK_FAQS }: FaqInde
                                                     : 'bg-slate-50 text-slate-500 ring-slate-200',
                                             )}
                                         >
-                                            {faq.is_active ? <Eye className="size-3" /> : <EyeOff className="size-3" />}
-                                            {faq.is_active ? 'Aktif' : 'Nonaktif'}
+                                            {faq.is_active ? (
+                                                <Eye className="size-3" />
+                                            ) : (
+                                                <EyeOff className="size-3" />
+                                            )}
+                                            {faq.is_active
+                                                ? 'Aktif'
+                                                : 'Nonaktif'}
                                         </span>
                                     </div>
-                                    <p className="text-sm font-bold text-[#12213e]">{faq.question}</p>
-                                    <p className="line-clamp-2 text-xs text-slate-500">{faq.answer}</p>
+                                    <p className="text-sm font-bold text-[#12213e]">
+                                        {faq.question}
+                                    </p>
+                                    <p className="line-clamp-2 text-xs text-slate-500">
+                                        {faq.answer}
+                                    </p>
                                 </div>
                                 <div className="flex shrink-0 items-center gap-1">
                                     <Link
@@ -135,7 +174,9 @@ export default function FaqIndex({ user = MOCK_USER, faqs = MOCK_FAQS }: FaqInde
                     {faqs.data.length === 0 && (
                         <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
                             <HelpCircle className="size-10 text-slate-300" />
-                            <p className="text-sm font-medium text-slate-500">Belum ada FAQ. Tambahkan yang pertama.</p>
+                            <p className="text-sm font-medium text-slate-500">
+                                Belum ada FAQ. Tambahkan yang pertama.
+                            </p>
                         </div>
                     )}
                 </div>

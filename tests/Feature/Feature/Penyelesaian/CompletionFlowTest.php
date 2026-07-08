@@ -88,12 +88,19 @@ test('survei wajib membuka kunci unduhan sertifikat', function () {
 
     $this->actingAs($mahasiswa)
         ->post("/sertifikat/{$certificate->id}/survei", [
-            'rating' => 5,
+            'ratings' => [
+                'bimbingan' => 5,
+                'lingkungan' => 4,
+                'relevansi' => 5,
+                'fasilitas' => 4,
+                'keseluruhan' => 5,
+            ],
             'comment' => 'Pengalaman yang bermanfaat.',
         ])
         ->assertRedirect();
 
     expect($certificate->refresh()->is_download_locked)->toBeFalse();
+    // Rata-rata (5+4+5+4+5)/5 = 4.6 -> dibulatkan 5.
     $this->assertDatabaseHas('satisfaction_surveys', [
         'application_id' => $app->id,
         'rating' => 5,

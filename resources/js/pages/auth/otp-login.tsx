@@ -39,16 +39,25 @@ interface OtpLoginProps {
     errors?: Record<string, string>;
 }
 
-export default function OtpLogin({ status, prefillEmail, errors }: OtpLoginProps) {
+export default function OtpLogin({
+    status,
+    prefillEmail,
+    errors,
+}: OtpLoginProps) {
     const [step, setStep] = useState<Step>(prefillEmail ? 'code' : 'email');
     const [email, setEmail] = useState(prefillEmail ?? '');
-    const [code, setCode] = useState<string[]>(() => Array(OTP_LENGTH).fill(''));
+    const [code, setCode] = useState<string[]>(() =>
+        Array(OTP_LENGTH).fill(''),
+    );
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [resendIn, setResendIn] = useState(prefillEmail ? RESEND_SECONDS : 0);
 
     const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
-    const emailValid = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()), [email]);
+    const emailValid = useMemo(
+        () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()),
+        [email],
+    );
     const codeValue = code.join('');
     const codeComplete = codeValue.length === OTP_LENGTH;
 
@@ -70,14 +79,9 @@ export default function OtpLogin({ status, prefillEmail, errors }: OtpLoginProps
         }
     }, [step]);
 
-    // Tampilkan error yang datang lewat props Inertia (mis. redirect back dari server).
-    useEffect(() => {
-        const inbound = errors?.otp ?? errors?.email;
-
-        if (inbound) {
-            setError(inbound);
-        }
-    }, [errors]);
+    // Error yang ditampilkan: prioritaskan hasil handler lokal (router.post
+    // onError), lalu error yang datang lewat props Inertia (redirect back server).
+    const shownError = error ?? errors?.otp ?? errors?.email ?? null;
 
     /* ---- Langkah 1: minta OTP ---------------------------------------- */
     function handleRequestOtp(e: React.FormEvent) {
@@ -126,7 +130,11 @@ export default function OtpLogin({ status, prefillEmail, errors }: OtpLoginProps
                 preserveScroll: true,
                 // Sukses → controller redirect sesuai peran (tak ada callback sukses di sini).
                 onError: (errs) => {
-                    setError(errs.otp ?? errs.email ?? 'Kode tidak valid atau telah kedaluwarsa.');
+                    setError(
+                        errs.otp ??
+                            errs.email ??
+                            'Kode tidak valid atau telah kedaluwarsa.',
+                    );
                     setCode(Array(OTP_LENGTH).fill(''));
                     inputsRef.current[0]?.focus();
                 },
@@ -154,7 +162,9 @@ export default function OtpLogin({ status, prefillEmail, errors }: OtpLoginProps
                     inputsRef.current[0]?.focus();
                 },
                 onError: (errs) => {
-                    setError(errs.email ?? 'Gagal mengirim ulang kode. Coba lagi.');
+                    setError(
+                        errs.email ?? 'Gagal mengirim ulang kode. Coba lagi.',
+                    );
                 },
                 onFinish: () => setProcessing(false),
             },
@@ -188,7 +198,10 @@ export default function OtpLogin({ status, prefillEmail, errors }: OtpLoginProps
 
     function handlePaste(e: ClipboardEvent<HTMLInputElement>) {
         e.preventDefault();
-        const digits = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, OTP_LENGTH);
+        const digits = e.clipboardData
+            .getData('text')
+            .replace(/\D/g, '')
+            .slice(0, OTP_LENGTH);
 
         if (!digits) {
             return;
@@ -208,7 +221,7 @@ export default function OtpLogin({ status, prefillEmail, errors }: OtpLoginProps
                 {/* ===== Panel brand (kiri, desktop) ===== */}
                 <aside className="relative hidden overflow-hidden bg-[#12213e] lg:flex lg:flex-col lg:justify-between lg:p-12">
                     {/* ornamen */}
-                    <div className="pointer-events-none absolute -right-24 -top-24 size-96 rounded-full bg-[#106feb]/30 blur-3xl" />
+                    <div className="pointer-events-none absolute -top-24 -right-24 size-96 rounded-full bg-[#106feb]/30 blur-3xl" />
                     <div className="pointer-events-none absolute -bottom-32 -left-20 size-96 rounded-full bg-[#106feb]/20 blur-3xl" />
 
                     <Link href="/" className="relative flex items-center gap-3">
@@ -217,17 +230,20 @@ export default function OtpLogin({ status, prefillEmail, errors }: OtpLoginProps
                         </div>
                         <div className="leading-tight text-white">
                             <p className="text-sm font-bold">E-Magang</p>
-                            <p className="text-[11px] font-medium text-white/60">Pemerintah Kota Madiun</p>
+                            <p className="text-[11px] font-medium text-white/60">
+                                Pemerintah Kota Madiun
+                            </p>
                         </div>
                     </Link>
 
                     <div className="relative max-w-md text-white">
-                        <h2 className="text-3xl font-black leading-tight">
+                        <h2 className="text-3xl leading-tight font-black">
                             Satu pintu untuk seluruh proses magang Anda.
                         </h2>
                         <p className="mt-4 text-sm leading-relaxed text-white/70">
-                            Ajukan permohonan, pantau status verifikasi, hingga unduh e-sertifikat —
-                            semua terpusat dan transparan dalam satu akun.
+                            Ajukan permohonan, pantau status verifikasi, hingga
+                            unduh e-sertifikat — semua terpusat dan transparan
+                            dalam satu akun.
                         </p>
 
                         <ul className="mt-8 space-y-3">
@@ -236,7 +252,10 @@ export default function OtpLogin({ status, prefillEmail, errors }: OtpLoginProps
                                 'Lacak status pengajuan secara real-time',
                                 'Sertifikat digital resmi Dinas Kominfo',
                             ].map((item) => (
-                                <li key={item} className="flex items-center gap-3 text-sm text-white/80">
+                                <li
+                                    key={item}
+                                    className="flex items-center gap-3 text-sm text-white/80"
+                                >
                                     <CheckCircle2 className="size-5 shrink-0 text-[#cddcef]" />
                                     {item}
                                 </li>
@@ -253,13 +272,20 @@ export default function OtpLogin({ status, prefillEmail, errors }: OtpLoginProps
                 <main className="flex items-center justify-center bg-slate-50 px-5 py-12 sm:px-8">
                     <div className="w-full max-w-sm">
                         {/* Brand mobile */}
-                        <Link href="/" className="mb-10 flex items-center gap-3 lg:hidden">
+                        <Link
+                            href="/"
+                            className="mb-10 flex items-center gap-3 lg:hidden"
+                        >
                             <div className="flex size-10 items-center justify-center rounded-xl bg-[#106feb] text-base font-black text-white shadow-sm">
                                 eM
                             </div>
                             <div className="leading-tight">
-                                <p className="text-sm font-bold text-[#12213e]">E-Magang</p>
-                                <p className="text-[11px] font-medium text-slate-500">Kota Madiun</p>
+                                <p className="text-sm font-bold text-[#12213e]">
+                                    E-Magang
+                                </p>
+                                <p className="text-[11px] font-medium text-slate-500">
+                                    Kota Madiun
+                                </p>
                             </div>
                         </Link>
 
@@ -276,21 +302,33 @@ export default function OtpLogin({ status, prefillEmail, errors }: OtpLoginProps
                                     initial={{ opacity: 0, x: -16 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: -16 }}
-                                    transition={{ duration: 0.3, ease: 'circOut' }}
+                                    transition={{
+                                        duration: 0.3,
+                                        ease: 'circOut',
+                                    }}
                                 >
                                     <div className="mb-8">
                                         <div className="mb-5 flex size-12 items-center justify-center rounded-2xl bg-[#cddcef]/60 text-[#106feb]">
                                             <Mail className="size-6" />
                                         </div>
-                                        <h1 className="text-2xl font-black text-[#12213e]">Masuk ke akun Anda</h1>
+                                        <h1 className="text-2xl font-black text-[#12213e]">
+                                            Masuk ke akun Anda
+                                        </h1>
                                         <p className="mt-2 text-sm text-slate-500">
-                                            Masukkan email terdaftar. Kami akan mengirim kode verifikasi 6 digit.
+                                            Masukkan email terdaftar. Kami akan
+                                            mengirim kode verifikasi 6 digit.
                                         </p>
                                     </div>
 
-                                    <form onSubmit={handleRequestOtp} className="space-y-5">
+                                    <form
+                                        onSubmit={handleRequestOtp}
+                                        className="space-y-5"
+                                    >
                                         <div className="space-y-2">
-                                            <label htmlFor="email" className="text-sm font-semibold text-[#12213e]">
+                                            <label
+                                                htmlFor="email"
+                                                className="text-sm font-semibold text-[#12213e]"
+                                            >
                                                 Alamat Email
                                             </label>
                                             <input
@@ -302,12 +340,18 @@ export default function OtpLogin({ status, prefillEmail, errors }: OtpLoginProps
                                                 inputMode="email"
                                                 placeholder="nama@email.com"
                                                 value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
-                                                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-[#12213e] placeholder:text-slate-400 outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                                                onChange={(e) =>
+                                                    setEmail(e.target.value)
+                                                }
+                                                className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-[#12213e] transition outline-none placeholder:text-slate-400 focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                                             />
                                         </div>
 
-                                        {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
+                                        {shownError && (
+                                            <p className="text-sm font-medium text-rose-600">
+                                                {shownError}
+                                            </p>
+                                        )}
 
                                         <button
                                             type="submit"
@@ -330,7 +374,10 @@ export default function OtpLogin({ status, prefillEmail, errors }: OtpLoginProps
 
                                     <p className="mt-8 text-center text-sm text-slate-500">
                                         Belum punya akun?{' '}
-                                        <Link href="/#daftar" className="font-semibold text-[#106feb] hover:underline">
+                                        <Link
+                                            href="/#daftar"
+                                            className="font-semibold text-[#106feb] hover:underline"
+                                        >
                                             Ajukan magang
                                         </Link>
                                     </p>
@@ -341,7 +388,10 @@ export default function OtpLogin({ status, prefillEmail, errors }: OtpLoginProps
                                     initial={{ opacity: 0, x: 16 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: 16 }}
-                                    transition={{ duration: 0.3, ease: 'circOut' }}
+                                    transition={{
+                                        duration: 0.3,
+                                        ease: 'circOut',
+                                    }}
                                 >
                                     <button
                                         type="button"
@@ -359,41 +409,70 @@ export default function OtpLogin({ status, prefillEmail, errors }: OtpLoginProps
                                         <div className="mb-5 flex size-12 items-center justify-center rounded-2xl bg-[#cddcef]/60 text-[#106feb]">
                                             <ShieldCheck className="size-6" />
                                         </div>
-                                        <h1 className="text-2xl font-black text-[#12213e]">Masukkan kode verifikasi</h1>
+                                        <h1 className="text-2xl font-black text-[#12213e]">
+                                            Masukkan kode verifikasi
+                                        </h1>
                                         <p className="mt-2 text-sm text-slate-500">
                                             Kami mengirim 6 digit kode ke{' '}
-                                            <span className="font-semibold text-[#12213e]">{email}</span>.
+                                            <span className="font-semibold text-[#12213e]">
+                                                {email}
+                                            </span>
+                                            .
                                         </p>
                                     </div>
 
-                                    <form onSubmit={handleVerifyOtp} className="space-y-6">
-                                        <div className="flex justify-between gap-2" onPaste={handlePaste}>
+                                    <form
+                                        onSubmit={handleVerifyOtp}
+                                        className="space-y-6"
+                                    >
+                                        <div
+                                            className="flex justify-between gap-2"
+                                            onPaste={handlePaste}
+                                        >
                                             {code.map((digit, i) => (
                                                 <input
                                                     key={i}
                                                     ref={(el) => {
-                                                        inputsRef.current[i] = el;
+                                                        inputsRef.current[i] =
+                                                            el;
                                                     }}
                                                     type="text"
                                                     inputMode="numeric"
                                                     maxLength={1}
                                                     value={digit}
-                                                    onChange={(e) => setDigit(i, e.target.value)}
-                                                    onKeyDown={(e) => handleKeyDown(i, e)}
-                                                    onFocus={(e) => e.target.select()}
+                                                    onChange={(e) =>
+                                                        setDigit(
+                                                            i,
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    onKeyDown={(e) =>
+                                                        handleKeyDown(i, e)
+                                                    }
+                                                    onFocus={(e) =>
+                                                        e.target.select()
+                                                    }
                                                     className={cn(
-                                                        'size-12 rounded-xl border bg-white text-center text-lg font-bold text-[#12213e] outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15',
-                                                        error ? 'border-rose-300' : 'border-slate-200',
+                                                        'size-12 rounded-xl border bg-white text-center text-lg font-bold text-[#12213e] transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15',
+                                                        error
+                                                            ? 'border-rose-300'
+                                                            : 'border-slate-200',
                                                     )}
                                                 />
                                             ))}
                                         </div>
 
-                                        {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
+                                        {shownError && (
+                                            <p className="text-sm font-medium text-rose-600">
+                                                {shownError}
+                                            </p>
+                                        )}
 
                                         <button
                                             type="submit"
-                                            disabled={!codeComplete || processing}
+                                            disabled={
+                                                !codeComplete || processing
+                                            }
                                             className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#106feb] text-sm font-bold text-white shadow-sm shadow-[#106feb]/30 transition hover:bg-[#0b5ed0] disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             {processing ? (

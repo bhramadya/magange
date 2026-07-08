@@ -108,7 +108,10 @@ export interface InternshipApplication {
 // Metadata tampilan per status: label Indonesia + warna badge konsisten.
 export const STATUS_META: Record<
     ApplicationStatus,
-    { label: string; tone: 'amber' | 'blue' | 'emerald' | 'rose' | 'violet' | 'slate' }
+    {
+        label: string;
+        tone: 'amber' | 'blue' | 'emerald' | 'rose' | 'violet' | 'slate';
+    }
 > = {
     pending_verifikator: { label: 'Menunggu Verifikasi', tone: 'amber' },
     forwarded_opd: { label: 'Diteruskan ke OPD', tone: 'blue' },

@@ -17,7 +17,11 @@ import { AnimatePresence, motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import MagangLayout from '@/layouts/magang-layout';
-import type { FinalReport, InternshipApplication, MagangUser } from '@/types/magang';
+import type {
+    FinalReport,
+    InternshipApplication,
+    MagangUser,
+} from '@/types/magang';
 
 /* =========================================================================
  *  HALAMAN PENYELESAIAN (Mahasiswa) — Fase 4
@@ -95,7 +99,11 @@ const MOCK_APPLICATION: InternshipApplication = {
     institution_name: 'Universitas Negeri Madiun',
     campus_supervisor: 'Dr. Indah Permatasari, M.Kom.',
     status: 'ongoing',
-    opd: { id: 16, name: 'DINAS KOMUNIKASI DAN INFORMATIKA', code: 'DISKOMINFO' },
+    opd: {
+        id: 16,
+        name: 'DINAS KOMUNIKASI DAN INFORMATIKA',
+        code: 'DISKOMINFO',
+    },
     division: 'Bidang Pengembangan Aplikasi',
     field_supervisor: 'Bayu Pratama, S.Kom.',
     person_in_charge: 'Bayu Pratama, S.Kom.',
@@ -112,7 +120,11 @@ const MOCK_APPLICATION: InternshipApplication = {
 /* -------------------------------- util ------------------------------------- */
 
 function formatDate(iso: string): string {
-    return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(iso));
+    return new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+    }).format(new Date(iso));
 }
 
 function formatBytes(bytes: number): string {
@@ -155,10 +167,20 @@ function StageHeader({
                           : 'bg-slate-100 text-slate-400'
                 }`}
             >
-                {state === 'done' ? <CheckCircle2 className="size-5" /> : state === 'locked' ? <Lock className="size-4" /> : index}
+                {state === 'done' ? (
+                    <CheckCircle2 className="size-5" />
+                ) : state === 'locked' ? (
+                    <Lock className="size-4" />
+                ) : (
+                    index
+                )}
             </span>
             <div className="min-w-0">
-                <h3 className={`text-base font-bold ${state === 'locked' ? 'text-slate-400' : 'text-[#12213e]'}`}>{title}</h3>
+                <h3
+                    className={`text-base font-bold ${state === 'locked' ? 'text-slate-400' : 'text-[#12213e]'}`}
+                >
+                    {title}
+                </h3>
                 <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>
             </div>
         </div>
@@ -167,11 +189,19 @@ function StageHeader({
 
 /* ---- kartu pembungkus tiap tahap ---- */
 
-function StageCard({ state, children }: { state: StageState; children: React.ReactNode }) {
+function StageCard({
+    state,
+    children,
+}: {
+    state: StageState;
+    children: React.ReactNode;
+}) {
     return (
         <div
             className={`rounded-2xl border bg-white p-6 transition-colors ${
-                state === 'active' ? 'border-[#106feb]/40 ring-1 ring-[#106feb]/15' : 'border-slate-200'
+                state === 'active'
+                    ? 'border-[#106feb]/40 ring-1 ring-[#106feb]/15'
+                    : 'border-slate-200'
             } ${state === 'locked' ? 'opacity-75' : ''}`}
         >
             {children}
@@ -181,7 +211,13 @@ function StageCard({ state, children }: { state: StageState; children: React.Rea
 
 /* ---- input bintang survei ---- */
 
-function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+function StarRating({
+    value,
+    onChange,
+}: {
+    value: number;
+    onChange: (v: number) => void;
+}) {
     const [hover, setHover] = useState(0);
     const shown = hover || value;
 
@@ -204,7 +240,9 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
                     </button>
                 ))}
             </div>
-            <span className="text-xs font-medium text-slate-500">{shown ? RATING_LABEL[shown] : 'Belum dinilai'}</span>
+            <span className="text-xs font-medium text-slate-500">
+                {shown ? RATING_LABEL[shown] : 'Belum dinilai'}
+            </span>
         </div>
     );
 }
@@ -214,28 +252,56 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
 function ReportFileCard({ report }: { report: FinalReport }) {
     const tone =
         report.status === 'approved'
-            ? { wrap: 'border-emerald-200 bg-emerald-50', icon: 'bg-emerald-500', text: 'text-emerald-700', label: 'Disetujui' }
+            ? {
+                  wrap: 'border-emerald-200 bg-emerald-50',
+                  icon: 'bg-emerald-500',
+                  text: 'text-emerald-700',
+                  label: 'Disetujui',
+              }
             : report.status === 'rejected'
-              ? { wrap: 'border-rose-200 bg-rose-50', icon: 'bg-rose-500', text: 'text-rose-700', label: 'Perlu Revisi' }
-              : { wrap: 'border-blue-200 bg-blue-50', icon: 'bg-[#106feb]', text: 'text-blue-700', label: 'Menunggu Validasi' };
+              ? {
+                    wrap: 'border-rose-200 bg-rose-50',
+                    icon: 'bg-rose-500',
+                    text: 'text-rose-700',
+                    label: 'Perlu Revisi',
+                }
+              : {
+                    wrap: 'border-blue-200 bg-blue-50',
+                    icon: 'bg-[#106feb]',
+                    text: 'text-blue-700',
+                    label: 'Menunggu Validasi',
+                };
 
     return (
-        <div className={`flex items-center gap-3 rounded-xl border p-3.5 ${tone.wrap}`}>
-            <span className={`flex size-10 shrink-0 items-center justify-center rounded-lg text-white ${tone.icon}`}>
+        <div
+            className={`flex items-center gap-3 rounded-xl border p-3.5 ${tone.wrap}`}
+        >
+            <span
+                className={`flex size-10 shrink-0 items-center justify-center rounded-lg text-white ${tone.icon}`}
+            >
                 <FileText className="size-5" />
             </span>
             <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-[#12213e]">{report.file_name}</p>
-                <p className="text-xs text-slate-500">Diunggah {formatDate(report.submitted_at)}</p>
+                <p className="truncate text-sm font-semibold text-[#12213e]">
+                    {report.file_name}
+                </p>
+                <p className="text-xs text-slate-500">
+                    Diunggah {formatDate(report.submitted_at)}
+                </p>
             </div>
-            <span className={`shrink-0 text-xs font-bold ${tone.text}`}>{tone.label}</span>
+            <span className={`shrink-0 text-xs font-bold ${tone.text}`}>
+                {tone.label}
+            </span>
         </div>
     );
 }
 
 /* ================================= PAGE =================================== */
 
-export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPLICATION }: PenyelesaianProps) {
+export default function Penyelesaian({
+    user = MOCK_USER,
+    application = MOCK_APPLICATION,
+}: PenyelesaianProps) {
     // ---- state turunan langsung dari props (Inertia reload props tiap sukses) ----
     const report = application?.final_report ?? null;
     const surveySubmitted = application?.survey_submitted ?? false;
@@ -256,10 +322,19 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
     const reportRejected = report?.status === 'rejected';
     const hasReport = report !== null;
 
-    const stage1: StageState = reportRejected ? 'active' : hasReport ? 'done' : 'active';
+    const stage1: StageState = reportRejected
+        ? 'active'
+        : hasReport
+          ? 'done'
+          : 'active';
     // Survei terbuka setelah Admin Verifikator menerbitkan sertifikat (terkunci).
-    const stage2: StageState = surveySubmitted ? 'done' : certificate ? 'active' : 'locked';
-    const stage3: StageState = certAvailable && surveySubmitted ? 'active' : 'locked';
+    const stage2: StageState = surveySubmitted
+        ? 'done'
+        : certificate
+          ? 'active'
+          : 'locked';
+    const stage3: StageState =
+        certAvailable && surveySubmitted ? 'active' : 'locked';
 
     const surveyValid = useMemo(
         () => SURVEY_QUESTIONS.every((q) => (ratings[q.key] ?? 0) > 0),
@@ -299,14 +374,15 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
             return;
         }
 
-        // Skema survei menyimpan 1 rating → kirim rata-rata dari 5 pertanyaan.
-        const values = SURVEY_QUESTIONS.map((q) => ratings[q.key] ?? 0);
-        const rating = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+        // Kirim rating per-aspek (5 pertanyaan); rata-rata dihitung server-side.
+        const payloadRatings = Object.fromEntries(
+            SURVEY_QUESTIONS.map((q) => [q.key, ratings[q.key] ?? 0]),
+        );
 
         setSendingSurvey(true);
         router.post(
             `/sertifikat/${certificate.id}/survei`,
-            { rating, comment },
+            { ratings: payloadRatings, comment },
             {
                 preserveScroll: true,
                 onFinish: () => setSendingSurvey(false),
@@ -324,15 +400,22 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
 
     if (!eligible) {
         return (
-            <MagangLayout user={user} title="Penyelesaian" active="penyelesaian">
+            <MagangLayout
+                user={user}
+                title="Penyelesaian"
+                active="penyelesaian"
+            >
                 <Head title="Penyelesaian" />
                 <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
                     <div className="flex size-14 items-center justify-center rounded-2xl bg-[#cddcef]/40 text-[#106feb]">
                         <Award className="size-7" />
                     </div>
-                    <h2 className="mt-4 text-lg font-bold text-[#12213e]">Tahap penyelesaian belum tersedia</h2>
+                    <h2 className="mt-4 text-lg font-bold text-[#12213e]">
+                        Tahap penyelesaian belum tersedia
+                    </h2>
                     <p className="mt-1 max-w-md text-sm text-slate-500">
-                        Halaman ini terbuka saat magang Anda telah berjalan. Unggah laporan akhir, isi survei, lalu unduh
+                        Halaman ini terbuka saat magang Anda telah berjalan.
+                        Unggah laporan akhir, isi survei, lalu unduh
                         e-Sertifikat di sini ketika periode magang berakhir.
                     </p>
                     <Link
@@ -357,20 +440,39 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
             {/* Header */}
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="text-sm text-slate-500">Tahap akhir magang Anda</p>
-                    <h2 className="text-2xl font-black text-[#12213e]">Penyelesaian &amp; Sertifikat</h2>
+                    <p className="text-sm text-slate-500">
+                        Tahap akhir magang Anda
+                    </p>
+                    <h2 className="text-2xl font-black text-[#12213e]">
+                        Penyelesaian &amp; Sertifikat
+                    </h2>
                 </div>
                 <span className="self-start rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 sm:self-auto">
-                    No. Tiket: <span className="text-[#106feb]">{application.ticket_number}</span>
+                    No. Tiket:{' '}
+                    <span className="text-[#106feb]">
+                        {application.ticket_number}
+                    </span>
                 </span>
             </div>
 
             {/* Banner ringkas progres */}
             <div className="mt-6 grid grid-cols-3 gap-3">
                 {[
-                    { label: 'Laporan', done: hasReport && !reportRejected, active: stage1 === 'active' },
-                    { label: 'Survei', done: surveySubmitted, active: stage2 === 'active' },
-                    { label: 'Sertifikat', done: completedAll, active: stage3 === 'active' },
+                    {
+                        label: 'Laporan',
+                        done: hasReport && !reportRejected,
+                        active: stage1 === 'active',
+                    },
+                    {
+                        label: 'Survei',
+                        done: surveySubmitted,
+                        active: stage2 === 'active',
+                    },
+                    {
+                        label: 'Sertifikat',
+                        done: completedAll,
+                        active: stage3 === 'active',
+                    },
                 ].map((s, i) => (
                     <div
                         key={s.label}
@@ -405,13 +507,16 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
                                 {report.status === 'pending' && (
                                     <p className="flex items-center gap-2 text-xs text-slate-500">
                                         <Clock className="size-4 text-[#106feb]" />
-                                        Laporan sedang ditinjau Admin Verifikator. Anda akan diberi tahu via email/WhatsApp.
+                                        Laporan sedang ditinjau Admin
+                                        Verifikator. Anda akan diberi tahu via
+                                        email/WhatsApp.
                                     </p>
                                 )}
                                 {report.status === 'approved' && (
                                     <p className="flex items-center gap-2 text-xs font-medium text-emerald-700">
                                         <CheckCircle2 className="size-4" />
-                                        Laporan disetujui. Lanjutkan ke pengisian survei di bawah.
+                                        Laporan disetujui. Lanjutkan ke
+                                        pengisian survei di bawah.
                                     </p>
                                 )}
                             </div>
@@ -420,10 +525,12 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
                                 {reportRejected && report && (
                                     <div className="rounded-xl border border-rose-200 bg-rose-50 p-3.5">
                                         <p className="flex items-center gap-2 text-sm font-bold text-rose-700">
-                                            <AlertTriangle className="size-4" /> Laporan perlu direvisi
+                                            <AlertTriangle className="size-4" />{' '}
+                                            Laporan perlu direvisi
                                         </p>
                                         <p className="mt-1 text-xs text-rose-700/90">
-                                            Admin Verifikator meminta perbaikan. Silakan unggah ulang versi revisi.
+                                            Admin Verifikator meminta perbaikan.
+                                            Silakan unggah ulang versi revisi.
                                         </p>
                                     </div>
                                 )}
@@ -437,14 +544,19 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
                                     </span>
                                     {file ? (
                                         <span className="mt-3 text-sm font-semibold text-[#12213e]">
-                                            {file.name} <span className="font-normal text-slate-500">({formatBytes(file.size)})</span>
+                                            {file.name}{' '}
+                                            <span className="font-normal text-slate-500">
+                                                ({formatBytes(file.size)})
+                                            </span>
                                         </span>
                                     ) : (
                                         <>
                                             <span className="mt-3 text-sm font-semibold text-[#12213e]">
                                                 Klik untuk memilih berkas
                                             </span>
-                                            <span className="mt-0.5 text-xs text-slate-500">Laporan akhir dalam format PDF</span>
+                                            <span className="mt-0.5 text-xs text-slate-500">
+                                                Laporan akhir dalam format PDF
+                                            </span>
                                         </>
                                     )}
                                     <input
@@ -461,12 +573,16 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
                                     <input
                                         type="checkbox"
                                         checked={confirmed}
-                                        onChange={(e) => setConfirmed(e.target.checked)}
+                                        onChange={(e) =>
+                                            setConfirmed(e.target.checked)
+                                        }
                                         className="mt-0.5 size-4 rounded border-slate-300 text-[#106feb] focus:ring-[#106feb]"
                                     />
                                     <span className="text-xs text-slate-600">
-                                        Saya konfirmasi telah menyelesaikan seluruh periode magang dan laporan ini bersifat final.
-                                        Mengunggah akan menandai magang saya <strong>selesai</strong>.
+                                        Saya konfirmasi telah menyelesaikan
+                                        seluruh periode magang dan laporan ini
+                                        bersifat final. Mengunggah akan menandai
+                                        magang saya <strong>selesai</strong>.
                                     </span>
                                 </label>
 
@@ -478,11 +594,15 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
                                 >
                                     {uploading ? (
                                         <>
-                                            <Loader2 className="size-4 animate-spin" /> Mengunggah…
+                                            <Loader2 className="size-4 animate-spin" />{' '}
+                                            Mengunggah…
                                         </>
                                     ) : (
                                         <>
-                                            <Upload className="size-4" /> {reportRejected ? 'Unggah Revisi' : 'Unggah Laporan'}
+                                            <Upload className="size-4" />{' '}
+                                            {reportRejected
+                                                ? 'Unggah Revisi'
+                                                : 'Unggah Laporan'}
                                         </>
                                     )}
                                 </button>
@@ -510,7 +630,9 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
                                 className="mt-5 flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500"
                             >
                                 <Lock className="size-4" />
-                                Survei terbuka setelah Admin Verifikator menyetujui laporan & menerbitkan sertifikat Anda.
+                                Survei terbuka setelah Admin Verifikator
+                                menyetujui laporan & menerbitkan sertifikat
+                                Anda.
                             </motion.p>
                         )}
 
@@ -528,27 +650,42 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
                                         className="flex flex-col gap-2 border-b border-slate-100 pb-4 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
                                     >
                                         <p className="text-sm font-medium text-[#12213e]">
-                                            <span className="mr-1.5 text-slate-400">{i + 1}.</span>
+                                            <span className="mr-1.5 text-slate-400">
+                                                {i + 1}.
+                                            </span>
                                             {q.text}
                                         </p>
                                         <StarRating
                                             value={ratings[q.key] ?? 0}
-                                            onChange={(v) => setRatings((prev) => ({ ...prev, [q.key]: v }))}
+                                            onChange={(v) =>
+                                                setRatings((prev) => ({
+                                                    ...prev,
+                                                    [q.key]: v,
+                                                }))
+                                            }
                                         />
                                     </div>
                                 ))}
 
                                 <div>
-                                    <label htmlFor="survey-comment" className="text-sm font-medium text-[#12213e]">
-                                        Saran &amp; masukan <span className="font-normal text-slate-400">(opsional)</span>
+                                    <label
+                                        htmlFor="survey-comment"
+                                        className="text-sm font-medium text-[#12213e]"
+                                    >
+                                        Saran &amp; masukan{' '}
+                                        <span className="font-normal text-slate-400">
+                                            (opsional)
+                                        </span>
                                     </label>
                                     <textarea
                                         id="survey-comment"
                                         value={comment}
-                                        onChange={(e) => setComment(e.target.value)}
+                                        onChange={(e) =>
+                                            setComment(e.target.value)
+                                        }
                                         rows={3}
                                         placeholder="Bagikan pengalaman atau saran Anda selama magang…"
-                                        className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-[#12213e] placeholder:text-slate-400 focus:border-[#106feb] focus:outline-none focus:ring-2 focus:ring-[#106feb]/15"
+                                        className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-[#12213e] placeholder:text-slate-400 focus:border-[#106feb] focus:ring-2 focus:ring-[#106feb]/15 focus:outline-none"
                                     />
                                 </div>
 
@@ -560,16 +697,21 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
                                 >
                                     {sendingSurvey ? (
                                         <>
-                                            <Loader2 className="size-4 animate-spin" /> Mengirim…
+                                            <Loader2 className="size-4 animate-spin" />{' '}
+                                            Mengirim…
                                         </>
                                     ) : (
                                         <>
-                                            <ClipboardList className="size-4" /> Kirim Survei
+                                            <ClipboardList className="size-4" />{' '}
+                                            Kirim Survei
                                         </>
                                     )}
                                 </button>
                                 {!surveyValid && (
-                                    <p className="text-xs text-slate-400">Mohon nilai seluruh pertanyaan terlebih dahulu.</p>
+                                    <p className="text-xs text-slate-400">
+                                        Mohon nilai seluruh pertanyaan terlebih
+                                        dahulu.
+                                    </p>
                                 )}
                             </motion.div>
                         )}
@@ -602,12 +744,14 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
                         {!surveySubmitted ? (
                             <p className="flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
                                 <Lock className="size-4" />
-                                Sertifikat terbuka setelah survei wajib Anda terkirim.
+                                Sertifikat terbuka setelah survei wajib Anda
+                                terkirim.
                             </p>
                         ) : !certAvailable ? (
                             <p className="flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
                                 <Clock className="size-4" />
-                                Sertifikat sedang disiapkan. Anda akan diberi tahu saat siap diunduh.
+                                Sertifikat sedang disiapkan. Anda akan diberi
+                                tahu saat siap diunduh.
                             </p>
                         ) : (
                             <motion.div
@@ -621,17 +765,25 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
                                         <Award className="size-6" />
                                     </span>
                                     <div>
-                                        <p className="text-sm font-bold">Selamat, magang Anda selesai! 🎉</p>
+                                        <p className="text-sm font-bold">
+                                            Selamat, magang Anda selesai! 🎉
+                                        </p>
                                         <p className="text-xs text-white/80">
-                                            e-Sertifikat resmi Anda telah terbit dan siap diunduh.
+                                            e-Sertifikat resmi Anda telah terbit
+                                            dan siap diunduh.
                                         </p>
                                     </div>
                                 </div>
                                 <a
-                                    href={certificate ? `/sertifikat/${certificate.id}/download` : '#'}
+                                    href={
+                                        certificate
+                                            ? `/sertifikat/${certificate.id}/download`
+                                            : '#'
+                                    }
                                     className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-[#106feb] transition-colors hover:bg-white/90"
                                 >
-                                    <Download className="size-4" /> Unduh e-Sertifikat
+                                    <Download className="size-4" /> Unduh
+                                    e-Sertifikat
                                 </a>
                             </motion.div>
                         )}
@@ -641,25 +793,42 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
 
             {/* Ringkasan magang (konteks) */}
             <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
-                <h3 className="text-base font-bold text-[#12213e]">Ringkasan Magang</h3>
+                <h3 className="text-base font-bold text-[#12213e]">
+                    Ringkasan Magang
+                </h3>
                 <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                        <dt className="text-xs font-medium text-slate-500">OPD Penempatan</dt>
-                        <dd className="mt-0.5 text-sm font-semibold text-[#12213e]">{application.opd?.name ?? '—'}</dd>
-                    </div>
-                    <div>
-                        <dt className="text-xs font-medium text-slate-500">Bidang</dt>
-                        <dd className="mt-0.5 text-sm font-semibold text-[#12213e]">{application.division ?? '—'}</dd>
-                    </div>
-                    <div>
-                        <dt className="text-xs font-medium text-slate-500">Periode</dt>
+                        <dt className="text-xs font-medium text-slate-500">
+                            OPD Penempatan
+                        </dt>
                         <dd className="mt-0.5 text-sm font-semibold text-[#12213e]">
-                            {formatDate(application.start_date)} – {formatDate(application.end_date)}
+                            {application.opd?.name ?? '—'}
                         </dd>
                     </div>
                     <div>
-                        <dt className="text-xs font-medium text-slate-500">Pembimbing Lapangan</dt>
-                        <dd className="mt-0.5 text-sm font-semibold text-[#12213e]">{application.field_supervisor ?? '—'}</dd>
+                        <dt className="text-xs font-medium text-slate-500">
+                            Bidang
+                        </dt>
+                        <dd className="mt-0.5 text-sm font-semibold text-[#12213e]">
+                            {application.division ?? '—'}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-xs font-medium text-slate-500">
+                            Periode
+                        </dt>
+                        <dd className="mt-0.5 text-sm font-semibold text-[#12213e]">
+                            {formatDate(application.start_date)} –{' '}
+                            {formatDate(application.end_date)}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-xs font-medium text-slate-500">
+                            Pembimbing Lapangan
+                        </dt>
+                        <dd className="mt-0.5 text-sm font-semibold text-[#12213e]">
+                            {application.field_supervisor ?? '—'}
+                        </dd>
                     </div>
                 </dl>
             </div>

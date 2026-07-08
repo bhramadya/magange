@@ -1,4 +1,11 @@
-import { CheckCircle2, Clock, Send, FileCheck, Award, XCircle } from 'lucide-react';
+import {
+    CheckCircle2,
+    Clock,
+    Send,
+    FileCheck,
+    Award,
+    XCircle,
+} from 'lucide-react';
 import type { ApplicationStatus } from '@/types/magang';
 
 const TIMELINE_STEPS = [
@@ -6,7 +13,11 @@ const TIMELINE_STEPS = [
     { key: 'forwarded_opd', label: 'Diteruskan ke OPD', icon: Send },
     { key: 'approved', label: 'Disetujui OPD', icon: CheckCircle2 },
     { key: 'ongoing', label: 'Sedang Magang', icon: FileCheck },
-    { key: 'completion_submitted', label: 'Penyelesaian Diajukan', icon: FileCheck },
+    {
+        key: 'completion_submitted',
+        label: 'Penyelesaian Diajukan',
+        icon: FileCheck,
+    },
     { key: 'completed', label: 'Selesai', icon: Award },
 ] as const;
 
@@ -25,16 +36,25 @@ interface StatusTimelineProps {
     className?: string;
 }
 
-export function StatusTimeline({ currentStatus, className = '' }: StatusTimelineProps) {
+export function StatusTimeline({
+    currentStatus,
+    className = '',
+}: StatusTimelineProps) {
     if (currentStatus === 'rejected') {
         return (
-            <div className={`flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-6 ${className}`}>
+            <div
+                className={`flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-6 ${className}`}
+            >
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
                     <XCircle className="size-5" />
                 </span>
                 <div>
-                    <p className="text-sm font-semibold text-rose-900">Pengajuan Ditolak</p>
-                    <p className="text-xs text-rose-700">Proses tidak dapat dilanjutkan.</p>
+                    <p className="text-sm font-semibold text-rose-900">
+                        Pengajuan Ditolak
+                    </p>
+                    <p className="text-xs text-rose-700">
+                        Proses tidak dapat dilanjutkan.
+                    </p>
                 </div>
             </div>
         );
@@ -70,7 +90,9 @@ export function StatusTimeline({ currentStatus, className = '' }: StatusTimeline
                             )}
                         </div>
                         <div className="flex-1 pt-1">
-                            <p className={`text-sm font-semibold ${isActive ? 'text-[#106feb]' : isDone ? 'text-emerald-700' : 'text-slate-500'}`}>
+                            <p
+                                className={`text-sm font-semibold ${isActive ? 'text-[#106feb]' : isDone ? 'text-emerald-700' : 'text-slate-500'}`}
+                            >
                                 {step.label}
                             </p>
                         </div>

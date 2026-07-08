@@ -13,7 +13,8 @@ class DatabaseSeeder extends Seeder
      * Seed the application's database.
      *
      * Urutan penting: OPD dahulu (dipakai AdminSeeder),
-     * lalu admin (Verifikator dipakai FaqSeeder sebagai created_by).
+     * lalu admin (Verifikator dipakai FaqSeeder sebagai created_by),
+     * terakhir data demo pengajuan (butuh OPD + admin sudah ada).
      */
     public function run(): void
     {
@@ -21,6 +22,7 @@ class DatabaseSeeder extends Seeder
             OpdSeeder::class,
             AdminSeeder::class,
             FaqSeeder::class,
+            ApplicationSeeder::class,
         ]);
     }
 }
