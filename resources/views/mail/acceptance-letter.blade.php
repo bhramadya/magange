@@ -1,17 +1,5 @@
 <x-mail::message>
-{{-- Header branded: judul biru besar + badge status --}}
-<table width="100%" cellpadding="0" cellspacing="0" role="presentation">
-<tr><td align="center" style="padding-bottom: 8px;">
-<span style="display:inline-block; font-size:30px; line-height:1.2; font-weight:800; color:#106feb; letter-spacing:-0.5px;">
-E-Magang Kota Madiun
-</span>
-</td></tr>
-<tr><td align="center" style="padding-bottom: 20px;">
-<span style="display:inline-block; padding:6px 18px; border-radius:9999px; background:#dcfce7; color:#15803d; font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">
-Disetujui
-</span>
-</td></tr>
-</table>
+@include('mail.partials.header', ['badge' => 'Disetujui', 'badgeBg' => '#dcfce7', 'badgeText' => '#15803d'])
 
 Halo **{{ $application->user->name }}**,
 

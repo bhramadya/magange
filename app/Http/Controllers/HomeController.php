@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Faq;
 use App\Models\Opd;
 use App\Models\SatisfactionSurvey;
-use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -35,9 +34,9 @@ class HomeController extends Controller
      * Testimonial landing: survei berkomentar dengan rating tinggi (>= 4),
      * terbaru dulu. Nama peserta & asal instansi diambil dari relasi pengajuan.
      *
-     * @return Collection<int, array<string, mixed>>
+     * @return array<int, array{id: int, rating: int, comment: string|null, name: string, institution: string|null}>
      */
-    private function testimonials()
+    private function testimonials(): array
     {
         return SatisfactionSurvey::query()
             ->where('rating', '>=', 4)
@@ -50,8 +49,10 @@ class HomeController extends Controller
                 'id' => $survey->id,
                 'rating' => $survey->rating,
                 'comment' => $survey->comment,
-                'name' => $survey->application?->user?->name ?? 'Peserta Magang',
+                'name' => $survey->application?->user->name ?? 'Peserta Magang',
                 'institution' => $survey->application?->institution_name,
-            ]);
+            ])
+            ->values()
+            ->all();
     }
 }

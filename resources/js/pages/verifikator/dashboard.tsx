@@ -78,6 +78,7 @@ function makeApp(partial: Partial<InternshipApplication> & Pick<InternshipApplic
         nis: '2101234567',
         address: 'Jl. Pahlawan No. 10, Madiun',
         guardian_name: 'Drs. Suparno',
+        major: 'Teknik Informatika',
         photo_url: null,
         tujuan_magang: 'Magang kompetensi keahlian',
         duration_months: 3,
@@ -580,6 +581,11 @@ export default function VerifikatorDashboard({
                                     <td className="px-5 py-3.5">{app.institution_name}</td>
                                     <td className="px-5 py-3.5 text-slate-600">
                                         {app.tujuan_magang}
+                                        {app.major && (
+                                            <span className="mt-1 flex items-center gap-1 text-xs font-medium text-slate-500">
+                                                <GraduationCap className="size-3 shrink-0" /> {app.major}
+                                            </span>
+                                        )}
                                         {app.skills && (
                                             <span className="mt-1 flex items-center gap-1 text-xs font-medium text-[#106feb]">
                                                 <Sparkles className="size-3 shrink-0" /> {app.skills}
@@ -623,6 +629,9 @@ export default function VerifikatorDashboard({
                                 <p className="flex items-center gap-1.5 text-xs text-slate-500">
                                     <GraduationCap className="size-3.5" /> {app.tujuan_magang}
                                 </p>
+                                {app.major && (
+                                    <p className="text-xs text-slate-500">Jurusan: {app.major}</p>
+                                )}
                                 {app.skills && (
                                     <p className="flex items-center gap-1.5 text-xs font-medium text-[#106feb]">
                                         <Sparkles className="size-3.5 shrink-0" /> {app.skills}

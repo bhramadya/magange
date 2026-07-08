@@ -1,18 +1,44 @@
 <x-mail::message>
-# E-Magang Kota Madiun
+@include('mail.partials.header', ['badge' => 'Ditolak', 'badgeBg' => '#fee2e2', 'badgeText' => '#b91c1c'])
 
-Halo {{ $application->user->name }},
+@php
+    // Tanda tangan menyesuaikan aktor penolak: Admin Verifikator atau Admin OPD.
+    $penolak = $application->opdDecisionBy?->role?->value === 'admin_opd'
+        ? 'Admin OPD'
+        : 'Admin Verifikator';
+@endphp
 
-Mohon maaf, pengajuan magang Anda dengan nomor tiket **{{ $application->ticket_number }}** belum dapat kami setujui.
+Halo **{{ $application->user->name }}**,
+
+Pengajuan magang Anda dengan nomor tiket **{{ $application->ticket_number }}** telah **ditolak**.
+
+{{-- Rincian lengkap pengajuan peserta --}}
+<x-mail::table>
+| Rincian | Keterangan |
+|:--------|:-----------|
+| NIS / NIM | {{ $application->nis ?? '-' }} |
+| Nama Lengkap | {{ $application->user->name }} |
+| Asal Instansi | {{ $application->institution_name }} |
+| Tujuan Bidang OPD | {{ $application->tujuan_magang }} |
+| Jurusan | {{ $application->major ?? '-' }} |
+| Keahlian | {{ $application->skills ?? '-' }} |
+| Alamat Lengkap | {{ $application->address ?? '-' }} |
+| Periode | {{ $application->start_date?->translatedFormat('d M Y') }} – {{ $application->end_date?->translatedFormat('d M Y') }} |
+| Dosen / Guru Pembimbing | {{ $application->campus_supervisor }} |
+| Penanggung Jawab | {{ $application->guardian_name ?? '-' }} |
+| Nomor WhatsApp | {{ $application->user->whatsapp_number ?? '-' }} |
+| Email | {{ $application->user->email }} |
+</x-mail::table>
 
 @if($application->rejection_reason)
 <x-mail::panel>
-Alasan: {{ $application->rejection_reason }}
+**Alasan penolakan:** {{ $application->rejection_reason }}
 </x-mail::panel>
 @endif
 
-Anda dapat memperbaiki berkas dan mengajukan kembali melalui portal E-Magang Kota Madiun.
+Kami menghargai pengajuan magang yang Anda kirimkan. Namun, setelah melalui proses seleksi, kami menginformasikan bahwa pengajuan Anda belum dapat disetujui. Terima kasih atas partisipasi Anda dan semoga sukses di kesempatan lain.
 
-Terima kasih,<br>
+Hormat kami,<br>
+**{{ $penolak }}**<br>
 Pemerintah Kota Madiun
 </x-mail::message>

@@ -32,7 +32,9 @@ test('user can submit a new application', function () {
         'start_date' => now()->addMonth()->toDateString(),
         'end_date' => now()->addMonths(4)->toDateString(),
         'institution_name' => 'Universitas Negeri Madiun',
+        'address' => 'Jl. Merdeka No. 1, Madiun',
         'campus_supervisor' => 'Dr. Andi',
+        'guardian_name' => 'Slamet Santoso',
     ]);
 
     // Alur Fase 1: setelah submit, peserta diarahkan ke login-otp (OTP terkirim).
@@ -58,7 +60,9 @@ test('application submission creates user if not exists', function () {
         'start_date' => now()->addMonth()->toDateString(),
         'end_date' => now()->addMonths(3)->toDateString(),
         'institution_name' => 'Test University',
+        'address' => 'Jl. Test No. 2',
         'campus_supervisor' => 'Dr. Test',
+        'guardian_name' => 'Wali Test',
     ]);
 
     expect(User::where('email', 'newuser@example.com')->exists())->toBeTrue();
@@ -78,7 +82,9 @@ test('application submission reuses existing user', function () {
         'start_date' => now()->addMonth()->toDateString(),
         'end_date' => now()->addMonths(3)->toDateString(),
         'institution_name' => 'Test University',
+        'address' => 'Jl. Test No. 3',
         'campus_supervisor' => 'Dr. Test',
+        'guardian_name' => 'Wali Test',
     ]);
 
     expect(User::where('email', 'existing@example.com')->count())->toBe(1);
@@ -115,7 +121,9 @@ test('application persists optional major and skills', function () {
         'start_date' => now()->addMonth()->toDateString(),
         'end_date' => now()->addMonths(4)->toDateString(),
         'institution_name' => 'Universitas Negeri Madiun',
+        'address' => 'Jl. Merdeka No. 1, Madiun',
         'campus_supervisor' => 'Dr. Andi',
+        'guardian_name' => 'Slamet Santoso',
         'major' => 'Teknik Informatika',
         'skills' => 'Figma, React, penulisan teknis',
     ]);

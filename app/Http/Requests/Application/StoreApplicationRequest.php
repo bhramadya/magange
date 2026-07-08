@@ -54,9 +54,11 @@ class StoreApplicationRequest extends FormRequest
             'start_date' => ['required', 'date', 'after_or_equal:today'],
             'end_date' => ['required', 'date', 'after:start_date'],
             'institution_name' => ['required', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:1000'],
+            // Alamat & Penanggung Jawab tampil sebagai field wajib di form (hanya
+            // Jurusan yang opsional) — validasi diselaraskan dengan UI.
+            'address' => ['required', 'string', 'max:1000'],
             'campus_supervisor' => ['required', 'string', 'max:255'],
-            'guardian_name' => ['nullable', 'string', 'max:255'],
+            'guardian_name' => ['required', 'string', 'max:255'],
             'major' => ['nullable', 'string', 'max:255'],
             'skills' => ['nullable', 'string', 'max:2000'],
             'photo' => ['nullable', 'image', 'mimes:jpeg,jpg,png', 'max:2048'],
@@ -79,16 +81,16 @@ class StoreApplicationRequest extends FormRequest
      *     start_date: string,
      *     end_date: string,
      *     institution_name: string,
-     *     address?: string|null,
+     *     address: string,
      *     campus_supervisor: string,
-     *     guardian_name?: string|null,
+     *     guardian_name: string,
      *     major?: string|null,
      *     skills?: string|null,
      * }
      */
     public function validated($key = null, $default = null): array
     {
-        /** @var array{name: string, nis?: string|null, email: string, whatsapp_number: string, tujuan_magang: string, duration_months: int, start_date: string, end_date: string, institution_name: string, address?: string|null, campus_supervisor: string, guardian_name?: string|null, major?: string|null, skills?: string|null} $validated */
+        /** @var array{name: string, nis?: string|null, email: string, whatsapp_number: string, tujuan_magang: string, duration_months: int, start_date: string, end_date: string, institution_name: string, address: string, campus_supervisor: string, guardian_name: string, major?: string|null, skills?: string|null} $validated */
         $validated = collect(parent::validated())
             ->except(['recaptcha_token', 'photo'])
             ->all();
@@ -116,7 +118,9 @@ class StoreApplicationRequest extends FormRequest
             'end_date.required' => 'Tanggal selesai wajib diisi.',
             'end_date.after' => 'Tanggal selesai harus setelah tanggal mulai.',
             'institution_name.required' => 'Nama instansi asal wajib diisi.',
+            'address.required' => 'Alamat lengkap wajib diisi.',
             'campus_supervisor.required' => 'Nama dosen pembimbing wajib diisi.',
+            'guardian_name.required' => 'Nama penanggung jawab wajib diisi.',
             'photo.image' => 'Pas foto harus berupa gambar.',
             'photo.mimes' => 'Pas foto harus berformat JPG atau PNG.',
             'photo.max' => 'Ukuran pas foto maksimal 2 MB.',

@@ -289,12 +289,27 @@ Urutan = prioritas. [BLOKER] = tanpa ini aplikasi tidak bisa dipakai end-to-end.
             feature (GET /verifikator/kuota -> 200 + component + opds) LULUS,
             `npm run types:check` LULUS, `pint` PASSED.
 
-[ ] 9. Tombol "Tandai Selesai" untuk Verifikator & OPD.
+[x] 9. Tombol "Tandai Selesai" untuk Verifikator & OPD.
        Endpoint sudah ada (verifikator.pengajuan.complete /
        opd.pengajuan.complete). Tambah tombol + konfirmasi di masing-masing
        dasbor untuk peserta berstatus ongoing/completion_submitted.
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 14:20 WIB.
+          - OPD DecisionDialog: prop onCompleted + submitComplete ->
+            router.post('/opd/pengajuan/{id}/complete'). Tombol "Tandai Selesai
+            Magang" muncul di blok "Status saat ini" saat status ongoing/
+            completion_submitted.
+          - Verifikator ReviewDialog: blok teruskan/tolak kini digate ke status
+            pending_verifikator (reviewable); ditambah blok complete (completable
+            = ongoing/completion_submitted) + submitComplete ->
+            router.post('/verifikator/pengajuan/{id}/complete'); status lain
+            tampil read-only. prop onCompleted ditambahkan.
+          - Kedua tombol optimistic applyStatus(id,'completed') pada sukses;
+            error validasi ditampilkan.
+          - Verifikasi: smoke test 2 endpoint (verifikator & opd complete ->
+            Completed) LULUS, CompletionFlowTest 7 lulus, types:check LULUS,
+            pint PASSED, `npm run build` sukses.
 
-[ ] 10. Standardisasi template email (header biru "E-Magang Kota Madiun").
+[x] 10. Standardisasi template email (header biru "E-Magang Kota Madiun").
         Saat ini hanya acceptance-letter.blade.php yang bergaya. Terapkan header
         biru + badge subteks ke:
         - application-rejection.blade.php -> badge "Ditolak" + detail lengkap
@@ -302,15 +317,51 @@ Urutan = prioritas. [BLOKER] = tanpa ini aplikasi tidak bisa dipakai end-to-end.
           vs OPD).
         - application-confirmation, certificate-notification, otp -> header biru
           konsisten.
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 14:50 WIB.
+           - Partial baru resources/views/mail/partials/header.blade.php (judul
+             biru 30px #106feb + badge subteks berparameter warna).
+           - acceptance-letter di-refactor pakai partial (badge "Disetujui"
+             hijau) — konten tetap.
+           - application-rejection ditulis ulang: badge "Ditolak" (merah), TABEL
+             detail lengkap peserta (NIS, Nama, Asal, Tujuan, Jurusan, Keahlian,
+             Alamat, Periode, Dosen Pembimbing, Penanggung Jawab, WhatsApp,
+             Email), panel alasan, paragraf penutup sesuai spec, dan tanda tangan
+             DINAMIS "Admin OPD"/"Admin Verifikator" via opdDecisionBy->role.
+           - application-confirmation (badge "Diterima" biru),
+             certificate-notification (badge "Sertifikat Terbit" hijau),
+             otp (badge "Kode Masuk" biru) -> semua pakai partial.
+           - Verifikasi: render test mail penolakan (header + Ditolak + email/wa
+             + alasan + signer OPD) LULUS; FULL SUITE 91 lulus/4 skip/0 gagal.
 
 
 === P2. PENYEMPURNAAN & KONSISTENSI ===
 
-[ ] 11. Tampilkan Jurusan (major) di card dasbor Verifikator (kini hanya skills).
+[x] 11. Tampilkan Jurusan (major) di card dasbor Verifikator (kini hanya skills).
         verifikator/dashboard.tsx (:550).
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 15:00 WIB.
+           - Baris Jurusan (major) ditambahkan di sel Tujuan tabel desktop (icon
+             GraduationCap) dan di kartu mobile ("Jurusan: ...") verifikator,
+             di atas baris Keahlian. Resource sudah mengekspos major (tanpa ubah
+             backend). MOCK makeApp diberi major.
+           - Verifikasi: types:check LULUS, `npm run build` sukses.
 
-[ ] 12. Validasi field wajib: pertimbangkan address & guardian_name jadi
+[x] 12. Validasi field wajib: pertimbangkan address & guardian_name jadi
         required agar sesuai form. StoreApplicationRequest.php (:57,:59).
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 15:30 WIB.
+           - KEPUTUSAN: dibuat required (form menandai keduanya sbagai field
+             biasa; hanya Jurusan yang opsional). StoreApplicationRequest:
+             address & guardian_name -> 'required', + pesan validasi, + docblock
+             (block & inline @var) diselaraskan jadi non-optional.
+           - Tes disesuaikan: ApplicationControllerTest (3 payload sukses +
+             payload major/skills) diberi address & guardian_name.
+             (validPengajuan RecaptchaRateLimitTest sudah memuat keduanya;
+             SubmissionServiceTest lewat service langsung, tak terpengaruh.)
+           - BONUS: phpstan (composer types) dijalankan & menemukan 2 error laten
+             dari #5 di HomeController (return type Collection non-covariant +
+             nullsafe berlebih) — diperbaiki (return array<int,shape> + values()
+             + user->name). Sekarang phpstan BERSIH.
+           - Verifikasi: phpstan 0 error, types:check LULUS, pint PASSED,
+             FULL SUITE 91 lulus / 4 skip / 0 gagal.
 
 [ ] 13. Bersihkan / lengkapi dead code:
         - Opd\SubmissionController@index/@show & Verifikator\PengajuanController@
