@@ -1,13 +1,26 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import {
     ChevronRight, Layout, Shield, Clock, Building2,
     MapPin, Mail, Phone, CheckCircle2, ArrowRight, ArrowUpRight, Send, Search, ChevronDown,
     ShieldCheck, Sparkles, Award, Timer,
     FileText, SearchCheck, Key, Download, Info,
-    Calendar, ChevronLeft, ImagePlus, Users
+    Calendar, ChevronLeft, ImagePlus, Users, Star, Quote
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView, animate } from 'motion/react';
 import { useState, useEffect, useRef } from 'react';
+
+/* Widget reCAPTCHA v2 (checkbox) — dimuat via script Google saat runtime. */
+declare global {
+    interface Window {
+        grecaptcha?: {
+            render: (
+                el: HTMLElement,
+                opts: { sitekey: string; callback: (token: string) => void; 'expired-callback'?: () => void },
+            ) => number;
+            reset: (id?: number) => void;
+        };
+    }
+}
 
 /* =========================================================================
  *  ANIMATION HELPERS (Framer Motion)
@@ -441,13 +454,68 @@ function DatePicker({
     );
 }
 
-export default function Welcome() {
+interface WelcomeFaq {
+    id: number;
+    question: string;
+    answer: string;
+}
+
+interface WelcomeOpd {
+    id: number;
+    name: string;
+    code: string;
+}
+
+interface WelcomeTestimonial {
+    id: number;
+    rating: number;
+    comment: string;
+    name: string;
+    institution?: string | null;
+}
+
+interface WelcomeProps {
+    faqs?: WelcomeFaq[];
+    opds?: WelcomeOpd[];
+    testimonials?: WelcomeTestimonial[];
+}
+
+export default function Welcome({ faqs = [], opds = [], testimonials = [] }: WelcomeProps) {
     const [scrolled, setScrolled] = useState(false);
     // Loading screen — tampil saat halaman pertama dimuat, lalu menyingkap hero.
     const [isLoading, setIsLoading] = useState(true);
     // State tanggal magang — disimpan ISO (yyyy-mm-dd), ditampilkan format Indonesia.
     const [tanggalMulai, setTanggalMulai] = useState('');
     const [tanggalSelesai, setTanggalSelesai] = useState('');
+
+    // Site key reCAPTCHA dari shared props (HandleInertiaRequests).
+    const recaptchaSiteKey = (usePage().props as { recaptchaSiteKey?: string }).recaptchaSiteKey ?? '';
+
+    // Formulir pendaftaran publik → POST /pengajuan (multipart karena pas foto).
+    const { data, setData, post, processing, errors, reset } = useForm<{
+        name: string;
+        nis: string;
+        institution_name: string;
+        tujuan_magang: string;
+        major: string;
+        skills: string;
+        address: string;
+        start_date: string;
+        end_date: string;
+        campus_supervisor: string;
+        guardian_name: string;
+        whatsapp_number: string;
+        email: string;
+        photo: File | null;
+        recaptcha_token: string;
+    }>({
+        name: '', nis: '', institution_name: '', tujuan_magang: '',
+        major: '', skills: '', address: '',
+        start_date: '', end_date: '',
+        campus_supervisor: '', guardian_name: '',
+        whatsapp_number: '', email: '',
+        photo: null, recaptcha_token: '',
+    });
 
     // State unggah pas foto — simpan nama berkas + URL pratinjau (object URL).
     const [pasFotoNama, setPasFotoNama] = useState('');
@@ -460,6 +528,7 @@ export default function Welcome() {
             return;
         }
 
+        setData('photo', file);
         setPasFotoNama(file.name);
         setPasFotoPreview((prev) => {
             if (prev) {
@@ -471,23 +540,103 @@ export default function Welcome() {
     };
     // State FAQ
     const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+    // FAQ dari DB (dikelola verifikator); fallback ke set default bila kosong.
+    const faqList: { q: string; a: string }[] = faqs.length > 0
+        ? faqs.map((f) => ({ q: f.question, a: f.answer }))
+        : [
+            { q: 'Apa itu E-Magang Kota Madiun?', a: 'Platform digital resmi untuk mempermudah pendaftaran, verifikasi, dan pemantauan status magang siswa/mahasiswa di lingkungan instansi Pemerintah Kota Madiun.' },
+            { q: 'Apakah pendaftaran dikenakan biaya?', a: 'Tidak. Seluruh layanan di E-Magang Kota Madiun adalah gratis bagi seluruh pelajar dan mahasiswa.' },
+            { q: 'Berapa lama proses verifikasi berkas?', a: 'Biasanya memakan waktu 2-3 hari kerja. Anda akan mendapatkan notifikasi status melalui email atau WhatsApp yang terdaftar.' },
+            { q: 'Berapa lama durasi magang yang diperbolehkan?', a: 'Durasi magang fleksibel mulai dari 1 hingga 6 bulan, menyesuaikan dengan kurikulum atau kebutuhan dari instansi pendidikan Anda.' },
+            { q: 'Apakah magang ini bisa dilakukan secara remote/WFH?', a: 'Seluruh pelaksanaan magang mengikuti kebijakan operasional masing-masing OPD tujuan, namun mayoritas dilaksanakan secara WFO (On-Site) dengan jam kerja kantor pemerintah.' },
+            { q: 'Bagaimana cara mendapatkan e-Sertifikat?', a: 'Setelah selesai melaksanakan magang, pastikan Anda telah mengunggah laporan tugas akhir dan mengisi survei evaluasi di dasbor akun Anda.' },
+        ];
     // State menu mobile (Dropdown Menu dengan AnimatePresence)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    // --- TAMBAHKAN KODE INI (Logika Slider Captcha) ---
-    const [sliderValue, setSliderValue] = useState(0);
-    const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
+    // --- reCAPTCHA v2 checkbox: render eksplisit + simpan token ke form ---
+    const recaptchaRef = useRef<HTMLDivElement | null>(null);
+    const recaptchaWidgetId = useRef<number | null>(null);
 
-    const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = parseInt(e.target.value);
-        setSliderValue(value);
-
-        if (value >= 95) { // Jika digeser sampai 95%, otomatis mengunci ke 100%
-            setIsCaptchaVerified(true);
-            setSliderValue(100);
+    const resetRecaptcha = () => {
+        if (recaptchaWidgetId.current !== null) {
+            window.grecaptcha?.reset(recaptchaWidgetId.current);
         }
+
+        setData('recaptcha_token', '');
     };
-    // --------------------------------------------------
+
+    useEffect(() => {
+        if (!recaptchaSiteKey) {
+            return;
+        }
+
+        let cancelled = false;
+
+        const renderWidget = () => {
+            if (cancelled || recaptchaWidgetId.current !== null) {
+                return;
+            }
+
+            if (!recaptchaRef.current || !window.grecaptcha?.render) {
+                return;
+            }
+
+            recaptchaWidgetId.current = window.grecaptcha.render(recaptchaRef.current, {
+                sitekey: recaptchaSiteKey,
+                callback: (token: string) => setData('recaptcha_token', token),
+                'expired-callback': () => setData('recaptcha_token', ''),
+            });
+        };
+
+        if (window.grecaptcha?.render) {
+            renderWidget();
+
+            return;
+        }
+
+        const scriptId = 'recaptcha-api';
+
+        if (!document.getElementById(scriptId)) {
+            const script = document.createElement('script');
+            script.id = scriptId;
+            script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+            script.async = true;
+            script.defer = true;
+            document.body.appendChild(script);
+        }
+
+        const timer = window.setInterval(() => {
+            if (window.grecaptcha?.render) {
+                window.clearInterval(timer);
+                renderWidget();
+            }
+        }, 300);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(timer);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [recaptchaSiteKey]);
+
+    const handleSubmitPengajuan = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        post('/pengajuan', {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                reset();
+                setPasFotoNama('');
+                setPasFotoPreview('');
+                setTanggalMulai('');
+                setTanggalSelesai('');
+                resetRecaptcha();
+            },
+        });
+    };
 
     // State Fitur Pencarian OPD
     const [searchOpd, setSearchOpd] = useState("");
@@ -548,6 +697,8 @@ export default function Welcome() {
         { href: "#fitur", label: "Fitur" },
         { href: "#instansi", label: "Instansi OPD" },
         { href: "#alur", label: "Alur Pendaftaran" },
+        // Tautan testimoni hanya muncul bila ada testimonial (section kondisional).
+        ...(testimonials.length > 0 ? [{ href: "#testimonial", label: "Testimoni" }] : []),
         { href: "#faq", label: "FAQ" },
         { href: "#daftar", label: "Kontak" },
     ];
@@ -1295,14 +1446,7 @@ export default function Welcome() {
                         </Reveal>
 
                         <div className="flex flex-col gap-4 max-w-3xl mx-auto">
-                            {[
-                                { q: "Apa itu E-Magang Kota Madiun?", a: "Platform digital resmi untuk mempermudah pendaftaran, verifikasi, dan pemantauan status magang siswa/mahasiswa di lingkungan instansi Pemerintah Kota Madiun." },
-                                { q: "Apakah pendaftaran dikenakan biaya?", a: "Tidak. Seluruh layanan di E-Magang Kota Madiun adalah gratis bagi seluruh pelajar dan mahasiswa." },
-                                { q: "Berapa lama proses verifikasi berkas?", a: "Biasanya memakan waktu 2-3 hari kerja. Anda akan mendapatkan notifikasi status melalui email atau WhatsApp yang terdaftar." },
-                                { q: "Berapa lama durasi magang yang diperbolehkan?", a: "Durasi magang fleksibel mulai dari 1 hingga 6 bulan, menyesuaikan dengan kurikulum atau kebutuhan dari instansi pendidikan Anda." },
-                                { q: "Apakah magang ini bisa dilakukan secara remote/WFH?", a: "Seluruh pelaksanaan magang mengikuti kebijakan operasional masing-masing OPD tujuan, namun mayoritas dilaksanakan secara WFO (On-Site) dengan jam kerja kantor pemerintah." },
-                                { q: "Bagaimana cara mendapatkan e-Sertifikat?", a: "Setelah selesai melaksanakan magang, pastikan Anda telah mengunggah laporan tugas akhir dan mengisi survei evaluasi di dasbor akun Anda." }
-                            ].map((item, index) => (
+                            {faqList.map((item, index) => (
                                 <Reveal key={index} delay={index * 0.06}>
                                     <div
                                         className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-[0_8px_30px_rgba(8,71,156,0.05)] hover:border-[#cddcef] transition-colors duration-300"
@@ -1336,6 +1480,59 @@ export default function Welcome() {
                         </div>
                     </div>
                 </section>
+
+                {/* 5.75. TESTIMONIAL — dari survei kepuasan peserta yang telah selesai */}
+                {testimonials.length > 0 && (
+                    <section id="testimonial" className="py-24 md:py-32 px-6 bg-white border-t border-slate-100">
+                        <div className="max-w-[1200px] mx-auto">
+                            <Reveal className="flex flex-col items-center text-center gap-2 mb-16">
+                                <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-slate-100 bg-[#f5faff] w-fit text-[#0a1628]/70 shadow-sm">
+                                    <p>Testimoni Peserta</p>
+                                </div>
+                                <h2 className="text-[32px] md:text-[42px] font-extrabold tracking-tight bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text text-transparent">
+                                    Kata Mereka yang Telah Magang
+                                </h2>
+                                <p className="max-w-xl text-[15px] text-[#0a1628]/60">
+                                    Umpan balik jujur dari peserta setelah menyelesaikan magang di lingkungan Pemerintah Kota Madiun.
+                                </p>
+                            </Reveal>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {testimonials.map((t, index) => (
+                                    <Reveal key={t.id} delay={index * 0.06}>
+                                        <figure className="h-full flex flex-col gap-4 bg-white border border-slate-100 rounded-2xl p-6 shadow-[0_8px_30px_rgba(8,71,156,0.05)] hover:border-[#cddcef] transition-colors duration-300">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex gap-0.5" aria-label={`Rating ${t.rating} dari 5`}>
+                                                    {Array.from({ length: 5 }).map((_, i) => (
+                                                        <Star
+                                                            key={i}
+                                                            className={`w-4 h-4 ${i < t.rating ? 'fill-amber-400 text-amber-400' : 'fill-slate-200 text-slate-200'}`}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <Quote className="w-6 h-6 text-[#cddcef]" />
+                                            </div>
+                                            <blockquote className="flex-1 text-[15px] leading-relaxed text-[#0a1628]/70">
+                                                “{t.comment}”
+                                            </blockquote>
+                                            <figcaption className="flex items-center gap-3 pt-2 border-t border-slate-100">
+                                                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#106feb]/10 text-sm font-bold text-[#106feb]">
+                                                    {t.name.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm font-bold text-[#0a1628]">{t.name}</p>
+                                                    {t.institution && (
+                                                        <p className="truncate text-xs text-[#0a1628]/50">{t.institution}</p>
+                                                    )}
+                                                </div>
+                                            </figcaption>
+                                        </figure>
+                                    </Reveal>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
 
                 {/* 6. KONTAK & FORM PENDAFTARAN */}
                 <section id="daftar" className="py-24 md:py-32 px-6 bg-white border-t border-slate-100">
@@ -1404,7 +1601,7 @@ export default function Welcome() {
                                 {/* Efek Cahaya Halus di Pojok Kanan Form */}
                                 <div className="absolute -right-20 -top-20 w-[300px] h-[300px] bg-[#cddcef]/20 rounded-full blur-[80px] pointer-events-none"></div>
 
-                                <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-6 relative z-10">
+                                <form onSubmit={handleSubmitPengajuan} className="flex flex-col gap-6 relative z-10">
 
                                     <div className="grid sm:grid-cols-2 gap-6">
                                         {/* Input: NIS / NIM */}
@@ -1412,6 +1609,8 @@ export default function Welcome() {
                                             <label className="text-[14px] font-semibold text-[#0a1628]">NIS / NIM</label>
                                             <input
                                                 type="text"
+                                                value={data.nis}
+                                                onChange={(e) => setData('nis', e.target.value)}
                                                 placeholder="Nomor Induk Siswa/Mahasiswa"
                                                 className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
                                             />
@@ -1421,6 +1620,8 @@ export default function Welcome() {
                                             <label className="text-[14px] font-semibold text-[#0a1628]">Nama Lengkap</label>
                                             <input
                                                 type="text"
+                                                value={data.name}
+                                                onChange={(e) => setData('name', e.target.value)}
                                                 placeholder="Nama lengkap sesuai KTP/Kartu Pelajar"
                                                 className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
                                             />
@@ -1433,6 +1634,8 @@ export default function Welcome() {
                                             <label className="text-[14px] font-semibold text-[#0a1628]">Asal Sekolah / Kampus</label>
                                             <input
                                                 type="text"
+                                                value={data.institution_name}
+                                                onChange={(e) => setData('institution_name', e.target.value)}
                                                 placeholder="Contoh: Universitas Brawijaya"
                                                 className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
                                             />
@@ -1440,11 +1643,15 @@ export default function Welcome() {
                                         {/* Input: Tujuan Bidang */}
                                         <div className="flex flex-col gap-2">
                                             <label className="text-[14px] font-semibold text-[#0a1628]">Tujuan Bidang OPD</label>
-                                            <select className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all appearance-none cursor-pointer">
+                                            <select
+                                                value={data.tujuan_magang}
+                                                onChange={(e) => setData('tujuan_magang', e.target.value)}
+                                                className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all appearance-none cursor-pointer"
+                                            >
                                                 <option value="">-- Pilih Instansi / Bidang --</option>
-                                                {/* Menggunakan daftar OPD resmi (35 instansi) */}
-                                                {daftarOPD.map((opd, idx) => (
-                                                    <option key={idx} value={idx + 1}>{opd.name}</option>
+                                                {/* OPD dari DB bila tersedia; fallback daftar statis. */}
+                                                {(opds.length > 0 ? opds.map((o) => o.name) : daftarOPD.map((o) => o.name)).map((name, idx) => (
+                                                    <option key={idx} value={name}>{name}</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -1457,6 +1664,8 @@ export default function Welcome() {
                                         </label>
                                         <input
                                             type="text"
+                                            value={data.major}
+                                            onChange={(e) => setData('major', e.target.value)}
                                             placeholder="Contoh: Teknik Informatika / Multimedia"
                                             className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
                                         />
@@ -1467,6 +1676,8 @@ export default function Welcome() {
                                         <label className="text-[14px] font-semibold text-[#0a1628]">Keahlian / Keterampilan</label>
                                         <textarea
                                             rows={3}
+                                            value={data.skills}
+                                            onChange={(e) => setData('skills', e.target.value)}
                                             placeholder="Sebutkan keahlian atau keterampilan yang dikuasai, mis. desain grafis, pemrograman web, analisis data…"
                                             className="w-full resize-none bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
                                         />
@@ -1477,6 +1688,8 @@ export default function Welcome() {
                                         <label className="text-[14px] font-semibold text-[#0a1628]">Alamat Lengkap</label>
                                         <textarea
                                             rows={3}
+                                            value={data.address}
+                                            onChange={(e) => setData('address', e.target.value)}
                                             placeholder="Alamat domisili lengkap beserta RT/RW, kelurahan, dan kecamatan"
                                             className="w-full resize-none bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
                                         />
@@ -1491,10 +1704,12 @@ export default function Welcome() {
                                                 placeholder="Pilih tanggal mulai"
                                                 onChange={(iso) => {
                                                     setTanggalMulai(iso);
+                                                    setData('start_date', iso);
 
                                                     // Reset tanggal selesai bila jadi lebih awal dari tanggal mulai baru.
                                                     if (tanggalSelesai && tanggalSelesai < iso) {
                                                         setTanggalSelesai('');
+                                                        setData('end_date', '');
                                                     }
                                                 }}
                                             />
@@ -1505,7 +1720,10 @@ export default function Welcome() {
                                                 value={tanggalSelesai}
                                                 min={tanggalMulai || toISODate(new Date())}
                                                 placeholder="Pilih tanggal selesai"
-                                                onChange={setTanggalSelesai}
+                                                onChange={(iso) => {
+                                                    setTanggalSelesai(iso);
+                                                    setData('end_date', iso);
+                                                }}
                                             />
                                         </div>
                                     </div>
@@ -1515,6 +1733,8 @@ export default function Welcome() {
                                             <label className="text-[14px] font-semibold text-[#0a1628]">Nama Dosen / Guru Pembimbing</label>
                                             <input
                                                 type="text"
+                                                value={data.campus_supervisor}
+                                                onChange={(e) => setData('campus_supervisor', e.target.value)}
                                                 placeholder="Nama lengkap pembimbing berserta gelar"
                                                 className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
                                             />
@@ -1523,6 +1743,8 @@ export default function Welcome() {
                                             <label className="text-[14px] font-semibold text-[#0a1628]">Nama Penanggung Jawab</label>
                                             <input
                                                 type="text"
+                                                value={data.guardian_name}
+                                                onChange={(e) => setData('guardian_name', e.target.value)}
                                                 placeholder="Nama orang tua / wali yang dapat dihubungi"
                                                 className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
                                             />
@@ -1534,6 +1756,8 @@ export default function Welcome() {
                                             <label className="text-[14px] font-semibold text-[#0a1628]">Nomor WhatsApp</label>
                                             <input
                                                 type="tel"
+                                                value={data.whatsapp_number}
+                                                onChange={(e) => setData('whatsapp_number', e.target.value)}
                                                 placeholder="Contoh: 081234567890"
                                                 className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
                                             />
@@ -1542,6 +1766,8 @@ export default function Welcome() {
                                             <label className="text-[14px] font-semibold text-[#0a1628]">Email Aktif</label>
                                             <input
                                                 type="email"
+                                                value={data.email}
+                                                onChange={(e) => setData('email', e.target.value)}
                                                 placeholder="Gunakan email utama Anda"
                                                 className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
                                             />
@@ -1572,54 +1798,36 @@ export default function Welcome() {
                                         </label>
                                     </div>
 
-                                    {/* --- SAAS LIGHT MODE SLIDER CAPTCHA --- */}
+                                    {/* --- reCAPTCHA v2 (checkbox) — gerbang anti-bot Fase 1 --- */}
                                     <div className="mt-6 pt-8 border-t border-[#e5e7eb]">
                                         <label className="text-[14px] font-semibold text-[#0a1628] mb-3 block">Validasi Anti-Spam</label>
 
-                                        <div className="relative w-full h-[56px] bg-[#f5faff] border border-[#e5e7eb] rounded-full overflow-hidden flex items-center group shadow-inner">
+                                        {recaptchaSiteKey ? (
+                                            <div ref={recaptchaRef} className="min-h-[78px]" />
+                                        ) : (
+                                            <p className="text-[13px] text-amber-600">
+                                                Kunci reCAPTCHA belum dikonfigurasi. Hubungi administrator.
+                                            </p>
+                                        )}
 
-                                            {/* Background Pengisi */}
-                                            <div
-                                                className="absolute left-0 top-0 bottom-0 bg-[#106feb]/10 transition-all duration-75"
-                                                style={{ width: `${isCaptchaVerified ? 100 : sliderValue}%` }}
-                                            ></div>
-
-                                            {/* Teks Instruksi */}
-                                            <div className="absolute w-full text-center z-0 text-[15px] font-medium select-none pointer-events-none transition-colors">
-                                                {isCaptchaVerified ? (
-                                                    <span className="text-[#106feb] flex items-center justify-center gap-2">
-                                                        <CheckCircle2 className="w-5 h-5" /> Terverifikasi
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-[#0a1628]/40 group-hover:text-[#0a1628]/60">
-                                                        Geser untuk memverifikasi &gt;&gt;
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {/* Input Range Murni */}
-                                            <input
-                                                type="range"
-                                                min="0" max="100"
-                                                value={isCaptchaVerified ? 100 : sliderValue}
-                                                onChange={handleSliderChange}
-                                                disabled={isCaptchaVerified}
-                                                className={`absolute z-20 w-full h-full opacity-0 cursor-ew-resize ${isCaptchaVerified ? 'pointer-events-none' : ''}`}
-                                            />
-
-                                            {/* Gagang Slider (Pill) */}
-                                            <div
-                                                className={`absolute z-10 h-[44px] w-[70px] bg-white border border-[#e5e7eb] rounded-full flex items-center justify-center pointer-events-none transition-all duration-75 shadow-sm ${isCaptchaVerified ? 'border-[#106feb] bg-[#106feb]' : ''}`}
-                                                style={{ left: `calc(${isCaptchaVerified ? 100 : sliderValue}% - ${isCaptchaVerified ? 74 : (sliderValue * 0.74) + 6}px)` }}
-                                            >
-                                                {isCaptchaVerified ? (
-                                                    <CheckCircle2 className="w-6 h-6 text-white" />
-                                                ) : (
-                                                    <ArrowRight className="w-6 h-6 text-[#0a1628]/40" />
-                                                )}
-                                            </div>
-                                        </div>
+                                        {errors.recaptcha_token && (
+                                            <p className="mt-2 text-[13px] text-rose-600">{errors.recaptcha_token}</p>
+                                        )}
                                     </div>
+
+                                    {/* Ringkasan galat validasi lain (mis. email/durasi/tanggal). */}
+                                    {Object.keys(errors).filter((k) => k !== 'recaptcha_token').length > 0 && (
+                                        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
+                                            <p className="text-[13px] font-semibold text-rose-700">Periksa kembali isian berikut:</p>
+                                            <ul className="mt-1 list-disc pl-5 text-[13px] text-rose-600">
+                                                {Object.entries(errors)
+                                                    .filter(([k]) => k !== 'recaptcha_token')
+                                                    .map(([k, msg]) => (
+                                                        <li key={k}>{msg}</li>
+                                                    ))}
+                                            </ul>
+                                        </div>
+                                    )}
 
                                     {/* Informasi Penting — nomor WhatsApp aktif untuk akun & OTP */}
                                     <div className="flex items-start gap-3 mt-6 rounded-2xl bg-[#f5faff] border border-slate-200 px-4 py-3.5">
@@ -1633,26 +1841,26 @@ export default function Welcome() {
                                         dari kiri menutupi background biru #106feb). */}
                                     <motion.button
                                         type="submit"
-                                        disabled={!isCaptchaVerified}
-                                        whileTap={isCaptchaVerified ? { scale: 0.98 } : undefined}
+                                        disabled={!data.recaptcha_token || processing}
+                                        whileTap={data.recaptcha_token && !processing ? { scale: 0.98 } : undefined}
                                         className={`group relative w-full overflow-hidden rounded-full py-1.5 pl-7 pr-1.5 mt-2 flex items-center justify-between gap-3 transition-shadow duration-300 ${
-                                            isCaptchaVerified
+                                            data.recaptcha_token && !processing
                                             ? "bg-[#106feb] shadow-lg shadow-[#106feb]/30 hover:shadow-xl hover:shadow-[#106feb]/40 cursor-pointer"
                                             : "bg-[#e5e7eb] cursor-not-allowed"
                                         }`}
                                     >
                                         {/* Overlay #cddcef geser dari kiri (hanya saat captcha terverifikasi) */}
-                                        {isCaptchaVerified && (
+                                        {data.recaptcha_token && !processing && (
                                             <span
                                                 aria-hidden
                                                 className="absolute inset-0 z-0 bg-[#cddcef] -translate-x-[101%] transition-transform duration-500 ease-out group-hover:translate-x-0"
                                             />
                                         )}
-                                        <span className={`relative z-10 text-[16px] font-semibold transition-colors duration-500 ease-out ${isCaptchaVerified ? "text-white group-hover:text-[#0a1628]" : "text-[#0a1628]/40"}`}>
-                                            Kirim Berkas Pengajuan Magang
+                                        <span className={`relative z-10 text-[16px] font-semibold transition-colors duration-500 ease-out ${data.recaptcha_token && !processing ? "text-white group-hover:text-[#0a1628]" : "text-[#0a1628]/40"}`}>
+                                            {processing ? 'Mengirim…' : 'Kirim Berkas Pengajuan Magang'}
                                         </span>
                                         {/* Lingkaran ikon — membalik kontras saat overlay menutupi */}
-                                        <span className={`relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-500 ease-out ${isCaptchaVerified ? "bg-[#cddcef] text-[#106feb] group-hover:bg-[#106feb] group-hover:text-white" : "bg-white/60 text-[#0a1628]/30"}`}>
+                                        <span className={`relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-500 ease-out ${data.recaptcha_token && !processing ? "bg-[#cddcef] text-[#106feb] group-hover:bg-[#106feb] group-hover:text-white" : "bg-white/60 text-[#0a1628]/30"}`}>
                                             <Send className="size-5 transition-transform duration-500 ease-out group-hover:translate-x-0.5" />
                                         </span>
                                     </motion.button>

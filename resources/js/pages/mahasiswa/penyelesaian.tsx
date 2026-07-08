@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     Upload,
     FileText,
@@ -10,7 +10,6 @@ import {
     Download,
     AlertTriangle,
     ClipboardList,
-    RefreshCw,
     ArrowRight,
     Clock,
 } from 'lucide-react';
@@ -106,6 +105,7 @@ const MOCK_APPLICATION: InternshipApplication = {
     created_at: '2026-06-18T08:15:00',
     final_report: null,
     survey_submitted: false,
+    certificate: null,
     certificate_available: false,
 };
 
@@ -236,13 +236,15 @@ function ReportFileCard({ report }: { report: FinalReport }) {
 /* ================================= PAGE =================================== */
 
 export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPLICATION }: PenyelesaianProps) {
-    // ---- state turunan dari props (disimulasikan saat frontend-only) ----
-    const [report, setReport] = useState<FinalReport | null>(application?.final_report ?? null);
-    const [surveySubmitted, setSurveySubmitted] = useState<boolean>(application?.survey_submitted ?? false);
+    // ---- state turunan langsung dari props (Inertia reload props tiap sukses) ----
+    const report = application?.final_report ?? null;
+    const surveySubmitted = application?.survey_submitted ?? false;
+    const certificate = application?.certificate ?? null;
     const certAvailable = application?.certificate_available ?? false;
 
     // ---- form unggah ----
     const [file, setFile] = useState<File | null>(null);
+    const [confirmed, setConfirmed] = useState(false);
     const [uploading, setUploading] = useState(false);
 
     // ---- form survei ----
@@ -251,12 +253,12 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
     const [sendingSurvey, setSendingSurvey] = useState(false);
 
     // ---- gerbang tahap ----
-    const reportApproved = report?.status === 'approved';
     const reportRejected = report?.status === 'rejected';
     const hasReport = report !== null;
 
     const stage1: StageState = reportRejected ? 'active' : hasReport ? 'done' : 'active';
-    const stage2: StageState = surveySubmitted ? 'done' : reportApproved ? 'active' : 'locked';
+    // Survei terbuka setelah Admin Verifikator menerbitkan sertifikat (terkunci).
+    const stage2: StageState = surveySubmitted ? 'done' : certificate ? 'active' : 'locked';
     const stage3: StageState = certAvailable && surveySubmitted ? 'active' : 'locked';
 
     const surveyValid = useMemo(
@@ -271,40 +273,45 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
     }
 
     function handleUpload() {
-        if (!file) {
+        if (!file || !confirmed || !application) {
             return;
         }
 
         setUploading(true);
-        // TODO(backend): kirim multipart
-        //   router.post('/penyelesaian/laporan', { final_report: file }, { forceFormData: true })
-        setTimeout(() => {
-            setReport({
-                status: 'pending',
-                file_name: file.name,
-                submitted_at: application?.end_date ?? '2026-09-30',
-                is_confirmed: false,
-            });
-            setFile(null);
-            setUploading(false);
-        }, 1100);
-    }
-
-    function handleReupload() {
-        setReport(null);
+        // Aktor "Selesai" #4: unggah laporan + konfirmasi → tandai selesai.
+        router.post(
+            `/mahasiswa/pengajuan/${application.id}/laporan`,
+            { file, is_confirmed: true },
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    setFile(null);
+                    setConfirmed(false);
+                },
+                onFinish: () => setUploading(false),
+            },
+        );
     }
 
     function handleSubmitSurvey() {
-        if (!surveyValid) {
+        if (!surveyValid || !certificate) {
             return;
         }
 
+        // Skema survei menyimpan 1 rating → kirim rata-rata dari 5 pertanyaan.
+        const values = SURVEY_QUESTIONS.map((q) => ratings[q.key] ?? 0);
+        const rating = Math.round(values.reduce((a, b) => a + b, 0) / values.length);
+
         setSendingSurvey(true);
-        // TODO(backend): router.post('/penyelesaian/survei', { ratings, comment })
-        setTimeout(() => {
-            setSurveySubmitted(true);
-            setSendingSurvey(false);
-        }, 1100);
+        router.post(
+            `/sertifikat/${certificate.id}/survei`,
+            { rating, comment },
+            {
+                preserveScroll: true,
+                onFinish: () => setSendingSurvey(false),
+            },
+        );
     }
 
     /* ----------------------------- tanpa magang ---------------------------- */
@@ -449,10 +456,24 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
                                     />
                                 </label>
 
+                                {/* Konfirmasi penyelesaian — aktor "Selesai" #4 (PRD). */}
+                                <label className="flex cursor-pointer items-start gap-2.5 rounded-xl bg-slate-50 px-3.5 py-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={confirmed}
+                                        onChange={(e) => setConfirmed(e.target.checked)}
+                                        className="mt-0.5 size-4 rounded border-slate-300 text-[#106feb] focus:ring-[#106feb]"
+                                    />
+                                    <span className="text-xs text-slate-600">
+                                        Saya konfirmasi telah menyelesaikan seluruh periode magang dan laporan ini bersifat final.
+                                        Mengunggah akan menandai magang saya <strong>selesai</strong>.
+                                    </span>
+                                </label>
+
                                 <button
                                     type="button"
                                     onClick={handleUpload}
-                                    disabled={!file || uploading}
+                                    disabled={!file || !confirmed || uploading}
                                     className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#106feb] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#0b4fb0] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                                 >
                                     {uploading ? (
@@ -466,17 +487,6 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
                                     )}
                                 </button>
                             </div>
-                        )}
-
-                        {/* tombol unggah ulang ketika sudah disetujui/pending (opsional koreksi) */}
-                        {hasReport && report.status === 'pending' && (
-                            <button
-                                type="button"
-                                onClick={handleReupload}
-                                className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-[#106feb]"
-                            >
-                                <RefreshCw className="size-3.5" /> Ganti berkas
-                            </button>
                         )}
                     </div>
                 </StageCard>
@@ -500,7 +510,7 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
                                 className="mt-5 flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500"
                             >
                                 <Lock className="size-4" />
-                                Survei terbuka setelah laporan akhir Anda disetujui Admin Verifikator.
+                                Survei terbuka setelah Admin Verifikator menyetujui laporan & menerbitkan sertifikat Anda.
                             </motion.p>
                         )}
 
@@ -618,10 +628,9 @@ export default function Penyelesaian({ user = MOCK_USER, application = MOCK_APPL
                                     </div>
                                 </div>
                                 <a
-                                    href="/penyelesaian/sertifikat"
+                                    href={certificate ? `/sertifikat/${certificate.id}/download` : '#'}
                                     className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-[#106feb] transition-colors hover:bg-white/90"
                                 >
-                                    {/* TODO(backend): GET /penyelesaian/sertifikat → unduh PDF sertifikat */}
                                     <Download className="size-4" /> Unduh e-Sertifikat
                                 </a>
                             </motion.div>

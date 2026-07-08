@@ -68,6 +68,18 @@ class DashboardController extends Controller
     }
 
     /**
+     * Kelola Kuota OPD: Verifikator dapat mengubah kuota seluruh OPD.
+     * (Dipindah dari panel bawah dasbor ke halaman/menu sidebar tersendiri.)
+     */
+    public function kuota(Request $request): Response
+    {
+        return Inertia::render('verifikator/kuota', [
+            'user' => new MagangUserResource($request->user()),
+            'opds' => OpdResource::collection($this->activeOpds()),
+        ]);
+    }
+
+    /**
      * @return Collection<int, InternshipApplication>
      */
     private function recentApplications()

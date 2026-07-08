@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     Search,
     ClipboardCheck,
@@ -40,12 +40,11 @@ import type { ApplicationStatus, InternshipApplication, MagangUser, Opd } from '
  *  beserta divisi, pembimbing lapangan, & penanggung jawab. OPD memutuskan:
  *  MENYETUJUI (→ peserta mulai magang) atau MENOLAK dengan alasan.
  *
- *  FRONTEND ONLY. Tabel & form memakai MOCK + simulasi state. Rekan backend
- *  cukup mengirim props dari Inertia::render('opd/dashboard', [...]) dan
- *  mengganti handler `submitApprove`/`submitReject` dengan:
- *    router.post(`/opd/pengajuan/${id}/setujui`, {})
- *    router.post(`/opd/pengajuan/${id}/tolak`,   { rejection_reason })
- *  Backend hanya mengirim pengajuan milik OPD admin yang login.
+ *  Aksi form terhubung ke backend nyata (OpdSubmissionController) via Inertia:
+ *    router.post(`/opd/pengajuan/${id}/approve`, { division, field_supervisor, person_in_charge })
+ *    router.post(`/opd/pengajuan/${id}/reject`,  { rejection_reason })
+ *  Props tabel dikirim dari Inertia::render('opd/dashboard', [...]) — hanya
+ *  pengajuan milik OPD admin yang login. MOCK di bawah fallback pratinjau.
  * ========================================================================= */
 
 /* ---- Util tanggal ---------------------------------------------------- */
@@ -68,6 +67,13 @@ function makeApp(
     partial: Partial<InternshipApplication> & Pick<InternshipApplication, 'id' | 'ticket_number' | 'status'>,
 ): InternshipApplication {
     return {
+        applicant_name: 'Peserta Magang',
+        applicant_email: 'peserta@example.com',
+        applicant_whatsapp: '6281234567890',
+        nis: '2101234567',
+        address: 'Jl. Pahlawan No. 10, Madiun',
+        guardian_name: 'Drs. Suparno',
+        photo_url: null,
         tujuan_magang: 'Magang kompetensi keahlian',
         duration_months: 3,
         start_date: '2026-07-01',
@@ -318,14 +324,17 @@ function DecisionDialog({
     onClose,
     onApproved,
     onRejected,
+    onCompleted,
 }: {
     app: InternshipApplication | null;
     onClose: () => void;
     onApproved: (id: number) => void;
     onRejected: (id: number) => void;
+    onCompleted: (id: number) => void;
 }) {
     const [mode, setMode] = useState<DecisionMode>('approve');
     const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [reason, setReason] = useState('');
 
     // Penempatan kini diisi Admin OPD saat menyetujui (dipindah dari Verifikator).
@@ -338,17 +347,37 @@ function DecisionDialog({
     // Hanya pengajuan `forwarded_opd` yang bisa diputuskan.
     const decidable = app?.status === 'forwarded_opd';
 
+    // Aktor "Selesai" #3 (Admin OPD): boleh menandai selesai saat peserta sudah
+    // magang (ongoing) atau telah mengajukan penyelesaian (completion_submitted).
+    const completable = app?.status === 'ongoing' || app?.status === 'completion_submitted';
+
     function submitApprove() {
         if (!approveValid || processing || !app) {
             return;
         }
 
+        setError(null);
         setProcessing(true);
-        // TODO(backend): router.post(`/opd/pengajuan/${app.id}/setujui`, { division, field_supervisor, person_in_charge })
-        setTimeout(() => {
-            setProcessing(false);
-            onApproved(app.id);
-        }, 800);
+        router.post(
+            `/opd/pengajuan/${app.id}/approve`,
+            {
+                division: division.trim(),
+                field_supervisor: fieldSupervisor.trim(),
+                person_in_charge: personInCharge.trim(),
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => onApproved(app.id),
+                onError: (errs) =>
+                    setError(
+                        errs.division ??
+                            errs.field_supervisor ??
+                            errs.person_in_charge ??
+                            'Gagal menyetujui pengajuan.',
+                    ),
+                onFinish: () => setProcessing(false),
+            },
+        );
     }
 
     function submitReject() {
@@ -356,12 +385,37 @@ function DecisionDialog({
             return;
         }
 
+        setError(null);
         setProcessing(true);
-        // TODO(backend): router.post(`/opd/pengajuan/${app.id}/tolak`, { rejection_reason: reason })
-        setTimeout(() => {
-            setProcessing(false);
-            onRejected(app.id);
-        }, 800);
+        router.post(
+            `/opd/pengajuan/${app.id}/reject`,
+            { rejection_reason: reason.trim() },
+            {
+                preserveScroll: true,
+                onSuccess: () => onRejected(app.id),
+                onError: (errs) => setError(errs.rejection_reason ?? 'Gagal menolak pengajuan.'),
+                onFinish: () => setProcessing(false),
+            },
+        );
+    }
+
+    function submitComplete() {
+        if (processing || !app) {
+            return;
+        }
+
+        setError(null);
+        setProcessing(true);
+        router.post(
+            `/opd/pengajuan/${app.id}/complete`,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => onCompleted(app.id),
+                onError: (errs) => setError(errs.status ?? 'Gagal menandai magang selesai.'),
+                onFinish: () => setProcessing(false),
+            },
+        );
     }
 
     return (
@@ -377,18 +431,37 @@ function DecisionDialog({
                             <DialogDescription className="text-slate-500">Penempatan peserta ditetapkan oleh Admin OPD saat menyetujui.</DialogDescription>
                         </DialogHeader>
 
-                        {/* Detail pemohon */}
+                        {/* Pas foto pemohon */}
+                        {app.photo_url && (
+                            <div className="flex justify-center">
+                                <img
+                                    src={app.photo_url}
+                                    alt={`Pas foto ${app.applicant_name ?? 'pemohon'}`}
+                                    className="h-40 w-32 rounded-xl border border-slate-200 object-cover shadow-sm"
+                                />
+                            </div>
+                        )}
+
+                        {/* Detail pemohon — seluruh data peserta magang */}
                         <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white px-4">
+                            <DetailRow label="NIS / NIM" value={app.nis || '—'} />
+                            <DetailRow label="Nama Lengkap" value={app.applicant_name || '—'} />
                             <DetailRow label="Asal Instansi" value={app.institution_name} />
                             <DetailRow label="Tujuan Magang" value={app.tujuan_magang} />
+                            <DetailRow label="Jurusan" value={app.major || '—'} />
+                            <DetailRow label="Alamat" value={app.address || '—'} />
                             <DetailRow label="Durasi" value={`${app.duration_months} bulan`} />
                             <DetailRow label="Periode" value={`${formatDate(app.start_date)} – ${formatDate(app.end_date)}`} />
+                            <DetailRow label="Pembimbing Kampus" value={app.campus_supervisor} />
+                            <DetailRow label="Penanggung Jawab" value={app.guardian_name || '—'} />
+                            <DetailRow label="No. WhatsApp" value={app.applicant_whatsapp || '—'} />
+                            <DetailRow label="Email" value={app.applicant_email || '—'} />
                             {/* Penempatan hanya tampil read-only setelah diputuskan. */}
                             {!decidable && (
                                 <>
                                     <DetailRow label="Divisi / Bidang" value={app.division ?? '—'} icon={Briefcase} />
                                     <DetailRow label="Pembimbing Lapangan" value={app.field_supervisor ?? '—'} icon={UserCog} />
-                                    <DetailRow label="Penanggung Jawab" value={app.person_in_charge ?? '—'} icon={UserCog} />
+                                    <DetailRow label="Penanggung Jawab (OPD)" value={app.person_in_charge ?? '—'} icon={UserCog} />
                                 </>
                             )}
                         </div>
@@ -457,6 +530,8 @@ function DecisionDialog({
                                             </p>
                                         </div>
 
+                                        {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
+
                                         <button
                                             type="button"
                                             onClick={submitApprove}
@@ -479,6 +554,8 @@ function DecisionDialog({
                                                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-[#0a1628] outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-rose-400 focus:ring-4 focus:ring-rose-500/15"
                                             />
                                         </div>
+                                        {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
+
                                         <button
                                             type="button"
                                             onClick={submitReject}
@@ -497,6 +574,25 @@ function DecisionDialog({
                                 <StatusBadge status={app.status} />
                                 {app.status === 'rejected' && app.rejection_reason && (
                                     <p className="mt-3 text-sm text-rose-600">Alasan: {app.rejection_reason}</p>
+                                )}
+
+                                {/* Aktor "Selesai" #3: Admin OPD menandai magang selesai. */}
+                                {completable && (
+                                    <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
+                                        <p className="text-xs text-slate-500">
+                                            Tandai magang peserta ini telah selesai. Status berubah menjadi “Selesai Magang”.
+                                        </p>
+                                        {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
+                                        <button
+                                            type="button"
+                                            onClick={submitComplete}
+                                            disabled={processing}
+                                            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {processing ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                                            Tandai Selesai Magang
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         )}
@@ -539,6 +635,7 @@ export default function OpdDashboard({
                 matchFilter(a, filter) &&
                 (!q ||
                     a.ticket_number.toLowerCase().includes(q) ||
+                    (a.applicant_name ?? '').toLowerCase().includes(q) ||
                     a.institution_name.toLowerCase().includes(q) ||
                     a.tujuan_magang.toLowerCase().includes(q)),
         );
@@ -618,6 +715,7 @@ export default function OpdDashboard({
                         <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                             <tr>
                                 <th className="px-5 py-3 font-semibold">No. Tiket</th>
+                                <th className="px-5 py-3 font-semibold">Nama Lengkap</th>
                                 <th className="px-5 py-3 font-semibold">Asal Instansi</th>
                                 <th className="px-5 py-3 font-semibold">Divisi</th>
                                 <th className="px-5 py-3 font-semibold">Diteruskan</th>
@@ -629,6 +727,7 @@ export default function OpdDashboard({
                             {filtered.map((app) => (
                                 <tr key={app.id} className="transition hover:bg-slate-50/60">
                                     <td className="px-5 py-3.5 font-mono text-xs font-semibold text-[#12213e]">{app.ticket_number}</td>
+                                    <td className="px-5 py-3.5 font-medium text-[#12213e]">{app.applicant_name ?? '—'}</td>
                                     <td className="px-5 py-3.5">{app.institution_name}</td>
                                     <td className="px-5 py-3.5 text-slate-600">{app.division ?? '—'}</td>
                                     <td className="px-5 py-3.5 text-slate-500">{app.forwarded_at ? formatDate(app.forwarded_at) : '—'}</td>
@@ -661,6 +760,7 @@ export default function OpdDashboard({
                                     <span className="font-mono text-xs font-semibold text-[#12213e]">{app.ticket_number}</span>
                                     <StatusBadge status={app.status} />
                                 </div>
+                                <p className="text-sm font-bold text-[#12213e]">{app.applicant_name ?? '—'}</p>
                                 <p className="flex items-center gap-1.5 text-sm font-medium text-[#12213e]">
                                     <Building2 className="size-3.5 text-slate-400" /> {app.institution_name}
                                 </p>
@@ -690,6 +790,7 @@ export default function OpdDashboard({
                 onClose={() => setActive(null)}
                 onApproved={(id) => applyStatus(id, 'approved')}
                 onRejected={(id) => applyStatus(id, 'rejected')}
+                onCompleted={(id) => applyStatus(id, 'completed')}
             />
         </MagangLayout>
     );

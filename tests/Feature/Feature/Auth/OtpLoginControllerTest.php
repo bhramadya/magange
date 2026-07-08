@@ -3,6 +3,7 @@
 use App\Contracts\OtpServiceContract;
 use App\Enums\UserRole;
 use App\Jobs\SendOtpEmailJob;
+use App\Models\Opd;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -97,7 +98,7 @@ test('admin verifikator redirects to verifikator dashboard', function () {
 });
 
 test('admin opd redirects to opd dashboard', function () {
-    $opd = \App\Models\Opd::create(['name' => 'Test OPD', 'code' => 'TEST']);
+    $opd = Opd::create(['name' => 'Test OPD', 'code' => 'TEST']);
     $admin = User::factory()->opdAdmin($opd->id)->create(['email' => 'opd@example.com']);
 
     $otp = issueOtp($admin);

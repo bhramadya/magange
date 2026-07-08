@@ -1,0 +1,351 @@
+================================================================================
+ E-MAGANG KOTA MADIUN — PEMAHAMAN ALUR & TO-DO LIST PENYELESAIAN
+ Ditulis oleh Claude setelah menganalisis CLAUDE.md + alur_E-Magang_lengkap.txt
+ dan mengaudit kode nyata (controller, service, migration, halaman React).
+ Tanggal: 2026-07-07
+================================================================================
+
+
+################################################################################
+ BAGIAN A — ALUR APLIKASI YANG SAYA PAHAMI (versi ditulis ulang)
+################################################################################
+
+Aplikasi ini adalah portal pendaftaran magang Pemerintah Kota Madiun dengan 3
+peran: MAHASISWA (pendaftar), ADMIN VERIFIKATOR (penyaring tahap 1), dan
+ADMIN OPD (instansi tujuan, pemutus akhir + pengelola peserta aktif).
+
+State machine pengajuan (app/Enums/ApplicationStatus.php):
+  pending_verifikator -> forwarded_opd -> approved -> ongoing
+    -> completion_submitted -> completed
+  Cabang terminal: rejected (bisa dari verifikator ATAU OPD)
+
+Label status yang tampil di dasbor (urut filter):
+  Perlu Keputusan -> Disetujui -> Sedang Magang -> Selesai Magang -> Ditolak -> Semua
+
+
+--- FASE 1: PENDAFTARAN PUBLIK + KEAMANAN OTOMATIS (sisi Mahasiswa) ---
+
+1. Pengguna membuka landing page (welcome.tsx). Section: hero, fitur, daftar
+   instansi/OPD, alur pendaftaran, FAQ, Kontak (form), + TESTIMONIAL (survei
+   kepuasan peserta yang sudah selesai).
+2. TANPA registrasi akun. Pengguna langsung mengisi formulir publik di section
+   Kontak. Field: NIS/NIM, Nama Lengkap, Asal Sekolah/Kampus, Tujuan Bidang OPD,
+   Jurusan (opsional), Keahlian, Alamat Lengkap, Tanggal Mulai, Tanggal Selesai,
+   Nama Dosen/Guru Pembimbing, Nama Penanggung Jawab, Nomor WhatsApp, Email
+   Aktif, Pas Foto.
+3. Keamanan: dilindungi reCAPTCHA Google + rate limiting (kombinasi IP +
+   Email/WhatsApp, batas kiriman harian) untuk cegah brute force/spam. Backend
+   juga sanitasi anti SQL-injection & XSS.
+4. Pembuatan akun otomatis: saat form terkirim, sistem cek DB. Jika email belum
+   terdaftar -> buat akun secara tersembunyi. Pengguna DIARAHKAN ke halaman
+   login-otp dengan kode OTP 6 digit SUDAH terkirim ke email — TANPA perlu
+   memasukkan email lagi — lalu masuk ke dasbor peserta.
+
+
+--- FASE 2: VERIFIKASI TAHAP 1 (Admin Verifikator) ---
+
+1. Pengajuan masuk ke dasbor Verifikator. Di setiap card tampil Jurusan &
+   Keahlian sebagai bahan pertimbangan. Tabel dasbor menampilkan kolom NAMA
+   LENGKAP tepat setelah NO. TIKET.
+2. Pop-up "Tinjau Pengajuan" menampilkan SEMUA data peserta (NIS, Nama, Asal,
+   Tujuan OPD, Jurusan, Keahlian, Alamat, Tgl Mulai/Selesai, Dosen Pembimbing,
+   Penanggung Jawab, WhatsApp, Email, Pas Foto) + kolom "Catatan Khusus Admin
+   Verifikator" (opsional).
+3. Verifikator TIDAK menentukan divisi/pembimbing. Ia hanya memberi catatan lalu:
+   - TERUSKAN (forward) ke Admin OPD tujuan, ATAU
+   - TOLAK -> email penolakan otomatis dikirim ke peserta, status -> Ditolak.
+4. Menu "Kelola Kuota OPD" ada di SIDEBAR (setelah menu Riwayat), bukan di bawah
+   dasbor.
+5. Email penolakan: header teks besar biru "E-Magang Kota Madiun" + subteks
+   "Ditolak", memuat detail lengkap peserta, ditutup paragraf penutup atas nama
+   "admin verifikator".
+
+
+--- FASE 3: VERIFIKASI TAHAP 2 (Admin OPD) ---
+
+1. Admin OPD menerima lemparan. Filter dasbor: Perlu Keputusan (latar KUNING),
+   Disetujui, Sedang Magang, Selesai Magang, Ditolak, Semua. Kolom NAMA LENGKAP
+   setelah NO. TIKET. (Label lama "Diteruskan ke OPD" = "Perlu Keputusan".)
+2. Pop-up detail menampilkan SEMUA data peserta + Pas Foto.
+3. Admin OPD menekan TOLAK atau PUTUSKAN (ACC):
+   - ACC -> pop-up WAJIB isi Divisi/Bidang, Pembimbing Lapangan, Penanggung
+     Jawab. Di bawah form ada alert: "Notif ini akan dikirim ke peserta magang.
+     Peserta akan datang berkunjung ke kantor setelah diterima pengajuan ini".
+     -> email persetujuan (header biru + subteks "Disetujui", detail penempatan,
+     instruksi hadir menemui bidang X dipandu pembimbing Y) + LAMPIRAN PDF surat
+     rekomendasi penerimaan. Status -> Disetujui. Kuota OPD bertambah.
+   - TOLAK -> wajib isi alasan -> email penolakan (atas nama "admin OPD"),
+     status -> Ditolak.
+
+
+--- FASE 4: LOGIN TERPISAH & KEAMANAN SESI ---
+
+1. Login Mahasiswa (OTP): masukkan EMAIL saja -> sistem kirim OTP 6 digit ke
+   email. OTP di-hash dan disimpan sebagai password di DB tiap kali minta masuk.
+   Jika email belum pernah mengisi form -> akses ditolak "akun tidak terdaftar".
+2. Keamanan sesi: 1 browser tidak bisa login 2 akun berbeda bersamaan; login
+   baru mematikan sesi di perangkat/browser lain (single-session).
+3. Login Admin: URL khusus /admin/login, pakai Username + Password konvensional
+   (tanpa OTP).
+
+
+--- FASE 5: OTOMATISASI STATUS (Cron Job harian, 01:00) ---
+
+1. Disetujui + tanggal hari ini == tanggal mulai -> status "Sedang Magang".
+2. Sedang Magang + tanggal hari ini == tanggal selesai -> status "Selesai Magang".
+
+
+--- FASE 6: PENYELESAIAN & SERTIFIKAT ---
+
+Status "Selesai" bisa diset 4 aktor: (1) Sistem/Cron, (2) Admin Verifikator,
+(3) Admin OPD, (4) Pengguna sendiri.
+1. Pengguna unggah Laporan Magang + centang "Saya sudah menyelesaikan magang".
+2. Laporan masuk ke Admin Verifikator -> verifikator cek -> unggah "Surat Selesai
+   Magang" (Sertifikat) ke akun pengguna.
+3. Sertifikat muncul di dasbor pengguna, tapi tombol download TERKUNCI. Pengguna
+   WAJIB isi survei kepuasan (rating bintang + komentar) dulu, barulah bisa
+   diunduh.
+4. Setiap testimonial survei DITAMPILKAN di section testimonial welcome.tsx.
+
+
+================================================================================
+ CATATAN KESENJANGAN INTI (hasil audit kode nyata)
+================================================================================
+Backend domain (service, job, mail, migration, route aksi) SUDAH matang & teruji.
+Yang belum: sebagian besar HALAMAN REACT masih memakai handler MOCK (setTimeout /
+TODO) dan belum memanggil endpoint nyata, ditambah beberapa fitur spec yang belum
+dibuat sama sekali (testimonial, auto-OTP saat daftar, kolom nama, foto di pop-up).
+
+
+################################################################################
+ BAGIAN B — TO-DO LIST PENYELESAIAN (agar aplikasi bisa dites & dipakai)
+################################################################################
+
+Urutan = prioritas. [BLOKER] = tanpa ini aplikasi tidak bisa dipakai end-to-end.
+
+
+=== P0. BLOKER — TANPA INI ALUR TIDAK JALAN ===
+
+[x] 1. [BLOKER] Wiring halaman OTP login ke backend nyata.
+       resources/js/pages/auth/otp-login.tsx — handleRequestOtp (:82),
+       handleVerifyOtp (:101), handleResend (:127) masih setTimeout + TODO,
+       redirect hardcoded ke '/dashboard'. Ganti jadi router.post ke
+       route('otp.send') & route('otp.verify'); tangani error validasi &
+       redirect resmi dari controller. (Backend OtpLoginController/OtpService
+       SUDAH siap.)
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 10:42 WIB.
+          - Ketiga handler (handleRequestOtp/handleVerifyOtp/handleResend)
+            kini memanggil router.post('/otp/send') & router.post('/otp/verify')
+            dengan payload { email } dan { email, otp } sesuai FormRequest.
+          - Langkah 1 sukses (flash `status`) -> pindah ke step kode + mulai
+            hitung mundur kirim ulang; gagal -> tampilkan errors.email.
+          - Langkah 2 sukses -> controller redirect sesuai peran (dashboard/
+            verifikator/opd), tak lagi redirect hardcoded; gagal -> errors.otp,
+            reset kotak kode.
+          - Prop `errors` Inertia ditambah + useEffect untuk menampilkan error
+            yang datang lewat redirect-back server.
+          - Verifikasi: `npm run types:check` LULUS (tsc --noEmit, tanpa error).
+
+[x] 2. [BLOKER] Wiring dialog aksi dasbor VERIFIKATOR ke router.post.
+       resources/js/pages/verifikator/dashboard.tsx — submitForward (:210) &
+       submitReject (:223) masih stub. Panggil route('verifikator.pengajuan.
+       forward'/'reject') dg payload (opd_id, verifikator_note / alasan).
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 11:05 WIB.
+          - submitForward -> router.post('/verifikator/pengajuan/{id}/forward')
+            payload { opd_id (number), verifikator_note (string|null) } sesuai
+            ForwardApplicationRequest.
+          - submitReject -> router.post('/verifikator/pengajuan/{id}/reject')
+            payload { rejection_reason } sesuai RejectApplicationRequest.
+          - onSuccess memanggil onForwarded/onRejected (optimistic update baris);
+            server juga return back() sehingga props ikut ter-refresh.
+          - onError menampilkan pesan validasi (state `error` baru) di atas
+            tombol aksi pada kedua mode.
+          - Verifikasi: `npm run types:check` LULUS (tsc --noEmit, tanpa error).
+
+[x] 3. [BLOKER] Wiring dialog aksi dasbor OPD ke router.post.
+       resources/js/pages/opd/dashboard.tsx — submitApprove (:347) &
+       submitReject (:360) masih stub. Panggil route('opd.pengajuan.
+       approve'/'reject') dg payload (division, field_supervisor,
+       person_in_charge / rejection_reason).
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 11:20 WIB.
+          - submitApprove -> router.post('/opd/pengajuan/{id}/approve')
+            payload { division, field_supervisor, person_in_charge } sesuai
+            ApproveApplicationRequest (semua required).
+          - submitReject -> router.post('/opd/pengajuan/{id}/reject')
+            payload { rejection_reason } sesuai RejectApplicationRequest.
+          - onSuccess memanggil onApproved/onRejected (optimistic update baris);
+            server return back() sehingga props ikut ter-refresh.
+          - onError menampilkan pesan validasi (state `error` baru) di atas
+            tombol aksi pada kedua mode (Setujui & Tolak).
+          - Verifikasi: `npm run types:check` LULUS (tsc --noEmit, tanpa error).
+
+[x] 4. [BLOKER] Alur pendaftaran: redirect + auto-kirim OTP.
+       - SubmissionService::submit() harus panggil OtpService::generate()
+         setelah buat/ambil user (app/Services/SubmissionService.php ~:50-86).
+       - ApplicationController@store (:63) ganti redirect dari route('lacak')
+         -> route('login.otp'), bawa email agar halaman OTP tampil di step
+         verifikasi tanpa minta email lagi.
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 11:48 WIB.
+          - SubmissionService kini meng-inject OtpServiceContract; submit()
+            memanggil otpService->generate() untuk user pemohon setelah commit
+            (menghormati canRequest / batas OTP). Job SendOtpEmailJob otomatis
+            dispatch.
+          - ApplicationController@store redirect -> route('login.otp') dengan
+            flash `email` + `status` (bukan lagi ke 'lacak').
+          - Route login-otp diubah dari Route::inertia menjadi
+            OtpLoginController@showForm agar bisa mengirim prop prefillEmail +
+            status dari session flash.
+          - Halaman auth/otp-login.tsx: prop `prefillEmail` -> bila ada, email
+            terisi & langsung mulai di langkah KODE + hitung mundur kirim ulang
+            aktif (OTP sudah terkirim saat submit).
+          - Tes disesuaikan: unit SubmissionServiceTest (konstruktor 2 argumen +
+            OtpService), feature ApplicationControllerTest (assert redirect ke
+            login.otp + session `email`).
+          - Verifikasi: `php artisan test` (Submission+Application 15 lulus,
+            Otp 15 lulus), `npm run types:check` LULUS, `pint` PASSED.
+
+
+=== P1. FITUR SPEC YANG BELUM ADA ===
+
+[x] 5. Section TESTIMONIAL di welcome.tsx.
+       - HomeController@index: query SatisfactionSurvey (rating + comment +
+         nama peserta, mis. rating >= 4, terbaru) -> prop 'testimonials'.
+       - welcome.tsx: tambah section testimonial (bintang + komentar + nama/
+         instansi). Belum ada sama sekali.
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 12:10 WIB.
+          - HomeController@index kini mengirim prop `testimonials`: survei
+            rating >= 4 + berkomentar, terbaru dulu (limit 9), nama peserta dari
+            relasi application.user, asal instansi dari application.
+          - welcome.tsx: section baru id="testimonial" (grid kartu: rating
+            bintang, kutipan komentar, avatar inisial + nama + instansi).
+            Section & tautan navbar "Testimoni" hanya muncul bila ada data.
+          - Verifikasi: query diuji via tinker (mapping nama/instansi/rating OK),
+            `npm run types:check` LULUS, `pint` PASSED, feature test landing
+            (Application+Faq) 11 lulus (1 skip pra-ada).
+
+[x] 6. Kolom NAMA LENGKAP setelah NO. TIKET di kedua tabel admin.
+       verifikator/dashboard.tsx (:535) & opd/dashboard.tsx (:620). Nama ada di
+       relasi user — pastikan InternshipApplicationResource mengekspos
+       user.name (sudah), lalu render kolomnya.
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 12:35 WIB.
+          - InternshipApplicationResource menambah field `applicant_name`
+            (whenLoaded('user') -> user.name). Tipe magang.ts + applicant_name.
+          - Kolom "Nama Lengkap" disisipkan setelah "No. Tiket" di tabel desktop
+            verifikator & opd, plus baris nama pada kartu mobile keduanya.
+          - Pencarian toolbar kini juga mencocokkan nama pemohon.
+          - MOCK makeApp diberi applicant_name agar pratinjau tetap terisi.
+          - Verifikasi: resource diuji via tinker (emit 'Andi Verifikasi'),
+            `npm run types:check` LULUS, `pint` PASSED.
+            Catatan: kedua DashboardController sudah eager-load 'user'.
+
+[x] 7. Pop-up tinjau/detail tampilkan SEMUA field + PAS FOTO.
+       - verifikator ReviewDialog (:245) hanya 5 field. Tambah NIS, Nama,
+         Alamat, WhatsApp, Email, Penanggung Jawab, Jurusan, + Pas Foto.
+       - opd DecisionDialog (:382) idem + Pas Foto.
+       - Pastikan resource mengembalikan photo_path sebagai URL yang bisa
+         ditampilkan (Storage private -> route/URL bertoken bila perlu).
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 13:10 WIB.
+          - Route baru GET pengajuan/{application}/foto (name pengajuan.foto),
+            controller ApplicationPhotoController@show melayani foto dari disk
+            PRIVAT inline; otorisasi via policy view (Verifikator semua, OPD
+            hanya miliknya), middleware role:admin_opd,admin_verifikator.
+          - Resource menambah applicant_email, applicant_whatsapp, photo_url
+            (route bila photo_path ada). Tipe magang.ts diperluas (nis, address,
+            guardian_name, applicant_email/whatsapp, photo_url).
+          - ReviewDialog (verifikator) & DecisionDialog (opd): pas foto (bila
+            ada) + tabel lengkap NIS, Nama, Asal Instansi, Tujuan, Jurusan,
+            (Keahlian: verifikator via tabel / opd panel terpisah), Alamat,
+            Durasi, Periode, Pembimbing Kampus, Penanggung Jawab, WhatsApp,
+            Email. MOCK makeApp keduanya diberi field baru.
+          - CATATAN PENTING: migrasi 2026_07_06_090000 (nis/address/
+            guardian_name/photo_path) ternyata masih PENDING di DB dev pgsql ->
+            dijalankan `php artisan migrate --force` (DONE). Ini juga syarat
+            form pendaftaran welcome berfungsi.
+          - Perbaikan lanjutan efek #4: RecaptchaRateLimitTest (2 assert) yang
+            masih assert redirect 'lacak' diubah ke 'login.otp'.
+          - Verifikasi: resource diuji via tinker (semua field + photo_url =
+            http://localhost/pengajuan/3/foto), `php artisan test` FULL SUITE
+            91 lulus / 4 skip / 0 gagal, `npm run types:check` LULUS,
+            `pint` PASSED.
+
+[x] 8. Pindahkan "Kelola Kuota OPD" ke sidebar Verifikator (setelah Riwayat).
+       - magang-layout.tsx verifikatorNav (:56) tambah item Kuota.
+       - Hapus panel kuota dari bawah verifikator/dashboard.tsx (:613-625);
+         buat halaman/route kuota tersendiri bila perlu (route kuota.update
+         sudah ada untuk aksi PATCH).
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 13:40 WIB.
+          - verifikatorNav: item baru "Kelola Kuota OPD" (key kuota, icon Users)
+            disisipkan setelah Riwayat, sebelum Kelola FAQ.
+          - Route GET verifikator/kuota (name verifikator.kuota) +
+            DashboardController@kuota (render 'verifikator/kuota' dengan user +
+            opds).
+          - Halaman baru resources/js/pages/verifikator/kuota.tsx: memuat editor
+            OpdQuotaRow yang KINI WIRED ke router.patch('/kuota/{opd}',
+            { quota_total }) (bukan lagi setTimeout), plus tampilan error.
+          - Panel "Kelola Kuota OPD" + komponen OpdQuotaRow dihapus dari
+            verifikator/dashboard.tsx; import Users & Pencil yang tak terpakai
+            ikut dibersihkan.
+          - Verifikasi: `npm run build` sukses (page ter-bundle), smoke test
+            feature (GET /verifikator/kuota -> 200 + component + opds) LULUS,
+            `npm run types:check` LULUS, `pint` PASSED.
+
+[ ] 9. Tombol "Tandai Selesai" untuk Verifikator & OPD.
+       Endpoint sudah ada (verifikator.pengajuan.complete /
+       opd.pengajuan.complete). Tambah tombol + konfirmasi di masing-masing
+       dasbor untuk peserta berstatus ongoing/completion_submitted.
+
+[ ] 10. Standardisasi template email (header biru "E-Magang Kota Madiun").
+        Saat ini hanya acceptance-letter.blade.php yang bergaya. Terapkan header
+        biru + badge subteks ke:
+        - application-rejection.blade.php -> badge "Ditolak" + detail lengkap
+          peserta + paragraf penutup sesuai spec (bedakan penutup verifikator
+          vs OPD).
+        - application-confirmation, certificate-notification, otp -> header biru
+          konsisten.
+
+
+=== P2. PENYEMPURNAAN & KONSISTENSI ===
+
+[ ] 11. Tampilkan Jurusan (major) di card dasbor Verifikator (kini hanya skills).
+        verifikator/dashboard.tsx (:550).
+
+[ ] 12. Validasi field wajib: pertimbangkan address & guardian_name jadi
+        required agar sesuai form. StoreApplicationRequest.php (:57,:59).
+
+[ ] 13. Bersihkan / lengkapi dead code:
+        - Opd\SubmissionController@index/@show & Verifikator\PengajuanController@
+          index/@show merender halaman opd/pengajuan/* & verifikator/pengajuan/*
+          yang TIDAK ADA dan tak punya route. Hapus, atau buat halamannya bila
+          memang dipakai.
+
+[ ] 14. Pastikan method OpdDashboardController@keputusan & @peserta ada (nav
+        /opd/keputusan & /opd/peserta menunjuk ke sana).
+
+[ ] 15. Survei kepuasan: UI penyelesaian.tsx punya 5 pertanyaan bintang tapi
+        tabel satisfaction_surveys hanya simpan 1 rating (dirata-rata di klien,
+        :303). Putuskan: cukup rata-rata, atau tambah kolom per-pertanyaan.
+
+
+=== P3. VERIFIKASI AKHIR SEBELUM DEMO/TES ===
+
+[ ] 16. Uji alur end-to-end manual:
+        daftar publik -> OTP masuk -> verifikator forward -> OPD approve (cek
+        email + PDF) -> cron ubah ke Sedang Magang/Selesai -> mahasiswa unggah
+        laporan -> verifikator unggah sertifikat -> mahasiswa isi survei ->
+        unduh sertifikat -> testimonial muncul di welcome.
+[ ] 17. Uji jalur tolak di verifikator & OPD (email penolakan terkirim, status
+        Ditolak).
+[ ] 18. Jalankan: composer test (pint + phpstan + artisan test), npm run
+        types:check, npm run lint, npm run build.
+[ ] 19. Seed data demo (AdminSeeder, OpdSeeder, FaqSeeder) + minimal beberapa
+        pengajuan contoh untuk pengujian dasbor.
+[ ] 20. Pastikan queue worker jalan (composer dev) — tanpa worker, job email/PDF
+        tidak diproses.
+
+================================================================================
+ RINGKASAN: 4 bloker P0 (wiring OTP, 2 dialog admin, auto-OTP daftar) adalah
+ jalur kritis agar aplikasi BISA DIPAKAI. Setelah itu 6 item P1 melengkapi fitur
+ spec yang hilang. Backend service/route sebagian besar sudah siap — pekerjaan
+ terbesar ada di lapisan React (mengganti mock jadi panggilan nyata) + beberapa
+ fitur baru (testimonial, auto-OTP, kolom/foto).
+================================================================================

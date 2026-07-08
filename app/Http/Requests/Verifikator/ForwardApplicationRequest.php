@@ -24,6 +24,19 @@ class ForwardApplicationRequest extends FormRequest
     }
 
     /**
+     * Payload tervalidasi sesuai kontrak PengajuanServiceContract::forwardToOpd().
+     *
+     * @return array{opd_id: int, verifikator_note?: string|null}
+     */
+    public function validated($key = null, $default = null): array
+    {
+        /** @var array{opd_id: int, verifikator_note?: string|null} $validated */
+        $validated = parent::validated();
+
+        return $validated;
+    }
+
+    /**
      * @return array<string, string>
      */
     public function messages(): array

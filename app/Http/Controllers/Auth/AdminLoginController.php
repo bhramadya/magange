@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Concerns\InvalidatesOtherSessions;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\AdminLoginRequest;
@@ -19,6 +20,8 @@ use Inertia\Response;
  */
 class AdminLoginController extends Controller
 {
+    use InvalidatesOtherSessions;
+
     public function showForm(): Response
     {
         return Inertia::render('auth/admin-login');
@@ -53,6 +56,9 @@ class AdminLoginController extends Controller
         Auth::login($user, remember: true);
 
         $request->session()->regenerate();
+
+        // Single session lintas-perangkat: tendang sesi user di perangkat lain.
+        $this->invalidateOtherSessions($request, $user);
 
         return $user->role === UserRole::AdminVerifikator
             ? redirect('/verifikator')

@@ -43,6 +43,21 @@ export interface FinalReport {
     is_confirmed: boolean;
 }
 
+// Sertifikat selesai magang — id dipakai untuk URL survei & unduh (Fase 4).
+export interface Certificate {
+    id: number;
+    is_download_locked: boolean;
+}
+
+// FAQ dikelola Admin Verifikator, tampil di landing page publik.
+export interface Faq {
+    id: number;
+    question: string;
+    answer: string;
+    sort_order: number;
+    is_active: boolean;
+}
+
 export interface InternshipApplication {
     id: number;
     ticket_number: string;
@@ -53,6 +68,17 @@ export interface InternshipApplication {
     institution_name: string;
     campus_supervisor: string; // pembimbing dari kampus/sekolah (diisi siswa)
     status: ApplicationStatus;
+
+    // Data pemohon (dari relasi user) — tampil di tabel & pop-up admin.
+    applicant_name?: string | null;
+    applicant_email?: string | null;
+    applicant_whatsapp?: string | null;
+
+    // Diisi peserta saat mendaftar (welcome #daftar) — tampil di pop-up admin.
+    nis?: string | null;
+    address?: string | null;
+    guardian_name?: string | null; // nama penanggung jawab
+    photo_url?: string | null; // URL pas foto (disk privat, route terproteksi)
 
     // Diisi peserta saat mendaftar (welcome #daftar).
     major?: string | null; // jurusan (opsional)
@@ -75,7 +101,8 @@ export interface InternshipApplication {
     // Tahap penyelesaian (Fase 4).
     final_report: FinalReport | null;
     survey_submitted: boolean;
-    certificate_available: boolean;
+    certificate?: Certificate | null; // sertifikat (terkunci) — null sebelum diunggah verifikator
+    certificate_available: boolean; // true saat sertifikat sudah dibuka kuncinya
 }
 
 // Metadata tampilan per status: label Indonesia + warna badge konsisten.

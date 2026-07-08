@@ -56,7 +56,10 @@ export const mahasiswaNav: MagangNavItem[] = [
 export const verifikatorNav: MagangNavItem[] = [
     { key: 'dashboard', title: 'Dasbor', href: '/verifikator', icon: LayoutDashboard },
     { key: 'masuk', title: 'Pengajuan Masuk', href: '/verifikator/masuk', icon: Inbox },
+    { key: 'laporan', title: 'Laporan', href: '/verifikator/laporan', icon: FileText },
     { key: 'riwayat', title: 'Riwayat', href: '/verifikator/riwayat', icon: History },
+    { key: 'kuota', title: 'Kelola Kuota OPD', href: '/verifikator/kuota', icon: Users },
+    { key: 'faq', title: 'Kelola FAQ', href: '/verifikator/faq', icon: HelpCircle },
     { key: 'bantuan', title: 'Bantuan', href: '/bantuan?role=admin_verifikator', icon: HelpCircle },
 ];
 

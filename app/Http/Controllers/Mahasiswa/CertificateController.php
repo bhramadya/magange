@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Mahasiswa\SubmitSurveyRequest;
 use App\Models\Certificate;
 use App\Models\SatisfactionSurvey;
+use App\Services\CertificateService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Gate;
@@ -14,6 +15,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CertificateController extends Controller
 {
+    public function __construct(private CertificateService $certificateService) {}
+
     public function download(Certificate $certificate): StreamedResponse|RedirectResponse
     {
         $application = $certificate->application()->with('user')->first();
@@ -56,6 +59,9 @@ class CertificateController extends Controller
             'comment' => $validated['comment'] ?? null,
             'submitted_at' => Date::now(),
         ]);
+
+        // Survei wajib terkirim → buka kunci unduhan sertifikat (PRD Fase 4).
+        $this->certificateService->unlock($certificate);
 
         return back()->with('success', 'Survei kepuasan berhasil dikirim. Terima kasih!');
     }

@@ -15,14 +15,14 @@ return new class extends Migration
         Schema::create('otp_tokens', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')
-                  ->constrained('users')
-                  ->cascadeOnDelete();
+                ->constrained('users')
+                ->cascadeOnDelete();
             $table->string('token_hash')
-                  ->comment('bcrypt dari OTP 6 digit');
+                ->comment('bcrypt dari OTP 6 digit');
             $table->timestamp('expires_at');
             $table->timestamp('used_at')
-                  ->nullable()
-                  ->comment('null = belum digunakan');
+                ->nullable()
+                ->comment('null = belum digunakan');
             $table->timestamp('created_at')->useCurrent();
 
             // Index untuk mempercepat lookup token aktif per user

@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     Search,
     Inbox,
@@ -11,8 +11,6 @@ import {
     Clock,
     Loader2,
     ArrowRight,
-    Users,
-    Pencil,
     Sparkles,
 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -43,11 +41,11 @@ import type { ApplicationStatus, InternshipApplication, MagangUser, Opd } from '
  *  dibaca Admin OPD) atau MENOLAK dengan alasan. Penempatan (divisi,
  *  pembimbing lapangan, penanggung jawab) kini diisi Admin OPD, bukan di sini.
  *
- *  FRONTEND ONLY. Tabel & form memakai MOCK + simulasi state. Rekan backend
- *  cukup mengirim props dari Inertia::render('verifikator/dashboard', [...])
- *  dan mengganti handler `submitForward`/`submitReject` dengan:
- *    router.post(`/verifikator/pengajuan/${id}/teruskan`, { opd_id, verifikator_note })
- *    router.post(`/verifikator/pengajuan/${id}/tolak`,     { rejection_reason })
+ *  Aksi form terhubung ke backend nyata (PengajuanController) via Inertia:
+ *    router.post(`/verifikator/pengajuan/${id}/forward`, { opd_id, verifikator_note })
+ *    router.post(`/verifikator/pengajuan/${id}/reject`,  { rejection_reason })
+ *  Props tabel dikirim dari Inertia::render('verifikator/dashboard', [...]);
+ *  MOCK di bawah hanya fallback pratinjau bila props kosong.
  * ========================================================================= */
 
 /* ---- Util tanggal ---------------------------------------------------- */
@@ -74,6 +72,13 @@ const MOCK_OPDS: Opd[] = [
 
 function makeApp(partial: Partial<InternshipApplication> & Pick<InternshipApplication, 'id' | 'ticket_number' | 'status'>): InternshipApplication {
     return {
+        applicant_name: 'Peserta Magang',
+        applicant_email: 'peserta@example.com',
+        applicant_whatsapp: '6281234567890',
+        nis: '2101234567',
+        address: 'Jl. Pahlawan No. 10, Madiun',
+        guardian_name: 'Drs. Suparno',
+        photo_url: null,
         tujuan_magang: 'Magang kompetensi keahlian',
         duration_months: 3,
         start_date: '2026-07-01',
@@ -181,15 +186,18 @@ function ReviewDialog({
     onClose,
     onForwarded,
     onRejected,
+    onCompleted,
 }: {
     app: InternshipApplication | null;
     opds: Opd[];
     onClose: () => void;
     onForwarded: (id: number) => void;
     onRejected: (id: number) => void;
+    onCompleted: (id: number) => void;
 }) {
     const [mode, setMode] = useState<ReviewMode>('forward');
     const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     // Form teruskan — verifikator hanya memilih OPD & menulis catatan khusus.
     // Hak isi penempatan (divisi/pembimbing/penanggung jawab) dipindah ke Admin OPD.
@@ -201,17 +209,30 @@ function ReviewDialog({
 
     const forwardValid = Boolean(opdId);
 
+    // Hanya pengajuan `pending_verifikator` yang bisa diteruskan/ditolak.
+    const reviewable = app?.status === 'pending_verifikator';
+
+    // Aktor "Selesai" #2 (Admin Verifikator): tandai selesai saat peserta sudah
+    // magang (ongoing) atau telah mengajukan penyelesaian (completion_submitted).
+    const completable = app?.status === 'ongoing' || app?.status === 'completion_submitted';
+
     function submitForward() {
         if (!forwardValid || processing || !app) {
             return;
         }
 
+        setError(null);
         setProcessing(true);
-        // TODO(backend): router.post(`/verifikator/pengajuan/${app.id}/teruskan`, { opd_id, verifikator_note: note })
-        setTimeout(() => {
-            setProcessing(false);
-            onForwarded(app.id);
-        }, 800);
+        router.post(
+            `/verifikator/pengajuan/${app.id}/forward`,
+            { opd_id: Number(opdId), verifikator_note: note.trim() || null },
+            {
+                preserveScroll: true,
+                onSuccess: () => onForwarded(app.id),
+                onError: (errs) => setError(errs.opd_id ?? errs.verifikator_note ?? 'Gagal meneruskan pengajuan.'),
+                onFinish: () => setProcessing(false),
+            },
+        );
     }
 
     function submitReject() {
@@ -219,12 +240,37 @@ function ReviewDialog({
             return;
         }
 
+        setError(null);
         setProcessing(true);
-        // TODO(backend): router.post(`/verifikator/pengajuan/${app.id}/tolak`, { rejection_reason: reason })
-        setTimeout(() => {
-            setProcessing(false);
-            onRejected(app.id);
-        }, 800);
+        router.post(
+            `/verifikator/pengajuan/${app.id}/reject`,
+            { rejection_reason: reason.trim() },
+            {
+                preserveScroll: true,
+                onSuccess: () => onRejected(app.id),
+                onError: (errs) => setError(errs.rejection_reason ?? 'Gagal menolak pengajuan.'),
+                onFinish: () => setProcessing(false),
+            },
+        );
+    }
+
+    function submitComplete() {
+        if (processing || !app) {
+            return;
+        }
+
+        setError(null);
+        setProcessing(true);
+        router.post(
+            `/verifikator/pengajuan/${app.id}/complete`,
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: () => onCompleted(app.id),
+                onError: (errs) => setError(errs.status ?? 'Gagal menandai magang selesai.'),
+                onFinish: () => setProcessing(false),
+            },
+        );
     }
 
     return (
@@ -240,15 +286,36 @@ function ReviewDialog({
                             <DialogDescription className="text-slate-500">Periksa detail pemohon sebelum meneruskan atau menolak.</DialogDescription>
                         </DialogHeader>
 
-                        {/* Detail pemohon */}
+                        {/* Pas foto pemohon */}
+                        {app.photo_url && (
+                            <div className="flex justify-center">
+                                <img
+                                    src={app.photo_url}
+                                    alt={`Pas foto ${app.applicant_name ?? 'pemohon'}`}
+                                    className="h-40 w-32 rounded-xl border border-slate-200 object-cover shadow-sm"
+                                />
+                            </div>
+                        )}
+
+                        {/* Detail pemohon — seluruh data peserta magang */}
                         <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white px-4">
+                            <DetailRow label="NIS / NIM" value={app.nis || '—'} />
+                            <DetailRow label="Nama Lengkap" value={app.applicant_name || '—'} />
                             <DetailRow label="Asal Instansi" value={app.institution_name} />
                             <DetailRow label="Tujuan Magang" value={app.tujuan_magang} />
+                            <DetailRow label="Jurusan" value={app.major || '—'} />
+                            <DetailRow label="Keahlian" value={app.skills || '—'} />
+                            <DetailRow label="Alamat" value={app.address || '—'} />
                             <DetailRow label="Durasi" value={`${app.duration_months} bulan`} />
                             <DetailRow label="Periode" value={`${formatDate(app.start_date)} – ${formatDate(app.end_date)}`} />
                             <DetailRow label="Pembimbing Kampus" value={app.campus_supervisor} />
+                            <DetailRow label="Penanggung Jawab" value={app.guardian_name || '—'} />
+                            <DetailRow label="No. WhatsApp" value={app.applicant_whatsapp || '—'} />
+                            <DetailRow label="Email" value={app.applicant_email || '—'} />
                         </div>
 
+                        {reviewable && (
+                        <>
                         {/* Toggle mode */}
                         <div className="flex gap-2 rounded-xl bg-slate-100 p-1">
                             <button
@@ -309,6 +376,8 @@ function ReviewDialog({
                                     />
                                 </div>
 
+                                {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
+
                                 <button
                                     type="button"
                                     onClick={submitForward}
@@ -332,6 +401,8 @@ function ReviewDialog({
                                     />
                                 </div>
 
+                                {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
+
                                 <button
                                     type="button"
                                     onClick={submitReject}
@@ -343,87 +414,46 @@ function ReviewDialog({
                                 </button>
                             </div>
                         )}
+                        </>
+                        )}
+
+                        {/* Aktor "Selesai" #2: Admin Verifikator menandai magang selesai. */}
+                        {completable && (
+                            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                                <p className="mb-2 text-sm font-semibold text-[#12213e]">Status saat ini</p>
+                                <StatusBadge status={app.status} />
+                                <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
+                                    <p className="text-xs text-slate-500">
+                                        Tandai magang peserta ini telah selesai. Status berubah menjadi “Selesai Magang”.
+                                    </p>
+                                    {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
+                                    <button
+                                        type="button"
+                                        onClick={submitComplete}
+                                        disabled={processing}
+                                        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-sm font-bold text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {processing ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+                                        Tandai Selesai Magang
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Status lain (approved/rejected/completed): tampil read-only. */}
+                        {!reviewable && !completable && (
+                            <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                                <p className="mb-2 text-sm font-semibold text-[#12213e]">Status saat ini</p>
+                                <StatusBadge status={app.status} />
+                                {app.status === 'rejected' && app.rejection_reason && (
+                                    <p className="mt-3 text-sm text-rose-600">Alasan: {app.rejection_reason}</p>
+                                )}
+                            </div>
+                        )}
                     </>
                 )}
             </DialogContent>
         </Dialog>
-    );
-}
-
-/* ---- Baris editor kuota per-OPD (dipakai panel Kelola Kuota) ---------- */
-// Preview memakai simulasi; backend nyata di PATCH /kuota/{opd}.
-function OpdQuotaRow({ opd }: { opd: Opd }) {
-    const used = opd.quota_used ?? 0;
-    const [total, setTotal] = useState(opd.quota ?? 0);
-    const [editing, setEditing] = useState(false);
-    const [value, setValue] = useState(String(opd.quota ?? 0));
-    const [processing, setProcessing] = useState(false);
-
-    const parsed = Number(value);
-    const valid = Number.isInteger(parsed) && parsed >= used && parsed <= 1000;
-    const sisa = Math.max(0, total - used);
-
-    function save() {
-        if (!valid || processing) {
-            return;
-        }
-
-        setProcessing(true);
-        // TODO(backend): router.patch(`/kuota/${opd.id}`, { quota_total: parsed })
-        setTimeout(() => {
-            setTotal(parsed);
-            setProcessing(false);
-            setEditing(false);
-        }, 700);
-    }
-
-    return (
-        <div className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-[#12213e]">{opd.name}</p>
-                <p className="text-xs text-slate-500">
-                    {opd.code} • terpakai {used}/{total} • sisa <span className="font-semibold text-emerald-600">{sisa}</span>
-                </p>
-            </div>
-            {editing ? (
-                <div className="flex items-center gap-2">
-                    <input
-                        type="number"
-                        min={used}
-                        max={1000}
-                        value={value}
-                        onChange={(e) => setValue(e.target.value)}
-                        className="h-9 w-24 rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
-                    />
-                    <button
-                        type="button"
-                        onClick={save}
-                        disabled={!valid || processing}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#106feb] px-3 text-xs font-bold text-white transition hover:bg-[#0b4fb0] disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        {processing ? <Loader2 className="size-3.5 animate-spin" /> : <CheckCircle2 className="size-3.5" />} Simpan
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setEditing(false)}
-                        className="h-9 rounded-lg px-2 text-xs font-semibold text-slate-500 transition hover:bg-slate-100"
-                    >
-                        Batal
-                    </button>
-                </div>
-            ) : (
-                <button
-                    type="button"
-                    onClick={() => {
-                        setValue(String(total));
-                        setEditing(true);
-                    }}
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-[#106feb] transition hover:bg-slate-50"
-                >
-                    <Pencil className="size-3.5" /> Ubah
-                </button>
-            )}
-        </div>
     );
 }
 
@@ -459,6 +489,7 @@ export default function VerifikatorDashboard({
                 matchFilter(a, filter) &&
                 (!q ||
                     a.ticket_number.toLowerCase().includes(q) ||
+                    (a.applicant_name ?? '').toLowerCase().includes(q) ||
                     a.institution_name.toLowerCase().includes(q) ||
                     a.tujuan_magang.toLowerCase().includes(q)),
         );
@@ -533,6 +564,7 @@ export default function VerifikatorDashboard({
                         <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                             <tr>
                                 <th className="px-5 py-3 font-semibold">No. Tiket</th>
+                                <th className="px-5 py-3 font-semibold">Nama Lengkap</th>
                                 <th className="px-5 py-3 font-semibold">Asal Instansi</th>
                                 <th className="px-5 py-3 font-semibold">Tujuan</th>
                                 <th className="px-5 py-3 font-semibold">Masuk</th>
@@ -544,6 +576,7 @@ export default function VerifikatorDashboard({
                             {filtered.map((app) => (
                                 <tr key={app.id} className="transition hover:bg-slate-50/60">
                                     <td className="px-5 py-3.5 font-mono text-xs font-semibold text-[#12213e]">{app.ticket_number}</td>
+                                    <td className="px-5 py-3.5 font-medium text-[#12213e]">{app.applicant_name ?? '—'}</td>
                                     <td className="px-5 py-3.5">{app.institution_name}</td>
                                     <td className="px-5 py-3.5 text-slate-600">
                                         {app.tujuan_magang}
@@ -583,6 +616,7 @@ export default function VerifikatorDashboard({
                                     <span className="font-mono text-xs font-semibold text-[#12213e]">{app.ticket_number}</span>
                                     <StatusBadge status={app.status} />
                                 </div>
+                                <p className="text-sm font-bold text-[#12213e]">{app.applicant_name ?? '—'}</p>
                                 <p className="flex items-center gap-1.5 text-sm font-medium text-[#12213e]">
                                     <Building2 className="size-3.5 text-slate-400" /> {app.institution_name}
                                 </p>
@@ -610,19 +644,6 @@ export default function VerifikatorDashboard({
                     )}
                 </div>
 
-                {/* Kelola kuota — Verifikator berhak mengubah kuota SEMUA OPD. */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-5">
-                    <div className="mb-1 flex items-center gap-1.5">
-                        <Users className="size-4 text-[#106feb]" />
-                        <h3 className="text-sm font-bold text-[#12213e]">Kelola Kuota OPD</h3>
-                    </div>
-                    <p className="mb-4 text-xs text-slate-500">Sebagai Admin Verifikator, Anda dapat mengubah kuota magang seluruh OPD.</p>
-                    <div className="divide-y divide-slate-100">
-                        {opds.map((opd) => (
-                            <OpdQuotaRow key={opd.id} opd={opd} />
-                        ))}
-                    </div>
-                </div>
             </div>
 
             <ReviewDialog
@@ -632,6 +653,7 @@ export default function VerifikatorDashboard({
                 onClose={() => setActive(null)}
                 onForwarded={(id) => applyStatus(id, 'forwarded_opd')}
                 onRejected={(id) => applyStatus(id, 'rejected')}
+                onCompleted={(id) => applyStatus(id, 'completed')}
             />
         </MagangLayout>
     );

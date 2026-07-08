@@ -1,18 +1,23 @@
 <?php
 
+use App\Http\Controllers\ApplicationPhotoController;
 use App\Http\Controllers\Auth\AdminLoginController;
 use App\Http\Controllers\Auth\OtpLoginController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Mahasiswa\ApplicationController;
+use App\Http\Controllers\Mahasiswa\CertificateController;
 use App\Http\Controllers\Mahasiswa\DashboardController as MahasiswaDashboardController;
 use App\Http\Controllers\Mahasiswa\ReportController;
 use App\Http\Controllers\Opd\DashboardController as OpdDashboardController;
 use App\Http\Controllers\Opd\SubmissionController as OpdSubmissionController;
 use App\Http\Controllers\OpdQuotaController;
 use App\Http\Controllers\Verifikator\DashboardController as VerifikatorDashboardController;
+use App\Http\Controllers\Verifikator\FaqController;
 use App\Http\Controllers\Verifikator\PengajuanController;
+use App\Http\Controllers\Verifikator\ReportController as VerifikatorReportController;
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'welcome')->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 /*
 |--------------------------------------------------------------------------
@@ -28,7 +33,7 @@ Route::inertia('/', 'welcome')->name('home');
 */
 
 // --- Publik (tanpa login) ---
-Route::inertia('login-otp', 'auth/otp-login')->name('login.otp');  // Login OTP (/login asli dikelola Fortify)
+Route::get('login-otp', [OtpLoginController::class, 'showForm'])->name('login.otp');  // Login OTP (/login asli dikelola Fortify)
 Route::post('otp/send', [OtpLoginController::class, 'sendOtp'])->name('otp.send');
 Route::post('otp/verify', [OtpLoginController::class, 'verifyOtp'])->name('otp.verify');
 Route::get('lacak', [ApplicationController::class, 'track'])->name('lacak'); // Lacak status publik (via ?email=)
@@ -54,6 +59,7 @@ Route::middleware(['auth', 'role:admin_verifikator'])->group(function () {
     Route::get('verifikator', [VerifikatorDashboardController::class, 'index'])->name('verifikator.dashboard');
     Route::get('verifikator/masuk', [VerifikatorDashboardController::class, 'masuk'])->name('verifikator.masuk');
     Route::get('verifikator/riwayat', [VerifikatorDashboardController::class, 'riwayat'])->name('verifikator.riwayat');
+    Route::get('verifikator/kuota', [VerifikatorDashboardController::class, 'kuota'])->name('verifikator.kuota');
 });
 
 // --- Dasbor OPD (tersambung: auth + role) ---
@@ -105,5 +111,52 @@ Route::middleware(['auth', 'role:mahasiswa'])
 Route::middleware(['auth', 'role:admin_opd,admin_verifikator'])
     ->patch('kuota/{opd}', [OpdQuotaController::class, 'update'])
     ->name('kuota.update');
+
+// Pas foto pemohon (disk privat) untuk pop-up tinjau admin. Otorisasi via
+// policy view: Verifikator semua, OPD hanya pengajuan miliknya.
+Route::middleware(['auth', 'role:admin_opd,admin_verifikator'])
+    ->get('pengajuan/{application}/foto', [ApplicationPhotoController::class, 'show'])
+    ->name('pengajuan.foto');
+
+/*
+|--------------------------------------------------------------------------
+| PENYELESAIAN (Fase 4 — review laporan, sertifikat, survei)
+|--------------------------------------------------------------------------
+| Ekor alur magang: Verifikator meninjau laporan akhir & mengunggah
+| sertifikat (terkunci); Mahasiswa mengisi survei wajib untuk membuka
+| kunci unduhan, lalu mengunduh e-sertifikat.
+*/
+
+// Verifikator: tinjau laporan akhir + unggah sertifikat selesai.
+Route::middleware(['auth', 'role:admin_verifikator'])
+    ->prefix('verifikator/laporan')
+    ->name('verifikator.laporan.')
+    ->group(function () {
+        Route::get('/', [VerifikatorReportController::class, 'index'])->name('index');
+        Route::post('{report}/approve', [VerifikatorReportController::class, 'approve'])->name('approve');
+        Route::post('{report}/sertifikat', [VerifikatorReportController::class, 'uploadCertificate'])->name('sertifikat');
+    });
+
+// Mahasiswa: kirim survei wajib (buka kunci) + unduh sertifikat.
+Route::middleware(['auth', 'role:mahasiswa'])
+    ->prefix('sertifikat')
+    ->name('mahasiswa.sertifikat.')
+    ->group(function () {
+        Route::post('{certificate}/survei', [CertificateController::class, 'submitSurvey'])->name('survei');
+        Route::get('{certificate}/download', [CertificateController::class, 'download'])->name('download');
+    });
+
+// Verifikator: kelola FAQ (tampil di landing page publik).
+Route::middleware(['auth', 'role:admin_verifikator'])
+    ->prefix('verifikator/faq')
+    ->name('verifikator.faq.')
+    ->group(function () {
+        Route::get('/', [FaqController::class, 'index'])->name('index');
+        Route::get('create', [FaqController::class, 'create'])->name('create');
+        Route::post('/', [FaqController::class, 'store'])->name('store');
+        Route::get('{faq}/edit', [FaqController::class, 'edit'])->name('edit');
+        Route::put('{faq}', [FaqController::class, 'update'])->name('update');
+        Route::delete('{faq}', [FaqController::class, 'destroy'])->name('destroy');
+    });
 
 require __DIR__.'/settings.php';

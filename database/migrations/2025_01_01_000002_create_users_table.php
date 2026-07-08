@@ -22,14 +22,14 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->string('whatsapp_number', 20)->nullable();
             $table->text('password')
-                  ->nullable()
-                  ->comment('Hash OTP aktif – diupdate tiap sesi login');
+                ->nullable()
+                ->comment('Hash OTP aktif – diupdate tiap sesi login');
             $table->enum('role', ['mahasiswa', 'admin_verifikator', 'admin_opd']);
             $table->foreignId('opd_id')
-                  ->nullable()
-                  ->comment('Hanya untuk role admin_opd')
-                  ->constrained('opds')
-                  ->nullOnDelete();
+                ->nullable()
+                ->comment('Hanya untuk role admin_opd')
+                ->constrained('opds')
+                ->nullOnDelete();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

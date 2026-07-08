@@ -15,15 +15,15 @@ return new class extends Migration
         Schema::create('application_status_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('application_id')
-                  ->constrained('internship_applications')
-                  ->cascadeOnDelete();
+                ->constrained('internship_applications')
+                ->cascadeOnDelete();
             $table->string('from_status', 50)
-                  ->nullable()
-                  ->comment('null pada entri pertama (status awal)');
+                ->nullable()
+                ->comment('null pada entri pertama (status awal)');
             $table->string('to_status', 50);
             $table->foreignId('changed_by')
-                  ->constrained('users')
-                  ->restrictOnDelete();
+                ->constrained('users')
+                ->restrictOnDelete();
             $table->text('notes')->nullable();
             $table->timestamp('created_at')->useCurrent();
 

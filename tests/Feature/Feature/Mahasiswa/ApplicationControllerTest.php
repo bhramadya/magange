@@ -35,7 +35,9 @@ test('user can submit a new application', function () {
         'campus_supervisor' => 'Dr. Andi',
     ]);
 
-    $response->assertRedirect(route('lacak'));
+    // Alur Fase 1: setelah submit, peserta diarahkan ke login-otp (OTP terkirim).
+    $response->assertRedirect(route('login.otp'));
+    $response->assertSessionHas('email', 'budi@example.com');
 
     expect(InternshipApplication::count())->toBe(1);
 

@@ -1,102 +1,103 @@
-# PRODUCT REQUIREMENTS DOCUMENT (PRD) - SISTEM E-MAGANG
+Berikut adalah pembaruan lengkap dan spesifik untuk **PRD (Product Requirements Document)** dan **Flowchart (Mermaid)** website E-Magang. Pembaruan ini telah mengintegrasikan semua hasil revisi, termasuk penambahan form, perombakan tugas admin, otomatisasi *Cron Job*, serta pemisahan keamanan *login*.
 
-## 1. Project Overview & Tech Stack
+---
+
+### 📄 PRODUCT REQUIREMENTS DOCUMENT (PRD) - REVISI FINAL
+
+**1. Project Overview & Tech Stack**
 *   **Nama Proyek:** Sistem Manajemen E-Magang Terpusat.
-*   **Tujuan:** Memfasilitasi pendaftaran, verifikasi, pelacakan, dan penyelesaian magang bagi mahasiswa ke berbagai OPD (Organisasi Perangkat Daerah) tanpa kerumitan registrasi akun manual.
-*   **Tech Stack Utama:**
-    *   **Backend & Frontend:** Framework **Laravel** (versi terbaru).
-    *   **Database:** **PostgreSQL**.
-    *   **Styling:** Bootstrap atau sejenisnya (bersih dan responsif).
+*   **Tech Stack:** Framework Laravel terbaru dikombinasikan dengan React/Inertia.js untuk antarmuka yang dinamis, serta PostgreSQL sebagai *database*.
+*   **Tujuan:** Memfasilitasi pendaftaran magang tanpa registrasi awal, dengan sistem verifikasi dua tahap, penjadwalan otomatis (*Cron Job*), dan keamanan tinggi.
 
-## 2. User Roles & Permissions
-Sistem ini memiliki 3 (tiga) peran utama:
-1.  **User (Anak Magang):** Pengguna publik yang mengajukan form magang. Mengakses dasbor untuk melihat status, mengunggah laporan akhir, mengisi survei, dan mengunduh sertifikat.
-2.  **Admin Verifikator:** Admin utama/tengah. Bertugas memverifikasi form masuk, meneruskan (*forward/lempar*) data ke Admin OPD spesifik beserta detail penempatan (bidang, pembimbing, penanggung jawab), mengelola FAQ, memvalidasi laporan akhir, dan mengunggah surat selesai magang.
-3.  **Admin OPD:** Admin divisi akhir. Hanya menerima data yang diteruskan oleh Admin Verifikator dan bertugas menekan tombol **ACC (Terima)** atau **Tolak**.
+**2. User Roles & Permissions**
+*   **User (Anak Magang):** Mengisi form magang, mengakses dasbor menggunakan OTP, melihat status, mengunggah laporan, mengisi survei, dan mengunduh sertifikat.
+*   **Admin Verifikator:** Bertugas meninjau pengajuan masuk. Tidak lagi mengisi divisi/pembimbing, melainkan hanya **memberikan catatan khusus** untuk diteruskan ke Admin OPD. Memiliki akses mengubah ketersediaan kuota semua instansi dan bertugas mengunggah sertifikat selesai magang.
+*   **Admin OPD:** Bertugas menerima lemparan pengajuan. Saat menyetujui, Admin OPD **wajib mengisi Divisi/Bidang, Pembimbing Lapangan, dan Penanggung Jawab**. Admin OPD hanya bisa mengubah ketersediaan kuota OPD-nya sendiri.
 
-## 3. Security Requirements (High Priority)
-Keamanan harus diimplementasikan dengan sangat ketat sejak awal karena sistem tidak menggunakan registrasi akun manual:
-*   **Vulnerability Prevention:** Wajib menerapkan anti-*Brute-force*, pencegahan *SQL Injection*, dan *XSS Injection*.
-*   **Anti-Spam & Rate Limiting:** Batasi frekuensi pengisian form per hari berdasarkan kombinasi **IP Address + Email** atau **IP Address + Nomor WhatsApp**.
-*   **Input Validation:** Validasi panjang karakter maksimal, dan pastikan field nomor WhatsApp hanya menerima input numerik.
-*   **Captcha:** Wajib menggunakan *Captcha* interaktif pada form publik (model *slider/puzzle* geser seperti TikTok).
+**3. UI/UX & Tampilan Frontend**
+*   **Landing Page:** Menampilkan alur pendaftaran, FAQ, dan *card* OPD yang memuat informasi ketersediaan atau kuota magang.
+*   **Formulir Publik:** Meminta data: Tujuan, Durasi, Kampus, Dosen, WA, Email. **Tambahan:** Kolom "Jurusan" (opsional) dan teks area "Keahlian/Keterampilan" diletakkan di atas kolom alamat.
+*   **Card Pengajuan (Dasbor Verifikator):** Wajib menampilkan informasi "Keahlian" user agar admin dapat menilai kualifikasi peserta.
+*   **Sidebar Admin:** Menu "Pengaturan" dihapus agar tidak membingungkan admin dalam mengubah data profil.
 
-## 4. Authentication Logic (No-Password / OTP Flow)
-*   **No Explicit Registration:** Pengguna baru TIDAK perlu menekan tombol "Daftar". Mereka langsung mengisi "Formulir Pengajuan Magang".
-*   **Account Auto-Creation:** Setelah form dikirim pertama kali, sistem mengecek *database*. Jika Email/WA belum ada, sistem otomatis membuatkan akun *User* berdasarkan data form tersebut.
-*   **Login via OTP:** 
-    *   User mengakses halaman login dan HANYA memasukkan Email.
-    *   Sistem mengecek email. Jika email tidak ada di tabel `users` (belum pernah isi form), tolak dengan pesan "Akun tidak terdaftar".
-    *   Jika email ada, sistem *generate* **OTP (One Time Password)** dan mengirimkannya ke Email via SMTP.
-    *   Sistem melakukan *hash* pada kode OTP tersebut dan melakukan *update* ke kolom `password` di tabel `users`.
-    *   User memasukkan OTP untuk login. Jika cocok dengan *hash*, user masuk ke dasbor. Setiap kali login, alur OTP ini diulang sehingga fitur "Lupa Password" ditiadakan.
-*   **Admin Access:** Admin hanya dapat melakukan *reset password* untuk user jika terjadi kendala, tetapi tidak bisa melihat *password* (karena ter-*hash*).
+**4. Security & Authentication Logic**
+*   **Pemisahan Alur Login:**
+    *   **User:** Memasukkan Email, lalu menerima kode OTP. Tidak ada *password* statis.
+    *   **Admin:** Menggunakan URL khusus (`/admin/login`) dengan form *Username* dan *Password* biasa tanpa OTP.
+*   **Single Session Browser:** 1 *browser* tidak diizinkan *login* ke 2 akun berbeda secara bersamaan. Jika terjadi, sistem akan melempar *Error 403 Forbidden*.
+*   **Proteksi Ekstra:** Wajib menyertakan anti-*Bruteforce*, *SQL/XSS Injection*, *Rate Limiting* (IP + Email), dan *Captcha* (model geser ala TikTok).
 
-## 5. Core Features & User Workflows
+**5. Core Workflow & Otomatisasi (Cron Job)**
+*   **Fase Verifikasi & Email Notifikasi:**
+    *   Saat Admin OPD menekan "Setujui", harus muncul *alert*: *"Notif ini akan dikirim ke peserta magang. Peserta akan datang berkunjung ke kantor setelah diterima pengajuan ini"*.
+    *   Sistem mengirim email persetujuan dengan *header* biru besar **"magang kota Madiun"** dan teks **"disetujui"**. Email memuat detail: asal, durasi, divisi, pembimbing, penanggung jawab, catatan, dan instruksi kedatangan ke kantor. Status tiket berubah menjadi **"Disetujui"**.
+*   **Otomatisasi Cron Job (Harian):**
+    *   *Cron Job* berjalan tiap jam 1 pagi.
+    *   Jika status **"Disetujui"** dan periode magang dimulai hari ini -> ubah ke **"Sedang Magang"**.
+    *   Jika status **"Sedang Magang"** dan periode magang berakhir hari ini -> ubah ke **"Selesai Magang"**.
+*   **Filter Dasbor:** Urutan *tab* filter: *Perlu Keputusan, Disetujui, Sedang Magang, Selesai Magang, Ditolak, Semua*.
+*   **Penyelesaian Magang (4 Aktor):** Status magang menjadi "Selesai" dapat dipicu oleh 4 pihak: 1) Sistem (*Cron Job*), 2) Admin Verifikator, 3) Admin OPD, dan 4) User (upload laporan). Setelah selesai, Admin Verifikator mengunggah surat sertifikat. User wajib mengisi survei kepuasan agar tombol unduh sertifikat terbuka.
 
-### A. Public Landing Page
-*   **Informasi:** Menampilkan **Alur Pendaftaran** dan ketersediaan/statistik (opsional).
-*   **FAQ Dinamis:** Menampilkan *Frequently Asked Questions* yang kontennya bisa di-CRUD (tambah/edit/hapus) oleh Admin Verifikator melalui panel admin.
+### 📊 FLOWCHART SISTEM (Mermaid)
 
-### B. Alur Pengajuan Magang (Formulir)
-*   User mengisi form publik berisi: Tujuan Magang, Durasi (Berapa bulan, Tanggal Mulai-Selesai), Asal Kampus/Instansi, Nama Dosen Pembimbing, Nomor WhatsApp, dan Email.
+flowchart TD
+    %% FASE 1: Pendaftaran
+    subgraph Fase1 [Fase 1: Pendaftaran & Lolos Keamanan]
+        A([Mulai: User Buka Landing Page]) --> B(Isi Form: Tujuan, Durasi, Kampus, Email, WA)
+        B --> B1(Isi Form Tambahan: Jurusan & Keahlian)
+        B1 --> C{Lolos Captcha reCAPTCHA & Rate Limit?}
+        C -- Tidak --> D[Akses Diblokir / Error]
+        C -- Ya --> E{Cek Email/WA di Database}
+        E -- Belum Ada --> F[Sistem Buat Akun Baru]
+        E -- Sudah Ada --> G[Gunakan Akun Terdaftar]
+        F --> H
+        G --> H
+    end
 
-### C. Alur Verifikasi (Admin Workflow)
-1.  **Tahap 1:** Form masuk ke dasbor Admin Verifikator. Admin ini menambah detail (Diteruskan ke OPD mana, Bidang apa, Siapa pembimbing lapangan, Siapa penanggung jawab). Admin Verifikator bisa menolak langsung atau Meneruskan ke Admin OPD.
-2.  **Tahap 2:** Admin OPD melihat data yang dilempar dan hanya memilih **ACC (Terima)** atau **Tolak**.
-3.  **Notifikasi:** Jika Ditolak, kirim email penolakan. Jika ACC, kirim email persetujuan otomatis via SMTP. Email ACC **wajib melampirkan file PDF** (berisi surat rekomendasi/tanda terima resmi untuk dibawa saat magang, *layout* mirip *invoice*).
+    %% FASE 2: Verifikasi Revisi
+    subgraph Fase2 [Fase 2: Verifikasi Bertingkat & Tugas Baru]
+        H[Pengajuan Masuk Dasbor Admin Verifikator] --> I{Tinjau Pengajuan & Keahlian}
+        I -- Tidak Valid --> J[Tolak & Kirim Email Penolakan]
+        I -- Valid --> K[Verifikator Beri Catatan Khusus & Lempar ke OPD]
+        K --> L{Admin OPD: Putuskan}
+        L -- Tolak --> M[Tolak & Kirim Email Penolakan]
+        L -- ACC --> N[Muncul Alert Peringatan Kedatangan]
+        N --> O[Admin OPD Isi: Divisi, Pembimbing, Penanggung Jawab]
+        O --> P[Kirim Email ACC Detail + Header Biru 'Magang Kota Madiun']
+        P --> Q[Update Status: Disetujui]
+    end
 
-### D. User Dashboard & Ticket Tracking
-*   Setelah login, User melihat tabel riwayat/tiket pengajuan magangnya.
-*   Tiket memiliki status *real-time*: `Tahap Verifikator Admin`, `Tahap Admin OPD`, `Sedang Magang`, `Diajukan Proses Selesai`.
+    %% FASE 3: Login Terpisah & Keamanan
+    subgraph Fase3 [Fase 3: Akses Login Terpisah]
+        %% Alur User
+        R([User Buka URL Utama]) --> S(Input Email)
+        S --> T[Kirim OTP via Email]
+        T --> U(User Masukkan OTP)
+        U --> V{Apakah Browser Sedang Digunakan Akun Lain?}
+        V -- Ya --> W[Tolak Akses: Error 403 Forbidden]
+        V -- Tidak --> X[Berhasil Masuk Dasbor User]
 
-### E. Alur Selesai Magang & Sertifikat (Feedback Loop)
-1.  **Upload Laporan:** Jika magang selesai, User menekan tombol di dasbor untuk **Upload Laporan Magang** (file) dan mencentang *checkbox* (konfirmasi "Saya sudah menyelesaikan magang").
-2.  **Verifikasi Admin:** Laporan dikirim ke dasbor Admin Verifikator. Admin Verifikator mengecek laporan dan memberikan status ACC penyelesaian.
-3.  **Upload Surat Selesai:** Admin Verifikator mengunggah dokumen **Surat Selesai Magang (Sertifikat)** ke dalam tiket user tersebut.
-4.  **Survei Kepuasan (Wajib):** File surat selesai muncul di dasbor User. Namun, tombol *Download* di-*disable/lock*. User wajib mengisi form **Survei Kepuasan / Feedback** (Rating Bintang & Komentar) agar tombol *Download* terbuka.
+        %% Alur Admin
+        Y([Admin Buka URL /admin/login]) --> Z(Input Username & Password Biasa)
+        Z --> AA[Berhasil Masuk Dasbor Admin]
+    end
 
-Fowchart E-Magang
+    %% FASE 4: Cron Job & 4 Aktor Selesai
+    subgraph Fase4 [Fase 4: Cron Job Otomatisasi & Penyelesaian]
+        Q -.-> AB{Cron Job: Cek Periode Harian jam 01.00}
+        AB -- Tanggal Mulai Tiba --> AC[Update Status: Sedang Magang]
+        AC -.-> AD{Kondisi Penyelesaian Terpenuhi?}
 
-### 🟩 FASE 1: Pendaftaran (Sisi User)
-**1. Kunjungan Website:** User (calon anak magang) mengunjungi halaman utama (*Landing Page*) yang berisi informasi alur pendaftaran dan FAQ.
-**2. Pengisian Form:** User langsung mengisi **Formulir Pengajuan Magang** (tanpa klik tombol "Daftar Akun"). Data yang diisi meliputi: tujuan magang, asal, durasi, nama pembimbing, email, dan nomor WhatsApp.
-**3. Pengecekan Database (Backend):** 
-*   **Jika Email/WA belum ada:** Sistem **otomatis membuatkan akun** baru untuk user tersebut.
-*   **Jika Email/WA sudah ada:** Sistem menggunakan akun yang sudah ada.
+        %% 4 Aktor Penyelesaian
+        AD -- 1. Sistem Cron Job: Tanggal Berakhir Tiba --> AE[Update Status: Selesai Magang]
+        AD -- 2. Dieksekusi Admin Verifikator --> AE
+        AD -- 3. Dieksekusi Admin OPD --> AE
+        X -.-> AF(4. User Upload Laporan & Klik Selesai)
+        AF --> AE
 
----
-
-### 🟨 FASE 2: Verifikasi Bertingkat (Sisi Admin)
-**4. Tahap 1 - Admin Verifikator:** 
-*   Data pengajuan masuk ke panel **Admin Verifikator**.
-*   Admin mengevaluasi kelengkapan form. 
-*   Jika tidak valid, Admin Verifikator bisa **Langsung Tolak** -> *Kirim Email Penolakan*.
-*   Jika valid, Admin melengkapi detail penempatan (memilih bidang, pembimbing lapangan, penanggung jawab), lalu **Meneruskan (Melempar)** pengajuan ke OPD tujuan.
-**5. Tahap 2 - Admin OPD:**
-*   Admin OPD terkait menerima data yang diteruskan.
-*   Admin OPD hanya melakukan eksekusi akhir: **ACC (Terima)** atau **Tolak**.
-*   *Jika Ditolak:* Sistem mengirimkan notifikasi penolakan via Email.
-*   *Jika ACC:* Sistem otomatis mengirimkan notifikasi ke Email user beserta **lampiran dokumen PDF** (surat pengantar/rekomendasi magang). Status tiket berubah menjadi **"Sedang Proses Magang"**.
-
----
-
-### 🟦 FASE 3: Akses Dasbor & Login OTP
-**6. Permintaan Login:** User masuk ke halaman login dan **hanya memasukkan Email**.
-**7. Validasi Akun:**
-*   **Jika belum pernah isi form:** Sistem menolak akses dengan keterangan "Akun tidak terdaftar".
-*   **Jika sudah pernah isi form:** Sistem men-*generate* kode **OTP (One Time Password)**, menyimpan *hash*-nya ke tabel *password*, dan mengirimkan OTP tersebut ke Email user.
-**8. Masuk Dasbor:** User memasukkan OTP. Jika benar, user berhasil login dan dapat melihat tiket serta melacak status magangnya.
-
----
-
-### 🟪 FASE 4: Penyelesaian Magang (Feedback Loop)
-**9. Upload Laporan (User):** Setelah masa magang berakhir, user login kembali dan **mengunggah Laporan Magang** beserta mencentang konfirmasi bahwa mereka telah selesai magang.
-**10. Verifikasi Laporan (Admin Verifikator):** Laporan tersebut masuk ke dasbor Admin Verifikator. Jika sudah sesuai, Admin **mengunggah Surat Selesai Magang (Sertifikat)** ke sistem (seperti *invoice* penyelesaian).
-**11. Syarat Unduh (User):** 
-*   Surat Selesai Magang muncul di dasbor User.
-*   **Sistem mengunci tombol *Download***.
-*   User **diwajibkan mengisi Survei Kepuasan (Feedback)** seperti memberikan *rating* bintang dan komentar.
-**12. Magang Selesai:** Setelah form survei dikirim, tombol unduh akan terbuka, dan user dapat mengunduh Surat Selesai Magang mereka. Alur pengajuan dinyatakan selesai.
-
-Semua alur di atas wajib berjalan di atas sistem keamanan yang ketat *(Anti-Brute Force, Anti-XSS, Anti-SQL Injection)* dengan pembatasan IP + Email dan perlindungan menggunakan *Captcha* yang digeser untuk mencegah bot/spam.
+        AE --> AG[Admin Verifikator Upload Surat Sertifikat]
+        AG --> AH[Sertifikat Masuk Dasbor User - Tombol Terkunci]
+        AH --> AI(User Isi Survei Kepuasan & Rating)
+        AI --> AJ[Tombol Download Terbuka]
+        AJ --> AK([Selesai: User Download Sertifikat])
+    end

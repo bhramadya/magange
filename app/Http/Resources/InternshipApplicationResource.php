@@ -34,7 +34,18 @@ class InternshipApplicationResource extends JsonResource
             'campus_supervisor' => $this->campus_supervisor,
             'status' => $this->status->value,
 
+            // Data pemohon (dari relasi user) — tampil di tabel & pop-up admin.
+            'applicant_name' => $this->whenLoaded('user', fn () => $this->user?->name),
+            'applicant_email' => $this->whenLoaded('user', fn () => $this->user?->email),
+            'applicant_whatsapp' => $this->whenLoaded('user', fn () => $this->user?->whatsapp_number),
+
+            // URL pas foto (disk privat) bila ada — dilayani route terproteksi.
+            'photo_url' => $this->photo_path !== null ? route('pengajuan.foto', $this->resource) : null,
+
             // Diisi peserta saat mendaftar.
+            'nis' => $this->nis,
+            'address' => $this->address,
+            'guardian_name' => $this->guardian_name,
             'major' => $this->major,
             'skills' => $this->skills,
 
@@ -60,6 +71,10 @@ class InternshipApplicationResource extends JsonResource
                 'is_confirmed' => $this->finalReport->is_confirmed,
             ] : null, null),
             'survey_submitted' => $this->whenLoaded('survey', fn () => $this->survey !== null, false),
+            'certificate' => $this->whenLoaded('certificate', fn () => $this->certificate ? [
+                'id' => $this->certificate->id,
+                'is_download_locked' => $this->certificate->is_download_locked,
+            ] : null, null),
             'certificate_available' => $this->whenLoaded(
                 'certificate',
                 fn () => $this->certificate !== null && ! $this->certificate->is_download_locked,

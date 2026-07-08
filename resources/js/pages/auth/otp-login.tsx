@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     ArrowLeft,
     ArrowRight,
@@ -18,14 +18,13 @@ import { cn } from '@/lib/utils';
  *    1) Peserta memasukkan email  → backend kirim kode OTP 6 digit.
  *    2) Peserta memasukkan kode    → backend verifikasi & buat sesi.
  *
- *  FRONTEND ONLY. Handler di bawah memakai simulasi state lokal supaya
- *  halaman bisa dipratinjau tanpa backend. Rekan backend cukup mengganti
- *  `handleRequestOtp` & `handleVerifyOtp` dengan panggilan Inertia:
+ *  Terhubung ke backend nyata (OtpLoginController) via Inertia:
+ *    router.post('/otp/send',   { email })          // langkah 1
+ *    router.post('/otp/verify', { email, otp })     // langkah 2
  *
- *    router.post('/login/otp/request', { email })           // langkah 1
- *    router.post('/login/otp/verify',  { email, code })     // langkah 2
- *
- *  Props `status` & `errors` opsional bila controller mengembalikannya.
+ *  Sukses langkah 1  → controller flash `status`, kita pindah ke langkah kode.
+ *  Sukses langkah 2  → controller redirect sesuai peran (dashboard/verifikator/opd).
+ *  Gagal             → errors.email (langkah 1) / errors.otp (langkah 2).
  * ========================================================================= */
 
 type Step = 'email' | 'code';
@@ -35,15 +34,18 @@ const RESEND_SECONDS = 60;
 
 interface OtpLoginProps {
     status?: string;
+    // Diisi controller setelah submit form pendaftaran → langsung ke langkah kode.
+    prefillEmail?: string | null;
+    errors?: Record<string, string>;
 }
 
-export default function OtpLogin({ status }: OtpLoginProps) {
-    const [step, setStep] = useState<Step>('email');
-    const [email, setEmail] = useState('');
+export default function OtpLogin({ status, prefillEmail, errors }: OtpLoginProps) {
+    const [step, setStep] = useState<Step>(prefillEmail ? 'code' : 'email');
+    const [email, setEmail] = useState(prefillEmail ?? '');
     const [code, setCode] = useState<string[]>(() => Array(OTP_LENGTH).fill(''));
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [resendIn, setResendIn] = useState(0);
+    const [resendIn, setResendIn] = useState(prefillEmail ? RESEND_SECONDS : 0);
 
     const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
     const emailValid = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()), [email]);
@@ -68,6 +70,15 @@ export default function OtpLogin({ status }: OtpLoginProps) {
         }
     }, [step]);
 
+    // Tampilkan error yang datang lewat props Inertia (mis. redirect back dari server).
+    useEffect(() => {
+        const inbound = errors?.otp ?? errors?.email;
+
+        if (inbound) {
+            setError(inbound);
+        }
+    }, [errors]);
+
     /* ---- Langkah 1: minta OTP ---------------------------------------- */
     function handleRequestOtp(e: React.FormEvent) {
         e.preventDefault();
@@ -79,12 +90,22 @@ export default function OtpLogin({ status }: OtpLoginProps) {
         setError(null);
         setProcessing(true);
 
-        // TODO(backend): router.post('/login/otp/request', { email }, {...})
-        setTimeout(() => {
-            setProcessing(false);
-            setStep('code');
-            setResendIn(RESEND_SECONDS);
-        }, 900);
+        router.post(
+            '/otp/send',
+            { email: email.trim() },
+            {
+                preserveScroll: true,
+                // Controller flash `status` bila sukses → pindah ke langkah kode.
+                onSuccess: () => {
+                    setStep('code');
+                    setResendIn(RESEND_SECONDS);
+                },
+                onError: (errs) => {
+                    setError(errs.email ?? 'Gagal mengirim kode. Coba lagi.');
+                },
+                onFinish: () => setProcessing(false),
+            },
+        );
     }
 
     /* ---- Langkah 2: verifikasi OTP ----------------------------------- */
@@ -98,21 +119,20 @@ export default function OtpLogin({ status }: OtpLoginProps) {
         setError(null);
         setProcessing(true);
 
-        // TODO(backend): router.post('/login/otp/verify', { email, code: codeValue }, {...})
-        setTimeout(() => {
-            setProcessing(false);
-
-            // Demo: kode "000000" dianggap salah agar UI error terlihat.
-            if (codeValue === '000000') {
-                setError('Kode yang dimasukkan salah atau telah kedaluwarsa.');
-                setCode(Array(OTP_LENGTH).fill(''));
-                inputsRef.current[0]?.focus();
-
-                return;
-            }
-
-            window.location.href = '/dashboard';
-        }, 900);
+        router.post(
+            '/otp/verify',
+            { email: email.trim(), otp: codeValue },
+            {
+                preserveScroll: true,
+                // Sukses → controller redirect sesuai peran (tak ada callback sukses di sini).
+                onError: (errs) => {
+                    setError(errs.otp ?? errs.email ?? 'Kode tidak valid atau telah kedaluwarsa.');
+                    setCode(Array(OTP_LENGTH).fill(''));
+                    inputsRef.current[0]?.focus();
+                },
+                onFinish: () => setProcessing(false),
+            },
+        );
     }
 
     function handleResend() {
@@ -122,9 +142,23 @@ export default function OtpLogin({ status }: OtpLoginProps) {
 
         setError(null);
         setCode(Array(OTP_LENGTH).fill(''));
-        setResendIn(RESEND_SECONDS);
-        inputsRef.current[0]?.focus();
-        // TODO(backend): router.post('/login/otp/request', { email })
+        setProcessing(true);
+
+        router.post(
+            '/otp/send',
+            { email: email.trim() },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setResendIn(RESEND_SECONDS);
+                    inputsRef.current[0]?.focus();
+                },
+                onError: (errs) => {
+                    setError(errs.email ?? 'Gagal mengirim ulang kode. Coba lagi.');
+                },
+                onFinish: () => setProcessing(false),
+            },
+        );
     }
 
     /* ---- Input OTP: ketik, hapus, navigasi panah, tempel ------------- */

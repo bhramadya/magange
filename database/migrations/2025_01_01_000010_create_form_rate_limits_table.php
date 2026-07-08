@@ -18,9 +18,9 @@ return new class extends Migration
         Schema::create('form_rate_limits', function (Blueprint $table) {
             $table->id();
             $table->string('ip_address', 45)
-                  ->comment('Mendukung IPv4 & IPv6');
+                ->comment('Mendukung IPv4 & IPv6');
             $table->string('identifier')
-                  ->comment('Email atau nomor WhatsApp');
+                ->comment('Email atau nomor WhatsApp');
             $table->enum('identifier_type', ['email', 'whatsapp']);
             $table->timestamp('submitted_at');
 
