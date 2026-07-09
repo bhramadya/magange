@@ -469,8 +469,24 @@ Urutan = prioritas. [BLOKER] = tanpa ini aplikasi tidak bisa dipakai end-to-end.
            - Kredensial admin demo: verifikator@madiunkota.go.id / password;
              admin OPD: {slug-kode}@opd.madiunkota.go.id / password (mis.
              diskominfo@opd.madiunkota.go.id). Mahasiswa demo login via OTP.
-[ ] 20. Pastikan queue worker jalan (composer dev) — tanpa worker, job email/PDF
+[x] 20. Pastikan queue worker jalan (composer dev) — tanpa worker, job email/PDF
         tidak diproses.
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 17:50 WIB.
+           - BUG DITEMUKAN & DIPERBAIKI: semua job (email, PDF surat, OTP)
+             di-dispatch ke queue 'emails' (onQueue('emails')), TAPI composer dev
+             menjalankan `queue:listen --tries=1` TANPA --queue, jadi hanya
+             mendengarkan queue 'default' -> job 'emails' TIDAK PERNAH diproses
+             (email/OTP/PDF diam-diam tak terkirim).
+           - FIX: composer.json script `dev` diubah menjadi
+             `queue:listen --queue=emails,default --tries=1`.
+           - BUKTI: dispatch job -> masuk queue 'emails'. Worker 'default' saja =
+             job tetap (tidak diproses). Worker 'emails,default' = job RUNNING->
+             DONE, queue emails drain ke 0. MAIL_MAILER=log (aman, tak kirim asli).
+           - Verifikasi: `composer validate` -> valid. Tabel jobs ADA
+             (0001_..._create_jobs_table), QUEUE_CONNECTION=database.
+           - CATATAN produksi: jalankan worker persisten
+             `php artisan queue:work --queue=emails,default` (mis. via supervisor)
+             + scheduler `php artisan schedule:work`/cron untuk cron 01:00.
 
 ================================================================================
  RINGKASAN: 4 bloker P0 (wiring OTP, 2 dialog admin, auto-OTP daftar) adalah
