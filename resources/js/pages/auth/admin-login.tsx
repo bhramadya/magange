@@ -14,10 +14,12 @@ export default function AdminLogin() {
     const { data, setData, post, processing, errors } = useForm({
         username: '',
         password: '',
+        remember: true,
     });
 
     function submit(e: FormEvent) {
         e.preventDefault();
+        // Dilayani Laravel Fortify (config fortify.paths.login = admin/login).
         post('/admin/login');
     }
 

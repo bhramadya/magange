@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\ApplicationPhotoController;
-use App\Http\Controllers\Auth\AdminLoginController;
 use App\Http\Controllers\Auth\OtpLoginController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Mahasiswa\ApplicationController;
@@ -33,7 +32,7 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 */
 
 // --- Publik (tanpa login) ---
-Route::get('login-otp', [OtpLoginController::class, 'showForm'])->name('login.otp');  // Login OTP (/login asli dikelola Fortify)
+Route::get('login-otp', [OtpLoginController::class, 'showForm'])->name('login.otp');  // Login OTP mahasiswa (login admin di /admin/login via Fortify)
 Route::post('otp/send', [OtpLoginController::class, 'sendOtp'])->name('otp.send');
 Route::post('otp/verify', [OtpLoginController::class, 'verifyOtp'])->name('otp.verify');
 Route::get('lacak', [ApplicationController::class, 'track'])->name('lacak'); // Lacak status publik (via ?email=)
@@ -43,9 +42,11 @@ Route::get('lacak', [ApplicationController::class, 'track'])->name('lacak'); // 
 // belum dibuat — form hidup ada di welcome.tsx, jadi rutenya belum dipasang.
 Route::post('pengajuan', [ApplicationController::class, 'store'])->name('pengajuan.store');
 
-// --- Login Admin (Username + Password, terpisah dari OTP mahasiswa) ---
-Route::get('admin/login', [AdminLoginController::class, 'showForm'])->name('admin.login');
-Route::post('admin/login', [AdminLoginController::class, 'authenticate'])->name('admin.login.attempt');
+// --- Login Admin (Username + Password) ---
+// Dilayani Laravel Fortify di `admin/login` (config fortify.paths.login):
+//   GET  admin/login -> loginView (Inertia auth/admin-login)  [name: login]
+//   POST admin/login -> AuthenticatedSessionController@store   [name: login.store]
+// Logika role/is_active/single-session ada di FortifyServiceProvider.
 
 // --- Dasbor Mahasiswa (tersambung: auth + role) ---
 Route::middleware(['auth', 'role:mahasiswa'])->group(function () {

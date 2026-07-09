@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\OtpServiceContract;
 use App\Contracts\PengajuanServiceContract;
+use App\Http\Responses\AdminLoginResponse;
 use App\Models\InternshipApplication;
 use App\Policies\InternshipApplicationPolicy;
 use App\Services\OtpService;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +27,10 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(OtpServiceContract::class, OtpService::class);
         $this->app->bind(PengajuanServiceContract::class, SubmissionService::class);
+
+        // Login Fortify (admin) diarahkan ke dasbor sesuai peran, bukan
+        // ke `fortify.home` (/dashboard) yang khusus mahasiswa.
+        $this->app->singleton(LoginResponseContract::class, AdminLoginResponse::class);
     }
 
     /**
