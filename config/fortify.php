@@ -45,7 +45,7 @@ return [
     |
     */
 
-    'username' => 'email',
+    'username' => 'username',
 
     'email' => 'email',
 
@@ -89,6 +89,21 @@ return [
     'prefix' => '',
 
     'domain' => null,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Fortify Route Paths
+    |--------------------------------------------------------------------------
+    |
+    | Login admin dilayani Fortify di `/admin/login` (bukan `/login` bawaan),
+    | sesuai spec: admin masuk lewat URL khusus dengan Username + Password.
+    | `logout` sengaja TIDAK dipindah — dibagi bersama alur OTP mahasiswa.
+    |
+    */
+
+    'paths' => [
+        'login' => 'admin/login',
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -140,11 +155,13 @@ return [
     | by removing them from this array. You're free to only remove some of
     | these features, or you can even remove all of these if you need to.
     |
+    | Registrasi & reset password dinonaktifkan: mahasiswa masuk lewat OTP,
+    | admin dibuat via seeder. Hanya login (Username + Password) yang aktif.
+    |
     */
 
     'features' => [
-        Features::registration(),
-        Features::resetPasswords(),
+        //
     ],
 
 ];

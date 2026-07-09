@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Concerns\InvalidatesOtherSessions;
 use App\Contracts\OtpServiceContract;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
@@ -9,17 +10,25 @@ use App\Http\Requests\Auth\SendOtpRequest;
 use App\Http\Requests\Auth\VerifyOtpRequest;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class OtpLoginController extends Controller
 {
+    use InvalidatesOtherSessions;
+
     public function __construct(private OtpServiceContract $otpService) {}
 
-    public function showForm(): Response
+    public function showForm(Request $request): Response
     {
-        return Inertia::render('auth/otp-login');
+        // Setelah submit form pendaftaran, controller pengajuan mem-flash `email`
+        // (+ status) agar halaman ini lompat ke langkah kode dengan email terisi.
+        return Inertia::render('auth/otp-login', [
+            'prefillEmail' => $request->session()->get('email'),
+            'status' => $request->session()->get('status'),
+        ]);
     }
 
     public function sendOtp(SendOtpRequest $request): RedirectResponse
@@ -59,6 +68,9 @@ class OtpLoginController extends Controller
         Auth::login($user, remember: true);
 
         $request->session()->regenerate();
+
+        // Single session lintas-perangkat: tendang sesi user di perangkat lain.
+        $this->invalidateOtherSessions($request, $user);
 
         return $this->redirectByRole($user->role);
     }

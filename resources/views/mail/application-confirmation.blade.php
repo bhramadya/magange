@@ -1,5 +1,5 @@
 <x-mail::message>
-# E-Magang Kota Madiun
+@include('mail.partials.header', ['badge' => 'Diterima', 'badgeBg' => '#dbeafe', 'badgeText' => '#106feb'])
 
 Halo {{ $application->user->name }},
 

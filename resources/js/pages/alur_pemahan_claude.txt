@@ -1,0 +1,497 @@
+================================================================================
+ E-MAGANG KOTA MADIUN — PEMAHAMAN ALUR & TO-DO LIST PENYELESAIAN
+ Ditulis oleh Claude setelah menganalisis CLAUDE.md + alur_E-Magang_lengkap.txt
+ dan mengaudit kode nyata (controller, service, migration, halaman React).
+ Tanggal: 2026-07-07
+================================================================================
+
+
+################################################################################
+ BAGIAN A — ALUR APLIKASI YANG SAYA PAHAMI (versi ditulis ulang)
+################################################################################
+
+Aplikasi ini adalah portal pendaftaran magang Pemerintah Kota Madiun dengan 3
+peran: MAHASISWA (pendaftar), ADMIN VERIFIKATOR (penyaring tahap 1), dan
+ADMIN OPD (instansi tujuan, pemutus akhir + pengelola peserta aktif).
+
+State machine pengajuan (app/Enums/ApplicationStatus.php):
+  pending_verifikator -> forwarded_opd -> approved -> ongoing
+    -> completion_submitted -> completed
+  Cabang terminal: rejected (bisa dari verifikator ATAU OPD)
+
+Label status yang tampil di dasbor (urut filter):
+  Perlu Keputusan -> Disetujui -> Sedang Magang -> Selesai Magang -> Ditolak -> Semua
+
+
+--- FASE 1: PENDAFTARAN PUBLIK + KEAMANAN OTOMATIS (sisi Mahasiswa) ---
+
+1. Pengguna membuka landing page (welcome.tsx). Section: hero, fitur, daftar
+   instansi/OPD, alur pendaftaran, FAQ, Kontak (form), + TESTIMONIAL (survei
+   kepuasan peserta yang sudah selesai).
+2. TANPA registrasi akun. Pengguna langsung mengisi formulir publik di section
+   Kontak. Field: NIS/NIM, Nama Lengkap, Asal Sekolah/Kampus, Tujuan Bidang OPD,
+   Jurusan (opsional), Keahlian, Alamat Lengkap, Tanggal Mulai, Tanggal Selesai,
+   Nama Dosen/Guru Pembimbing, Nama Penanggung Jawab, Nomor WhatsApp, Email
+   Aktif, Pas Foto.
+3. Keamanan: dilindungi reCAPTCHA Google + rate limiting (kombinasi IP +
+   Email/WhatsApp, batas kiriman harian) untuk cegah brute force/spam. Backend
+   juga sanitasi anti SQL-injection & XSS.
+4. Pembuatan akun otomatis: saat form terkirim, sistem cek DB. Jika email belum
+   terdaftar -> buat akun secara tersembunyi. Pengguna DIARAHKAN ke halaman
+   login-otp dengan kode OTP 6 digit SUDAH terkirim ke email — TANPA perlu
+   memasukkan email lagi — lalu masuk ke dasbor peserta.
+
+
+--- FASE 2: VERIFIKASI TAHAP 1 (Admin Verifikator) ---
+
+1. Pengajuan masuk ke dasbor Verifikator. Di setiap card tampil Jurusan &
+   Keahlian sebagai bahan pertimbangan. Tabel dasbor menampilkan kolom NAMA
+   LENGKAP tepat setelah NO. TIKET.
+2. Pop-up "Tinjau Pengajuan" menampilkan SEMUA data peserta (NIS, Nama, Asal,
+   Tujuan OPD, Jurusan, Keahlian, Alamat, Tgl Mulai/Selesai, Dosen Pembimbing,
+   Penanggung Jawab, WhatsApp, Email, Pas Foto) + kolom "Catatan Khusus Admin
+   Verifikator" (opsional).
+3. Verifikator TIDAK menentukan divisi/pembimbing. Ia hanya memberi catatan lalu:
+   - TERUSKAN (forward) ke Admin OPD tujuan, ATAU
+   - TOLAK -> email penolakan otomatis dikirim ke peserta, status -> Ditolak.
+4. Menu "Kelola Kuota OPD" ada di SIDEBAR (setelah menu Riwayat), bukan di bawah
+   dasbor.
+5. Email penolakan: header teks besar biru "E-Magang Kota Madiun" + subteks
+   "Ditolak", memuat detail lengkap peserta, ditutup paragraf penutup atas nama
+   "admin verifikator".
+
+
+--- FASE 3: VERIFIKASI TAHAP 2 (Admin OPD) ---
+
+1. Admin OPD menerima lemparan. Filter dasbor: Perlu Keputusan (latar KUNING),
+   Disetujui, Sedang Magang, Selesai Magang, Ditolak, Semua. Kolom NAMA LENGKAP
+   setelah NO. TIKET. (Label lama "Diteruskan ke OPD" = "Perlu Keputusan".)
+2. Pop-up detail menampilkan SEMUA data peserta + Pas Foto.
+3. Admin OPD menekan TOLAK atau PUTUSKAN (ACC):
+   - ACC -> pop-up WAJIB isi Divisi/Bidang, Pembimbing Lapangan, Penanggung
+     Jawab. Di bawah form ada alert: "Notif ini akan dikirim ke peserta magang.
+     Peserta akan datang berkunjung ke kantor setelah diterima pengajuan ini".
+     -> email persetujuan (header biru + subteks "Disetujui", detail penempatan,
+     instruksi hadir menemui bidang X dipandu pembimbing Y) + LAMPIRAN PDF surat
+     rekomendasi penerimaan. Status -> Disetujui. Kuota OPD bertambah.
+   - TOLAK -> wajib isi alasan -> email penolakan (atas nama "admin OPD"),
+     status -> Ditolak.
+
+
+--- FASE 4: LOGIN TERPISAH & KEAMANAN SESI ---
+
+1. Login Mahasiswa (OTP): masukkan EMAIL saja -> sistem kirim OTP 6 digit ke
+   email. OTP di-hash dan disimpan sebagai password di DB tiap kali minta masuk.
+   Jika email belum pernah mengisi form -> akses ditolak "akun tidak terdaftar".
+2. Keamanan sesi: 1 browser tidak bisa login 2 akun berbeda bersamaan; login
+   baru mematikan sesi di perangkat/browser lain (single-session).
+3. Login Admin: URL khusus /admin/login, pakai Username + Password konvensional
+   (tanpa OTP).
+
+
+--- FASE 5: OTOMATISASI STATUS (Cron Job harian, 01:00) ---
+
+1. Disetujui + tanggal hari ini == tanggal mulai -> status "Sedang Magang".
+2. Sedang Magang + tanggal hari ini == tanggal selesai -> status "Selesai Magang".
+
+
+--- FASE 6: PENYELESAIAN & SERTIFIKAT ---
+
+Status "Selesai" bisa diset 4 aktor: (1) Sistem/Cron, (2) Admin Verifikator,
+(3) Admin OPD, (4) Pengguna sendiri.
+1. Pengguna unggah Laporan Magang + centang "Saya sudah menyelesaikan magang".
+2. Laporan masuk ke Admin Verifikator -> verifikator cek -> unggah "Surat Selesai
+   Magang" (Sertifikat) ke akun pengguna.
+3. Sertifikat muncul di dasbor pengguna, tapi tombol download TERKUNCI. Pengguna
+   WAJIB isi survei kepuasan (rating bintang + komentar) dulu, barulah bisa
+   diunduh.
+4. Setiap testimonial survei DITAMPILKAN di section testimonial welcome.tsx.
+
+
+================================================================================
+ CATATAN KESENJANGAN INTI (hasil audit kode nyata)
+================================================================================
+Backend domain (service, job, mail, migration, route aksi) SUDAH matang & teruji.
+Yang belum: sebagian besar HALAMAN REACT masih memakai handler MOCK (setTimeout /
+TODO) dan belum memanggil endpoint nyata, ditambah beberapa fitur spec yang belum
+dibuat sama sekali (testimonial, auto-OTP saat daftar, kolom nama, foto di pop-up).
+
+
+################################################################################
+ BAGIAN B — TO-DO LIST PENYELESAIAN (agar aplikasi bisa dites & dipakai)
+################################################################################
+
+Urutan = prioritas. [BLOKER] = tanpa ini aplikasi tidak bisa dipakai end-to-end.
+
+
+=== P0. BLOKER — TANPA INI ALUR TIDAK JALAN ===
+
+[x] 1. [BLOKER] Wiring halaman OTP login ke backend nyata.
+       resources/js/pages/auth/otp-login.tsx — handleRequestOtp (:82),
+       handleVerifyOtp (:101), handleResend (:127) masih setTimeout + TODO,
+       redirect hardcoded ke '/dashboard'. Ganti jadi router.post ke
+       route('otp.send') & route('otp.verify'); tangani error validasi &
+       redirect resmi dari controller. (Backend OtpLoginController/OtpService
+       SUDAH siap.)
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 10:42 WIB.
+          - Ketiga handler (handleRequestOtp/handleVerifyOtp/handleResend)
+            kini memanggil router.post('/otp/send') & router.post('/otp/verify')
+            dengan payload { email } dan { email, otp } sesuai FormRequest.
+          - Langkah 1 sukses (flash `status`) -> pindah ke step kode + mulai
+            hitung mundur kirim ulang; gagal -> tampilkan errors.email.
+          - Langkah 2 sukses -> controller redirect sesuai peran (dashboard/
+            verifikator/opd), tak lagi redirect hardcoded; gagal -> errors.otp,
+            reset kotak kode.
+          - Prop `errors` Inertia ditambah + useEffect untuk menampilkan error
+            yang datang lewat redirect-back server.
+          - Verifikasi: `npm run types:check` LULUS (tsc --noEmit, tanpa error).
+
+[x] 2. [BLOKER] Wiring dialog aksi dasbor VERIFIKATOR ke router.post.
+       resources/js/pages/verifikator/dashboard.tsx — submitForward (:210) &
+       submitReject (:223) masih stub. Panggil route('verifikator.pengajuan.
+       forward'/'reject') dg payload (opd_id, verifikator_note / alasan).
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 11:05 WIB.
+          - submitForward -> router.post('/verifikator/pengajuan/{id}/forward')
+            payload { opd_id (number), verifikator_note (string|null) } sesuai
+            ForwardApplicationRequest.
+          - submitReject -> router.post('/verifikator/pengajuan/{id}/reject')
+            payload { rejection_reason } sesuai RejectApplicationRequest.
+          - onSuccess memanggil onForwarded/onRejected (optimistic update baris);
+            server juga return back() sehingga props ikut ter-refresh.
+          - onError menampilkan pesan validasi (state `error` baru) di atas
+            tombol aksi pada kedua mode.
+          - Verifikasi: `npm run types:check` LULUS (tsc --noEmit, tanpa error).
+
+[x] 3. [BLOKER] Wiring dialog aksi dasbor OPD ke router.post.
+       resources/js/pages/opd/dashboard.tsx — submitApprove (:347) &
+       submitReject (:360) masih stub. Panggil route('opd.pengajuan.
+       approve'/'reject') dg payload (division, field_supervisor,
+       person_in_charge / rejection_reason).
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 11:20 WIB.
+          - submitApprove -> router.post('/opd/pengajuan/{id}/approve')
+            payload { division, field_supervisor, person_in_charge } sesuai
+            ApproveApplicationRequest (semua required).
+          - submitReject -> router.post('/opd/pengajuan/{id}/reject')
+            payload { rejection_reason } sesuai RejectApplicationRequest.
+          - onSuccess memanggil onApproved/onRejected (optimistic update baris);
+            server return back() sehingga props ikut ter-refresh.
+          - onError menampilkan pesan validasi (state `error` baru) di atas
+            tombol aksi pada kedua mode (Setujui & Tolak).
+          - Verifikasi: `npm run types:check` LULUS (tsc --noEmit, tanpa error).
+
+[x] 4. [BLOKER] Alur pendaftaran: redirect + auto-kirim OTP.
+       - SubmissionService::submit() harus panggil OtpService::generate()
+         setelah buat/ambil user (app/Services/SubmissionService.php ~:50-86).
+       - ApplicationController@store (:63) ganti redirect dari route('lacak')
+         -> route('login.otp'), bawa email agar halaman OTP tampil di step
+         verifikasi tanpa minta email lagi.
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 11:48 WIB.
+          - SubmissionService kini meng-inject OtpServiceContract; submit()
+            memanggil otpService->generate() untuk user pemohon setelah commit
+            (menghormati canRequest / batas OTP). Job SendOtpEmailJob otomatis
+            dispatch.
+          - ApplicationController@store redirect -> route('login.otp') dengan
+            flash `email` + `status` (bukan lagi ke 'lacak').
+          - Route login-otp diubah dari Route::inertia menjadi
+            OtpLoginController@showForm agar bisa mengirim prop prefillEmail +
+            status dari session flash.
+          - Halaman auth/otp-login.tsx: prop `prefillEmail` -> bila ada, email
+            terisi & langsung mulai di langkah KODE + hitung mundur kirim ulang
+            aktif (OTP sudah terkirim saat submit).
+          - Tes disesuaikan: unit SubmissionServiceTest (konstruktor 2 argumen +
+            OtpService), feature ApplicationControllerTest (assert redirect ke
+            login.otp + session `email`).
+          - Verifikasi: `php artisan test` (Submission+Application 15 lulus,
+            Otp 15 lulus), `npm run types:check` LULUS, `pint` PASSED.
+
+
+=== P1. FITUR SPEC YANG BELUM ADA ===
+
+[x] 5. Section TESTIMONIAL di welcome.tsx.
+       - HomeController@index: query SatisfactionSurvey (rating + comment +
+         nama peserta, mis. rating >= 4, terbaru) -> prop 'testimonials'.
+       - welcome.tsx: tambah section testimonial (bintang + komentar + nama/
+         instansi). Belum ada sama sekali.
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 12:10 WIB.
+          - HomeController@index kini mengirim prop `testimonials`: survei
+            rating >= 4 + berkomentar, terbaru dulu (limit 9), nama peserta dari
+            relasi application.user, asal instansi dari application.
+          - welcome.tsx: section baru id="testimonial" (grid kartu: rating
+            bintang, kutipan komentar, avatar inisial + nama + instansi).
+            Section & tautan navbar "Testimoni" hanya muncul bila ada data.
+          - Verifikasi: query diuji via tinker (mapping nama/instansi/rating OK),
+            `npm run types:check` LULUS, `pint` PASSED, feature test landing
+            (Application+Faq) 11 lulus (1 skip pra-ada).
+
+[x] 6. Kolom NAMA LENGKAP setelah NO. TIKET di kedua tabel admin.
+       verifikator/dashboard.tsx (:535) & opd/dashboard.tsx (:620). Nama ada di
+       relasi user — pastikan InternshipApplicationResource mengekspos
+       user.name (sudah), lalu render kolomnya.
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 12:35 WIB.
+          - InternshipApplicationResource menambah field `applicant_name`
+            (whenLoaded('user') -> user.name). Tipe magang.ts + applicant_name.
+          - Kolom "Nama Lengkap" disisipkan setelah "No. Tiket" di tabel desktop
+            verifikator & opd, plus baris nama pada kartu mobile keduanya.
+          - Pencarian toolbar kini juga mencocokkan nama pemohon.
+          - MOCK makeApp diberi applicant_name agar pratinjau tetap terisi.
+          - Verifikasi: resource diuji via tinker (emit 'Andi Verifikasi'),
+            `npm run types:check` LULUS, `pint` PASSED.
+            Catatan: kedua DashboardController sudah eager-load 'user'.
+
+[x] 7. Pop-up tinjau/detail tampilkan SEMUA field + PAS FOTO.
+       - verifikator ReviewDialog (:245) hanya 5 field. Tambah NIS, Nama,
+         Alamat, WhatsApp, Email, Penanggung Jawab, Jurusan, + Pas Foto.
+       - opd DecisionDialog (:382) idem + Pas Foto.
+       - Pastikan resource mengembalikan photo_path sebagai URL yang bisa
+         ditampilkan (Storage private -> route/URL bertoken bila perlu).
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 13:10 WIB.
+          - Route baru GET pengajuan/{application}/foto (name pengajuan.foto),
+            controller ApplicationPhotoController@show melayani foto dari disk
+            PRIVAT inline; otorisasi via policy view (Verifikator semua, OPD
+            hanya miliknya), middleware role:admin_opd,admin_verifikator.
+          - Resource menambah applicant_email, applicant_whatsapp, photo_url
+            (route bila photo_path ada). Tipe magang.ts diperluas (nis, address,
+            guardian_name, applicant_email/whatsapp, photo_url).
+          - ReviewDialog (verifikator) & DecisionDialog (opd): pas foto (bila
+            ada) + tabel lengkap NIS, Nama, Asal Instansi, Tujuan, Jurusan,
+            (Keahlian: verifikator via tabel / opd panel terpisah), Alamat,
+            Durasi, Periode, Pembimbing Kampus, Penanggung Jawab, WhatsApp,
+            Email. MOCK makeApp keduanya diberi field baru.
+          - CATATAN PENTING: migrasi 2026_07_06_090000 (nis/address/
+            guardian_name/photo_path) ternyata masih PENDING di DB dev pgsql ->
+            dijalankan `php artisan migrate --force` (DONE). Ini juga syarat
+            form pendaftaran welcome berfungsi.
+          - Perbaikan lanjutan efek #4: RecaptchaRateLimitTest (2 assert) yang
+            masih assert redirect 'lacak' diubah ke 'login.otp'.
+          - Verifikasi: resource diuji via tinker (semua field + photo_url =
+            http://localhost/pengajuan/3/foto), `php artisan test` FULL SUITE
+            91 lulus / 4 skip / 0 gagal, `npm run types:check` LULUS,
+            `pint` PASSED.
+
+[x] 8. Pindahkan "Kelola Kuota OPD" ke sidebar Verifikator (setelah Riwayat).
+       - magang-layout.tsx verifikatorNav (:56) tambah item Kuota.
+       - Hapus panel kuota dari bawah verifikator/dashboard.tsx (:613-625);
+         buat halaman/route kuota tersendiri bila perlu (route kuota.update
+         sudah ada untuk aksi PATCH).
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 13:40 WIB.
+          - verifikatorNav: item baru "Kelola Kuota OPD" (key kuota, icon Users)
+            disisipkan setelah Riwayat, sebelum Kelola FAQ.
+          - Route GET verifikator/kuota (name verifikator.kuota) +
+            DashboardController@kuota (render 'verifikator/kuota' dengan user +
+            opds).
+          - Halaman baru resources/js/pages/verifikator/kuota.tsx: memuat editor
+            OpdQuotaRow yang KINI WIRED ke router.patch('/kuota/{opd}',
+            { quota_total }) (bukan lagi setTimeout), plus tampilan error.
+          - Panel "Kelola Kuota OPD" + komponen OpdQuotaRow dihapus dari
+            verifikator/dashboard.tsx; import Users & Pencil yang tak terpakai
+            ikut dibersihkan.
+          - Verifikasi: `npm run build` sukses (page ter-bundle), smoke test
+            feature (GET /verifikator/kuota -> 200 + component + opds) LULUS,
+            `npm run types:check` LULUS, `pint` PASSED.
+
+[x] 9. Tombol "Tandai Selesai" untuk Verifikator & OPD.
+       Endpoint sudah ada (verifikator.pengajuan.complete /
+       opd.pengajuan.complete). Tambah tombol + konfirmasi di masing-masing
+       dasbor untuk peserta berstatus ongoing/completion_submitted.
+       >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 14:20 WIB.
+          - OPD DecisionDialog: prop onCompleted + submitComplete ->
+            router.post('/opd/pengajuan/{id}/complete'). Tombol "Tandai Selesai
+            Magang" muncul di blok "Status saat ini" saat status ongoing/
+            completion_submitted.
+          - Verifikator ReviewDialog: blok teruskan/tolak kini digate ke status
+            pending_verifikator (reviewable); ditambah blok complete (completable
+            = ongoing/completion_submitted) + submitComplete ->
+            router.post('/verifikator/pengajuan/{id}/complete'); status lain
+            tampil read-only. prop onCompleted ditambahkan.
+          - Kedua tombol optimistic applyStatus(id,'completed') pada sukses;
+            error validasi ditampilkan.
+          - Verifikasi: smoke test 2 endpoint (verifikator & opd complete ->
+            Completed) LULUS, CompletionFlowTest 7 lulus, types:check LULUS,
+            pint PASSED, `npm run build` sukses.
+
+[x] 10. Standardisasi template email (header biru "E-Magang Kota Madiun").
+        Saat ini hanya acceptance-letter.blade.php yang bergaya. Terapkan header
+        biru + badge subteks ke:
+        - application-rejection.blade.php -> badge "Ditolak" + detail lengkap
+          peserta + paragraf penutup sesuai spec (bedakan penutup verifikator
+          vs OPD).
+        - application-confirmation, certificate-notification, otp -> header biru
+          konsisten.
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 14:50 WIB.
+           - Partial baru resources/views/mail/partials/header.blade.php (judul
+             biru 30px #106feb + badge subteks berparameter warna).
+           - acceptance-letter di-refactor pakai partial (badge "Disetujui"
+             hijau) — konten tetap.
+           - application-rejection ditulis ulang: badge "Ditolak" (merah), TABEL
+             detail lengkap peserta (NIS, Nama, Asal, Tujuan, Jurusan, Keahlian,
+             Alamat, Periode, Dosen Pembimbing, Penanggung Jawab, WhatsApp,
+             Email), panel alasan, paragraf penutup sesuai spec, dan tanda tangan
+             DINAMIS "Admin OPD"/"Admin Verifikator" via opdDecisionBy->role.
+           - application-confirmation (badge "Diterima" biru),
+             certificate-notification (badge "Sertifikat Terbit" hijau),
+             otp (badge "Kode Masuk" biru) -> semua pakai partial.
+           - Verifikasi: render test mail penolakan (header + Ditolak + email/wa
+             + alasan + signer OPD) LULUS; FULL SUITE 91 lulus/4 skip/0 gagal.
+
+
+=== P2. PENYEMPURNAAN & KONSISTENSI ===
+
+[x] 11. Tampilkan Jurusan (major) di card dasbor Verifikator (kini hanya skills).
+        verifikator/dashboard.tsx (:550).
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 15:00 WIB.
+           - Baris Jurusan (major) ditambahkan di sel Tujuan tabel desktop (icon
+             GraduationCap) dan di kartu mobile ("Jurusan: ...") verifikator,
+             di atas baris Keahlian. Resource sudah mengekspos major (tanpa ubah
+             backend). MOCK makeApp diberi major.
+           - Verifikasi: types:check LULUS, `npm run build` sukses.
+
+[x] 12. Validasi field wajib: pertimbangkan address & guardian_name jadi
+        required agar sesuai form. StoreApplicationRequest.php (:57,:59).
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 15:30 WIB.
+           - KEPUTUSAN: dibuat required (form menandai keduanya sbagai field
+             biasa; hanya Jurusan yang opsional). StoreApplicationRequest:
+             address & guardian_name -> 'required', + pesan validasi, + docblock
+             (block & inline @var) diselaraskan jadi non-optional.
+           - Tes disesuaikan: ApplicationControllerTest (3 payload sukses +
+             payload major/skills) diberi address & guardian_name.
+             (validPengajuan RecaptchaRateLimitTest sudah memuat keduanya;
+             SubmissionServiceTest lewat service langsung, tak terpengaruh.)
+           - BONUS: phpstan (composer types) dijalankan & menemukan 2 error laten
+             dari #5 di HomeController (return type Collection non-covariant +
+             nullsafe berlebih) — diperbaiki (return array<int,shape> + values()
+             + user->name). Sekarang phpstan BERSIH.
+           - Verifikasi: phpstan 0 error, types:check LULUS, pint PASSED,
+             FULL SUITE 91 lulus / 4 skip / 0 gagal.
+
+[x] 13. Bersihkan / lengkapi dead code:
+        - Opd\SubmissionController@index/@show & Verifikator\PengajuanController@
+          index/@show merender halaman opd/pengajuan/* & verifikator/pengajuan/*
+          yang TIDAK ADA dan tak punya route. Hapus, atau buat halamannya bila
+          memang dipakai.
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 15:45 WIB.
+           - Dikonfirmasi: hanya forward/reject/complete (verifikator) &
+             approve/reject/complete (opd) yang berrute; index/show tak berrute
+             & halamannya tidak ada, tak direferensikan tes -> DIHAPUS.
+           - Verifikator\PengajuanController: hapus index()+show(); buang import
+             tak terpakai (Opd, Inertia, Response).
+           - Opd\SubmissionController: hapus index()+show(); buang import tak
+             terpakai (Inertia, Response). (Request tetap dipakai complete().)
+           - Verifikasi: pint PASSED, phpstan 0 error, FULL SUITE 91 lulus /
+             4 skip / 0 gagal.
+
+[x] 14. Pastikan method OpdDashboardController@keputusan & @peserta ada (nav
+        /opd/keputusan & /opd/peserta menunjuk ke sana).
+        >> DIVERIFIKASI OLEH CLAUDE pada 2026-07-07, pukul 15:55 WIB.
+           - Kedua method SUDAH ADA di Opd\DashboardController (keputusan ->
+             render 'opd/keputusan' filter forwarded_opd; peserta -> render
+             'opd/peserta' bentuk Participant{student_name, application}).
+           - Halaman opd/keputusan.tsx & opd/peserta.tsx ADA & ter-bundle.
+           - Verifikasi: smoke test (GET /opd/keputusan & /opd/peserta -> 200 +
+             component benar) LULUS. Tidak ada perubahan kode diperlukan.
+
+[x] 15. Survei kepuasan: UI penyelesaian.tsx punya 5 pertanyaan bintang tapi
+        tabel satisfaction_surveys hanya simpan 1 rating (dirata-rata di klien,
+        :303). Putuskan: cukup rata-rata, atau tambah kolom per-pertanyaan.
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 16:20 WIB.
+           - KEPUTUSAN: simpan rincian per-aspek (lebih faithful) SEKALIGUS
+             pertahankan agregat.
+           - Migration 2026_07_08_000000: kolom JSON `ratings` (nullable) di
+             satisfaction_surveys. Model: fillable + cast 'array'.
+           - SubmitSurveyRequest: terima `ratings` (array size 5, tiap 1-5);
+             `rating` TIDAK lagi dari klien.
+           - CertificateController@submitSurvey: hitung agregat = round(avg 5
+             aspek) server-side, simpan rating (agregat) + ratings (rincian).
+             Testimonial tetap pakai `rating` (tanpa perubahan).
+           - penyelesaian.tsx: kirim { ratings: {aspek: nilai}, comment } (tak
+             lagi merata-rata di klien).
+           - Tes CompletionFlowTest disesuaikan (post ratings). Smoke test baru:
+             rincian tersimpan + agregat 3.6->4 benar + tanpa ratings ditolak &
+             sertifikat tetap terkunci.
+           - Verifikasi: migrate DONE, phpstan 0, types LULUS, pint PASSED,
+             build sukses, FULL SUITE 91 lulus / 4 skip / 0 gagal.
+
+
+=== P3. VERIFIKASI AKHIR SEBELUM DEMO/TES ===
+
+[x] 16. Uji alur end-to-end manual:
+        daftar publik -> OTP masuk -> verifikator forward -> OPD approve (cek
+        email + PDF) -> cron ubah ke Sedang Magang/Selesai -> mahasiswa unggah
+        laporan -> verifikator unggah sertifikat -> mahasiswa isi survei ->
+        unduh sertifikat -> testimonial muncul di welcome.
+        >> DIOTOMASI OLEH CLAUDE pada 2026-07-07, pukul 16:45 WIB.
+           - Dibuat test E2E Pest (tests/Feature/Feature/Penyelesaian/
+             EndToEndFlowTest.php) yang menjalankan alur penuh 8 tahap: submit
+             publik -> verifikator forward -> OPD approve (assert kuota++ &
+             GenerateJobAcceptanceLetter dispatched) -> cron magang:transition-
+             statuses (Ongoing) -> unggah laporan (Completed) -> verifikator
+             approve laporan + unggah sertifikat (terkunci) -> survei (buka
+             kunci) -> unduh sertifikat 200.
+           - CATATAN: langkah login OTP via UI diuji terpisah (suite Otp, 15
+             lulus); di E2E memakai actingAs. Testimonial welcome sudah diverif
+             di #5 (query tinker).
+[x] 17. Uji jalur tolak di verifikator & OPD (email penolakan terkirim, status
+        Ditolak).
+        >> DIOTOMASI OLEH CLAUDE pada 2026-07-07, pukul 16:45 WIB.
+           - 2 test di EndToEndFlowTest: tolak verifikator & tolak OPD -> status
+             Rejected + SendJobRejectionEmail dispatched. LULUS.
+        >> Verifikasi #16+#17: 3 test E2E LULUS; FULL SUITE naik ke 98 (94 lulus
+           / 4 skip / 0 gagal); pint PASSED.
+[x] 18. Jalankan: composer test (pint + phpstan + artisan test), npm run
+        types:check, npm run lint, npm run build.
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 17:10 WIB.
+           - `composer ci:check` HIJAU PENUH: eslint OK, prettier format:check OK
+             ("All matched files use Prettier code style!"), tsc OK, pint OK,
+             phpstan 0 error, pest 94 lulus / 4 skip / 0 gagal.
+           - PERBAIKAN eslint: refactor otp-login.tsx (hapus setState-in-effect
+             -> derive `shownError`) memenuhi rule react-hooks/set-state-in-effect.
+           - PRETTIER: utang lama 23 file tak tersentuh; atas persetujuan user
+             dijalankan `npm run format` (prettier --write) repo-wide -> resources/
+             kini 100% prettier-clean.
+           - CATATAN LINGKUNGAN: sempat PostgreSQL (magang_test:5432) mati saat
+             run -> semua test error "Connection refused". Diselesaikan dengan
+             start ulang Postgres Laragon (pg_ctl; recovery WAL). Bukan isu kode:
+             sebelum & sesudah DB up, test 94 lulus konsisten.
+[x] 19. Seed data demo (AdminSeeder, OpdSeeder, FaqSeeder) + minimal beberapa
+        pengajuan contoh untuk pengujian dasbor.
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 17:30 WIB.
+           - AdminSeeder/OpdSeeder/FaqSeeder sudah ada. DITAMBAH ApplicationSeeder
+             (database/seeders/ApplicationSeeder.php) + didaftarkan di
+             DatabaseSeeder (urutan terakhir, butuh OPD+admin).
+           - Membuat 9 pengajuan demo (nama/data Indonesia realistis, mayoritas
+             di DISKOMINFO) menutup SEMUA status: 2 pending_verifikator, 3
+             forwarded_opd, 1 approved, 1 ongoing, 1 rejected, 1 completed.
+             Yang completed lengkap: FinalReport(approved) + Certificate(terbuka)
+             + SatisfactionSurvey(rating 5 + komentar) -> juga jadi testimonial
+             landing. Idempotent (skip bila sudah ada pengajuan).
+           - Verifikasi: `php artisan db:seed --force` -> 35 OPD, 36 admin, 6 FAQ,
+             9 pengajuan (spread status benar), 1 report, 1 cert terbuka, 1
+             testimonial. phpstan 0, pint PASSED.
+           - Kredensial admin demo: verifikator@madiunkota.go.id / password;
+             admin OPD: {slug-kode}@opd.madiunkota.go.id / password (mis.
+             diskominfo@opd.madiunkota.go.id). Mahasiswa demo login via OTP.
+[x] 20. Pastikan queue worker jalan (composer dev) — tanpa worker, job email/PDF
+        tidak diproses.
+        >> SUDAH DIKERJAKAN OLEH CLAUDE pada 2026-07-07, pukul 17:50 WIB.
+           - BUG DITEMUKAN & DIPERBAIKI: semua job (email, PDF surat, OTP)
+             di-dispatch ke queue 'emails' (onQueue('emails')), TAPI composer dev
+             menjalankan `queue:listen --tries=1` TANPA --queue, jadi hanya
+             mendengarkan queue 'default' -> job 'emails' TIDAK PERNAH diproses
+             (email/OTP/PDF diam-diam tak terkirim).
+           - FIX: composer.json script `dev` diubah menjadi
+             `queue:listen --queue=emails,default --tries=1`.
+           - BUKTI: dispatch job -> masuk queue 'emails'. Worker 'default' saja =
+             job tetap (tidak diproses). Worker 'emails,default' = job RUNNING->
+             DONE, queue emails drain ke 0. MAIL_MAILER=log (aman, tak kirim asli).
+           - Verifikasi: `composer validate` -> valid. Tabel jobs ADA
+             (0001_..._create_jobs_table), QUEUE_CONNECTION=database.
+           - CATATAN produksi: jalankan worker persisten
+             `php artisan queue:work --queue=emails,default` (mis. via supervisor)
+             + scheduler `php artisan schedule:work`/cron untuk cron 01:00.
+
+================================================================================
+ RINGKASAN: 4 bloker P0 (wiring OTP, 2 dialog admin, auto-OTP daftar) adalah
+ jalur kritis agar aplikasi BISA DIPAKAI. Setelah itu 6 item P1 melengkapi fitur
+ spec yang hilang. Backend service/route sebagian besar sudah siap — pekerjaan
+ terbesar ada di lapisan React (mengganti mock jadi panggilan nyata) + beberapa
+ fitur baru (testimonial, auto-OTP, kolom/foto).
+================================================================================

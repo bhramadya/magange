@@ -2,10 +2,31 @@
 
 use App\Contracts\OtpServiceContract;
 use App\Enums\UserRole;
+use App\Jobs\SendOtpEmailJob;
+use App\Models\Opd;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
+
+/**
+ * Terbitkan OTP untuk user & kembalikan kode plaintext-nya. OTP dibuat acak
+ * oleh OtpService, jadi kita tangkap dari job email yang di-dispatch.
+ */
+function issueOtp(User $user): string
+{
+    Queue::fake();
+    app(OtpServiceContract::class)->generate($user, '127.0.0.1');
+
+    $captured = '';
+    Queue::assertPushed(SendOtpEmailJob::class, function (SendOtpEmailJob $job) use (&$captured) {
+        $captured = $job->plainOtp;
+
+        return true;
+    });
+
+    return $captured;
+}
 
 test('login form is displayed', function () {
     $response = $this->get('/login-otp');
@@ -40,15 +61,11 @@ test('otp verification logs in user and redirects by role', function () {
         'role' => UserRole::Mahasiswa,
     ]);
 
-    $otpService = app(OtpServiceContract::class);
-    $otpService->generate($mahasiswa, '127.0.0.1');
-
-    // Get the plaintext OTP from the user's password (it's set during generate)
-    $mahasiswa->refresh();
+    $otp = issueOtp($mahasiswa);
 
     $response = $this->post('/otp/verify', [
         'email' => 'mahasiswa@example.com',
-        'otp' => '123456', // UserFactory default OTP
+        'otp' => $otp,
     ]);
 
     $response->assertRedirect('/dashboard');
@@ -70,27 +87,25 @@ test('otp verification fails with invalid code', function () {
 test('admin verifikator redirects to verifikator dashboard', function () {
     $admin = User::factory()->verifikator()->create(['email' => 'admin@example.com']);
 
-    $otpService = app(OtpServiceContract::class);
-    $otpService->generate($admin, '127.0.0.1');
+    $otp = issueOtp($admin);
 
     $response = $this->post('/otp/verify', [
         'email' => 'admin@example.com',
-        'otp' => '123456',
+        'otp' => $otp,
     ]);
 
     $response->assertRedirect('/verifikator');
 });
 
 test('admin opd redirects to opd dashboard', function () {
-    $opd = \App\Models\Opd::create(['name' => 'Test OPD', 'code' => 'TEST']);
+    $opd = Opd::create(['name' => 'Test OPD', 'code' => 'TEST']);
     $admin = User::factory()->opdAdmin($opd->id)->create(['email' => 'opd@example.com']);
 
-    $otpService = app(OtpServiceContract::class);
-    $otpService->generate($admin, '127.0.0.1');
+    $otp = issueOtp($admin);
 
     $response = $this->post('/otp/verify', [
         'email' => 'opd@example.com',
-        'otp' => '123456',
+        'otp' => $otp,
     ]);
 
     $response->assertRedirect('/opd');

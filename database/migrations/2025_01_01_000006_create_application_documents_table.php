@@ -17,15 +17,15 @@ return new class extends Migration
         Schema::create('application_documents', function (Blueprint $table) {
             $table->id();
             $table->foreignId('application_id')
-                  ->constrained('internship_applications')
-                  ->cascadeOnDelete();
+                ->constrained('internship_applications')
+                ->cascadeOnDelete();
             $table->enum('type', ['acceptance_letter', 'completion_letter']);
             $table->string('file_name');
             $table->string('file_path', 500);
             $table->foreignId('uploaded_by')
-                  ->comment('Admin Verifikator yang mengunggah')
-                  ->constrained('users')
-                  ->restrictOnDelete();
+                ->comment('Admin Verifikator yang mengunggah')
+                ->constrained('users')
+                ->restrictOnDelete();
             $table->timestamp('created_at')->useCurrent();
 
             $table->index(['application_id', 'type']);

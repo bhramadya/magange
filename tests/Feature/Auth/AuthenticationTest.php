@@ -1,60 +1,99 @@
 <?php
 
+use App\Enums\UserRole;
+use App\Models\Opd;
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
-use Laravel\Fortify\Features;
 
-test('login screen can be rendered', function () {
+/*
+ * Login admin (Username + Password) dilayani Fortify di /admin/login.
+ * Hanya role admin_verifikator & admin_opd yang aktif yang boleh masuk;
+ * mahasiswa memakai alur OTP terpisah.
+ */
+
+test('admin login screen can be rendered', function () {
     $response = $this->get(route('login'));
 
     $response->assertOk();
 });
 
-test('users can authenticate using the login screen', function () {
-    $user = User::factory()->create();
+test('verifikator can authenticate and is redirected to its dashboard', function () {
+    $user = User::factory()->verifikator()->create([
+        'username' => 'verifikator',
+        'password' => Hash::make('rahasia123'),
+    ]);
 
     $response = $this->post(route('login.store'), [
-        'email' => $user->email,
+        'username' => 'verifikator',
+        'password' => 'rahasia123',
+    ]);
+
+    $this->assertAuthenticatedAs($user);
+    $response->assertRedirect('/verifikator');
+});
+
+test('opd admin can authenticate and is redirected to its dashboard', function () {
+    $opd = Opd::create(['name' => 'Dinas Kominfo', 'code' => 'DKI', 'is_active' => true]);
+    $user = User::factory()->opdAdmin($opd->id)->create([
+        'username' => 'opd-diskominfo',
+        'password' => Hash::make('rahasia123'),
+    ]);
+
+    $response = $this->post(route('login.store'), [
+        'username' => 'opd-diskominfo',
+        'password' => 'rahasia123',
+    ]);
+
+    $this->assertAuthenticatedAs($user);
+    $response->assertRedirect('/opd');
+});
+
+test('mahasiswa can not authenticate through the admin login', function () {
+    $user = User::factory()->create([
+        'username' => null,
+        'role' => UserRole::Mahasiswa,
+    ]);
+
+    $this->post(route('login.store'), [
+        'username' => (string) $user->email,
         'password' => '123456',
     ]);
 
-    $this->assertAuthenticated();
-    $response->assertRedirect(route('dashboard', absolute: false));
-});
-
-test('users with two factor enabled are redirected to two factor challenge', function () {
-    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
-
-    Features::twoFactorAuthentication([
-        'confirm' => true,
-        'confirmPassword' => true,
-    ]);
-
-    $user = User::factory()->withTwoFactor()->create();
-
-    $response = $this->post(route('login'), [
-        'email' => $user->email,
-        'password' => 'password',
-    ]);
-
-    $response->assertRedirect(route('two-factor.login'));
-    $response->assertSessionHas('login.id', $user->id);
     $this->assertGuest();
 });
 
-test('users can not authenticate with invalid password', function () {
-    $user = User::factory()->create();
+test('inactive admin can not authenticate', function () {
+    User::factory()->verifikator()->create([
+        'username' => 'nonaktif',
+        'password' => Hash::make('rahasia123'),
+        'is_active' => false,
+    ]);
 
     $this->post(route('login.store'), [
-        'email' => $user->email,
-        'password' => 'wrong-password',
+        'username' => 'nonaktif',
+        'password' => 'rahasia123',
+    ]);
+
+    $this->assertGuest();
+});
+
+test('admin can not authenticate with invalid password', function () {
+    User::factory()->verifikator()->create([
+        'username' => 'verifikator',
+        'password' => Hash::make('rahasia123'),
+    ]);
+
+    $this->post(route('login.store'), [
+        'username' => 'verifikator',
+        'password' => 'password-salah',
     ]);
 
     $this->assertGuest();
 });
 
 test('users can logout', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->verifikator()->create(['username' => 'verifikator']);
 
     $response = $this->actingAs($user)->post(route('logout'));
 
@@ -63,14 +102,17 @@ test('users can logout', function () {
     $this->assertGuest();
 });
 
-test('users are rate limited', function () {
-    $user = User::factory()->create();
+test('admin logins are rate limited', function () {
+    User::factory()->verifikator()->create([
+        'username' => 'verifikator',
+        'password' => Hash::make('rahasia123'),
+    ]);
 
-    RateLimiter::increment(md5('login'.implode('|', [$user->email, '127.0.0.1'])), amount: 5);
+    RateLimiter::increment(md5('login'.implode('|', ['verifikator', '127.0.0.1'])), amount: 5);
 
     $response = $this->post(route('login.store'), [
-        'email' => $user->email,
-        'password' => 'wrong-password',
+        'username' => 'verifikator',
+        'password' => 'password-salah',
     ]);
 
     $response->assertTooManyRequests();

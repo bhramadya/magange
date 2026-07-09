@@ -17,7 +17,11 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
-import MagangLayout, { mahasiswaNav, verifikatorNav, opdNav } from '@/layouts/magang-layout';
+import MagangLayout, {
+    mahasiswaNav,
+    verifikatorNav,
+    opdNav,
+} from '@/layouts/magang-layout';
 import type { MagangNavItem } from '@/layouts/magang-layout';
 import type { MagangUser, UserRole } from '@/types/magang';
 
@@ -147,12 +151,22 @@ function matches(item: FaqItem, query: string): boolean {
         return true;
     }
 
-    return (item.q + ' ' + item.a + ' ' + item.category).toLowerCase().includes(q);
+    return (item.q + ' ' + item.a + ' ' + item.category)
+        .toLowerCase()
+        .includes(q);
 }
 
 /* ------------------------------- komponen --------------------------------- */
 
-function FaqRow({ item, open, onToggle }: { item: FaqItem; open: boolean; onToggle: () => void }) {
+function FaqRow({
+    item,
+    open,
+    onToggle,
+}: {
+    item: FaqItem;
+    open: boolean;
+    onToggle: () => void;
+}) {
     return (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
             <button
@@ -161,22 +175,38 @@ function FaqRow({ item, open, onToggle }: { item: FaqItem; open: boolean; onTogg
                 aria-expanded={open}
                 className="flex w-full items-center gap-3 px-5 py-4 text-left transition-colors hover:bg-slate-50"
             >
-                <span className="flex-1 text-sm font-semibold text-[#12213e]">{item.q}</span>
+                <span className="flex-1 text-sm font-semibold text-[#12213e]">
+                    {item.q}
+                </span>
                 <ChevronDown
                     className={`size-5 shrink-0 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
                 />
             </button>
             {/* Animasi tinggi halus via grid-rows tanpa mengukur DOM. */}
-            <div className={`grid transition-all duration-200 ease-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+            <div
+                className={`grid transition-all duration-200 ease-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+            >
                 <div className="overflow-hidden">
-                    <p className="px-5 pb-4 text-sm leading-relaxed text-slate-600">{item.a}</p>
+                    <p className="px-5 pb-4 text-sm leading-relaxed text-slate-600">
+                        {item.a}
+                    </p>
                 </div>
             </div>
         </div>
     );
 }
 
-function ContactCard({ icon: Icon, label, value, href }: { icon: LucideIcon; label: string; value: string; href?: string }) {
+function ContactCard({
+    icon: Icon,
+    label,
+    value,
+    href,
+}: {
+    icon: LucideIcon;
+    label: string;
+    value: string;
+    href?: string;
+}) {
     const body = (
         <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 transition-colors hover:border-[#106feb]/40">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#cddcef]/50 text-[#106feb]">
@@ -184,7 +214,9 @@ function ContactCard({ icon: Icon, label, value, href }: { icon: LucideIcon; lab
             </span>
             <div className="min-w-0">
                 <p className="text-xs font-medium text-slate-500">{label}</p>
-                <p className="mt-0.5 text-sm font-semibold break-words text-[#12213e]">{value}</p>
+                <p className="mt-0.5 text-sm font-semibold break-words text-[#12213e]">
+                    {value}
+                </p>
             </div>
         </div>
     );
@@ -212,8 +244,13 @@ export default function Bantuan({ user = MOCK_USER }: BantuanProps) {
     // props `user` default ke mock mahasiswa dan sidebar "pindah" ke mahasiswa.
     // Saat backend siap, `user.role` asli jadi acuan bila query tak ada.
     const { url } = usePage();
-    const roleFromQuery = new URLSearchParams(url.split('?')[1] ?? '').get('role');
-    const effectiveRole: UserRole = roleFromQuery && roleFromQuery in NAV_BY_ROLE ? (roleFromQuery as UserRole) : user.role;
+    const roleFromQuery = new URLSearchParams(url.split('?')[1] ?? '').get(
+        'role',
+    );
+    const effectiveRole: UserRole =
+        roleFromQuery && roleFromQuery in NAV_BY_ROLE
+            ? (roleFromQuery as UserRole)
+            : user.role;
 
     const navItems = NAV_BY_ROLE[effectiveRole] ?? mahasiswaNav;
 
@@ -235,7 +272,12 @@ export default function Bantuan({ user = MOCK_USER }: BantuanProps) {
     const hasResults = Object.keys(grouped).length > 0;
 
     return (
-        <MagangLayout user={user} title="Pusat Bantuan" active="bantuan" navItems={navItems}>
+        <MagangLayout
+            user={user}
+            title="Pusat Bantuan"
+            active="bantuan"
+            navItems={navItems}
+        >
             <Head title="Pusat Bantuan" />
 
             <div className="space-y-8">
@@ -250,40 +292,57 @@ export default function Bantuan({ user = MOCK_USER }: BantuanProps) {
                         <LifeBuoy className="size-4" />
                         Pusat Bantuan E-Magang
                     </div>
-                    <h2 className="mt-3 text-2xl font-black sm:text-3xl">Ada yang bisa kami bantu?</h2>
+                    <h2 className="mt-3 text-2xl font-black sm:text-3xl">
+                        Ada yang bisa kami bantu?
+                    </h2>
                     <p className="mt-2 max-w-xl text-sm text-white/80">
-                        Temukan jawaban seputar pengajuan, verifikasi, hingga penerbitan sertifikat magang di lingkungan Pemerintah Kota Madiun.
+                        Temukan jawaban seputar pengajuan, verifikasi, hingga
+                        penerbitan sertifikat magang di lingkungan Pemerintah
+                        Kota Madiun.
                     </p>
 
                     <div className="relative mt-6 max-w-xl">
-                        <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                        <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-slate-400" />
                         <input
                             type="search"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="Cari pertanyaan, mis. 'sertifikat' atau 'OTP'…"
-                            className="w-full rounded-2xl border-0 bg-white py-3.5 pl-12 pr-4 text-sm text-[#12213e] shadow-lg outline-none ring-2 ring-transparent placeholder:text-slate-400 focus:ring-white/60"
+                            className="w-full rounded-2xl border-0 bg-white py-3.5 pr-4 pl-12 text-sm text-[#12213e] shadow-lg ring-2 ring-transparent outline-none placeholder:text-slate-400 focus:ring-white/60"
                         />
                     </div>
                 </motion.section>
 
                 {/* ===== Panduan alur magang ===== */}
                 <section>
-                    <h3 className="text-lg font-bold text-[#12213e]">Panduan Alur Magang</h3>
-                    <p className="mt-1 text-sm text-slate-500">Empat tahap utama dari pengajuan hingga sertifikat.</p>
+                    <h3 className="text-lg font-bold text-[#12213e]">
+                        Panduan Alur Magang
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Empat tahap utama dari pengajuan hingga sertifikat.
+                    </p>
 
                     <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                         {FLOW_STEPS.map((step, i) => {
                             const Icon = step.icon;
 
                             return (
-                                <div key={step.title} className="relative rounded-2xl border border-slate-200 bg-white p-5">
-                                    <span className="absolute right-4 top-4 text-3xl font-black text-slate-100">{i + 1}</span>
+                                <div
+                                    key={step.title}
+                                    className="relative rounded-2xl border border-slate-200 bg-white p-5"
+                                >
+                                    <span className="absolute top-4 right-4 text-3xl font-black text-slate-100">
+                                        {i + 1}
+                                    </span>
                                     <span className="flex size-11 items-center justify-center rounded-xl bg-[#cddcef]/50 text-[#106feb]">
                                         <Icon className="size-5" />
                                     </span>
-                                    <p className="mt-4 text-sm font-bold text-[#12213e]">{step.title}</p>
-                                    <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{step.desc}</p>
+                                    <p className="mt-4 text-sm font-bold text-[#12213e]">
+                                        {step.title}
+                                    </p>
+                                    <p className="mt-1.5 text-xs leading-relaxed text-slate-500">
+                                        {step.desc}
+                                    </p>
                                 </div>
                             );
                         })}
@@ -292,7 +351,9 @@ export default function Bantuan({ user = MOCK_USER }: BantuanProps) {
 
                 {/* ===== FAQ ===== */}
                 <section>
-                    <h3 className="text-lg font-bold text-[#12213e]">Pertanyaan yang Sering Diajukan</h3>
+                    <h3 className="text-lg font-bold text-[#12213e]">
+                        Pertanyaan yang Sering Diajukan
+                    </h3>
                     <p className="mt-1 text-sm text-slate-500">
                         {query.trim()
                             ? `Hasil pencarian untuk "${query.trim()}"`
@@ -301,34 +362,47 @@ export default function Bantuan({ user = MOCK_USER }: BantuanProps) {
 
                     {hasResults ? (
                         <div className="mt-4 space-y-6">
-                            {Object.entries(grouped).map(([category, items]) => (
-                                <div key={category}>
-                                    <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">{category}</p>
-                                    <div className="space-y-2.5">
-                                        {items.map((item) => {
-                                            const key = item.q;
+                            {Object.entries(grouped).map(
+                                ([category, items]) => (
+                                    <div key={category}>
+                                        <p className="mb-2 text-xs font-bold tracking-wide text-slate-400 uppercase">
+                                            {category}
+                                        </p>
+                                        <div className="space-y-2.5">
+                                            {items.map((item) => {
+                                                const key = item.q;
 
-                                            return (
-                                                <FaqRow
-                                                    key={key}
-                                                    item={item}
-                                                    open={openKey === key}
-                                                    onToggle={() => setOpenKey(openKey === key ? null : key)}
-                                                />
-                                            );
-                                        })}
+                                                return (
+                                                    <FaqRow
+                                                        key={key}
+                                                        item={item}
+                                                        open={openKey === key}
+                                                        onToggle={() =>
+                                                            setOpenKey(
+                                                                openKey === key
+                                                                    ? null
+                                                                    : key,
+                                                            )
+                                                        }
+                                                    />
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ),
+                            )}
                         </div>
                     ) : (
                         <div className="mt-4 flex flex-col items-center rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center">
                             <span className="flex size-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
                                 <HelpCircle className="size-6" />
                             </span>
-                            <p className="mt-3 text-sm font-semibold text-[#12213e]">Tidak ada hasil untuk "{query.trim()}"</p>
+                            <p className="mt-3 text-sm font-semibold text-[#12213e]">
+                                Tidak ada hasil untuk "{query.trim()}"
+                            </p>
                             <p className="mt-1 text-sm text-slate-500">
-                                Coba kata kunci lain, atau hubungi kami langsung di bawah ini.
+                                Coba kata kunci lain, atau hubungi kami langsung
+                                di bawah ini.
                             </p>
                             <button
                                 type="button"
@@ -344,9 +418,12 @@ export default function Bantuan({ user = MOCK_USER }: BantuanProps) {
                 {/* ===== Kontak ===== */}
                 <section className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8">
                     <div className="flex flex-col gap-1">
-                        <h3 className="text-lg font-bold text-[#12213e]">Masih butuh bantuan?</h3>
+                        <h3 className="text-lg font-bold text-[#12213e]">
+                            Masih butuh bantuan?
+                        </h3>
                         <p className="text-sm text-slate-500">
-                            Hubungi Dinas Komunikasi dan Informatika Kota Madiun pada jam operasional.
+                            Hubungi Dinas Komunikasi dan Informatika Kota Madiun
+                            pada jam operasional.
                         </p>
                     </div>
 
@@ -356,9 +433,23 @@ export default function Bantuan({ user = MOCK_USER }: BantuanProps) {
                             label="Alamat"
                             value="Jl. Perintis Kemerdekaan No. 32, Kota Madiun, Jawa Timur"
                         />
-                        <ContactCard icon={Phone} label="Telepon" value="(0351) 467-327" href="tel:0351467327" />
-                        <ContactCard icon={Mail} label="Email" value="kominfo@madiunkota.go.id" href="mailto:kominfo@madiunkota.go.id" />
-                        <ContactCard icon={Clock} label="Jam Operasional" value="Senin–Jumat, 07.30–16.00 WIB" />
+                        <ContactCard
+                            icon={Phone}
+                            label="Telepon"
+                            value="(0351) 467-327"
+                            href="tel:0351467327"
+                        />
+                        <ContactCard
+                            icon={Mail}
+                            label="Email"
+                            value="kominfo@madiunkota.go.id"
+                            href="mailto:kominfo@madiunkota.go.id"
+                        />
+                        <ContactCard
+                            icon={Clock}
+                            label="Jam Operasional"
+                            value="Senin–Jumat, 07.30–16.00 WIB"
+                        />
                     </div>
 
                     <a
@@ -375,7 +466,10 @@ export default function Bantuan({ user = MOCK_USER }: BantuanProps) {
                 {/* Pintasan navigasi cepat */}
                 <p className="text-center text-sm text-slate-500">
                     Siap mengajukan magang?{' '}
-                    <Link href="/pengajuan" className="font-semibold text-[#106feb] hover:underline">
+                    <Link
+                        href="/pengajuan"
+                        className="font-semibold text-[#106feb] hover:underline"
+                    >
                         Lihat pengajuan saya
                     </Link>
                 </p>

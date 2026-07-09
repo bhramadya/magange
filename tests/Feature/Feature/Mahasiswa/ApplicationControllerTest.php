@@ -18,7 +18,7 @@ test('application form displays available opds', function () {
         ->component('mahasiswa/application/create')
         ->has('opds', 1)
     );
-});
+})->skip('Halaman form khusus mahasiswa/application/create belum dibuat; form pendaftaran hidup ada di welcome.tsx (#daftar).');
 
 test('user can submit a new application', function () {
     Queue::fake();
@@ -29,13 +29,17 @@ test('user can submit a new application', function () {
         'whatsapp_number' => '08123456789',
         'tujuan_magang' => 'Belajar web development',
         'duration_months' => 3,
-        'start_date' => '2026-07-01',
-        'end_date' => '2026-09-30',
+        'start_date' => now()->addMonth()->toDateString(),
+        'end_date' => now()->addMonths(4)->toDateString(),
         'institution_name' => 'Universitas Negeri Madiun',
+        'address' => 'Jl. Merdeka No. 1, Madiun',
         'campus_supervisor' => 'Dr. Andi',
+        'guardian_name' => 'Slamet Santoso',
     ]);
 
-    $response->assertRedirect(route('lacak'));
+    // Alur Fase 1: setelah submit, peserta diarahkan ke login-otp (OTP terkirim).
+    $response->assertRedirect(route('login.otp'));
+    $response->assertSessionHas('email', 'budi@example.com');
 
     expect(InternshipApplication::count())->toBe(1);
 
@@ -53,10 +57,12 @@ test('application submission creates user if not exists', function () {
         'whatsapp_number' => '08123456789',
         'tujuan_magang' => 'Test',
         'duration_months' => 2,
-        'start_date' => '2026-07-01',
-        'end_date' => '2026-08-31',
+        'start_date' => now()->addMonth()->toDateString(),
+        'end_date' => now()->addMonths(3)->toDateString(),
         'institution_name' => 'Test University',
+        'address' => 'Jl. Test No. 2',
         'campus_supervisor' => 'Dr. Test',
+        'guardian_name' => 'Wali Test',
     ]);
 
     expect(User::where('email', 'newuser@example.com')->exists())->toBeTrue();
@@ -73,10 +79,12 @@ test('application submission reuses existing user', function () {
         'whatsapp_number' => '08123456789',
         'tujuan_magang' => 'Test',
         'duration_months' => 2,
-        'start_date' => '2026-07-01',
-        'end_date' => '2026-08-31',
+        'start_date' => now()->addMonth()->toDateString(),
+        'end_date' => now()->addMonths(3)->toDateString(),
         'institution_name' => 'Test University',
+        'address' => 'Jl. Test No. 3',
         'campus_supervisor' => 'Dr. Test',
+        'guardian_name' => 'Wali Test',
     ]);
 
     expect(User::where('email', 'existing@example.com')->count())->toBe(1);
@@ -101,6 +109,30 @@ test('track page filters applications by email', function () {
     );
 });
 
+test('application persists optional major and skills', function () {
+    Queue::fake();
+
+    $this->post('/pengajuan', [
+        'name' => 'Sari Dewi',
+        'email' => 'sari@example.com',
+        'whatsapp_number' => '08123456789',
+        'tujuan_magang' => 'Belajar UI/UX',
+        'duration_months' => 3,
+        'start_date' => now()->addMonth()->toDateString(),
+        'end_date' => now()->addMonths(4)->toDateString(),
+        'institution_name' => 'Universitas Negeri Madiun',
+        'address' => 'Jl. Merdeka No. 1, Madiun',
+        'campus_supervisor' => 'Dr. Andi',
+        'guardian_name' => 'Slamet Santoso',
+        'major' => 'Teknik Informatika',
+        'skills' => 'Figma, React, penulisan teknis',
+    ]);
+
+    $application = InternshipApplication::first();
+    expect($application->major)->toBe('Teknik Informatika');
+    expect($application->skills)->toBe('Figma, React, penulisan teknis');
+});
+
 test('application requires valid dates', function () {
     $response = $this->post('/pengajuan', [
         'name' => 'Test',
@@ -108,8 +140,8 @@ test('application requires valid dates', function () {
         'whatsapp_number' => '08123456789',
         'tujuan_magang' => 'Test',
         'duration_months' => 2,
-        'start_date' => '2026-09-30',
-        'end_date' => '2026-07-01', // End before start
+        'start_date' => now()->addMonths(4)->toDateString(),
+        'end_date' => now()->addMonth()->toDateString(), // End before start
         'institution_name' => 'Test University',
         'campus_supervisor' => 'Dr. Test',
     ]);

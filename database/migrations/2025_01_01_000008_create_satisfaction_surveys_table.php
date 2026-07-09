@@ -15,13 +15,13 @@ return new class extends Migration
         Schema::create('satisfaction_surveys', function (Blueprint $table) {
             $table->id();
             $table->foreignId('application_id')
-                  ->unique()
-                  ->comment('1:1 per tiket')
-                  ->constrained('internship_applications')
-                  ->cascadeOnDelete();
+                ->unique()
+                ->comment('1:1 per tiket')
+                ->constrained('internship_applications')
+                ->cascadeOnDelete();
             $table->tinyInteger('rating')
-                  ->unsigned()
-                  ->comment('1–5 bintang');
+                ->unsigned()
+                ->comment('1–5 bintang');
             $table->text('comment')->nullable();
             $table->timestamp('submitted_at');
             $table->timestamp('created_at')->useCurrent();

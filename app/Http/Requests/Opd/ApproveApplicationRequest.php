@@ -28,6 +28,19 @@ class ApproveApplicationRequest extends FormRequest
     }
 
     /**
+     * Payload tervalidasi sesuai kontrak PengajuanServiceContract::approve().
+     *
+     * @return array{division: string, field_supervisor: string, person_in_charge: string}
+     */
+    public function validated($key = null, $default = null): array
+    {
+        /** @var array{division: string, field_supervisor: string, person_in_charge: string} $validated */
+        $validated = parent::validated();
+
+        return $validated;
+    }
+
+    /**
      * @return array<string, string>
      */
     public function messages(): array

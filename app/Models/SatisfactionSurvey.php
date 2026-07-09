@@ -11,11 +11,12 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $application_id
  * @property int $rating
+ * @property array<string, int>|null $ratings
  * @property string|null $comment
  * @property Carbon $submitted_at
  * @property Carbon|null $created_at
  */
-#[Fillable(['application_id', 'rating', 'comment', 'submitted_at'])]
+#[Fillable(['application_id', 'rating', 'ratings', 'comment', 'submitted_at'])]
 class SatisfactionSurvey extends Model
 {
     /**
@@ -29,6 +30,7 @@ class SatisfactionSurvey extends Model
     protected function casts(): array
     {
         return [
+            'ratings' => 'array',
             'submitted_at' => 'datetime',
         ];
     }

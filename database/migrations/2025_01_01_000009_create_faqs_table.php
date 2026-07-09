@@ -19,8 +19,8 @@ return new class extends Migration
             $table->smallInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->foreignId('created_by')
-                  ->constrained('users')
-                  ->restrictOnDelete();
+                ->constrained('users')
+                ->restrictOnDelete();
             $table->timestamps();
 
             // Index untuk query FAQ aktif yang diurutkan

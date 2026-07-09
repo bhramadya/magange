@@ -16,8 +16,11 @@ class SubmitSurveyRequest extends FormRequest
      */
     public function rules(): array
     {
+        // Survei 5 aspek: tiap aspek 1–5 bintang. Nilai agregat `rating`
+        // (rata-rata) dihitung server-side di controller, bukan dari klien.
         return [
-            'rating' => ['required', 'integer', 'min:1', 'max:5'],
+            'ratings' => ['required', 'array', 'size:5'],
+            'ratings.*' => ['required', 'integer', 'min:1', 'max:5'],
             'comment' => ['nullable', 'string', 'max:500'],
         ];
     }
@@ -28,10 +31,12 @@ class SubmitSurveyRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'rating.required' => 'Rating wajib dipilih.',
-            'rating.integer' => 'Rating harus berupa angka.',
-            'rating.min' => 'Rating minimal 1 bintang.',
-            'rating.max' => 'Rating maksimal 5 bintang.',
+            'ratings.required' => 'Rating survei wajib diisi.',
+            'ratings.size' => 'Semua aspek survei wajib dinilai.',
+            'ratings.*.required' => 'Setiap aspek wajib dinilai.',
+            'ratings.*.integer' => 'Rating harus berupa angka.',
+            'ratings.*.min' => 'Rating minimal 1 bintang.',
+            'ratings.*.max' => 'Rating maksimal 5 bintang.',
             'comment.max' => 'Komentar maksimal 500 karakter.',
         ];
     }

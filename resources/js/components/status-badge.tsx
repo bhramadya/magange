@@ -1,5 +1,5 @@
-import { STATUS_META  } from '@/types/magang';
-import type {ApplicationStatus} from '@/types/magang';
+import { STATUS_META } from '@/types/magang';
+import type { ApplicationStatus } from '@/types/magang';
 
 interface StatusBadgeProps {
     status: ApplicationStatus;
@@ -22,7 +22,9 @@ export function StatusBadge({ status, className = '' }: StatusBadgeProps) {
         <span
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset ${toneClasses[tone]} ${className}`}
         >
-            <span className={`size-1.5 rounded-full ${tone === 'amber' ? 'bg-amber-500' : tone === 'blue' ? 'bg-blue-500' : tone === 'emerald' ? 'bg-emerald-500' : tone === 'rose' ? 'bg-rose-500' : tone === 'violet' ? 'bg-violet-500' : 'bg-slate-500'}`} />
+            <span
+                className={`size-1.5 rounded-full ${tone === 'amber' ? 'bg-amber-500' : tone === 'blue' ? 'bg-blue-500' : tone === 'emerald' ? 'bg-emerald-500' : tone === 'rose' ? 'bg-rose-500' : tone === 'violet' ? 'bg-violet-500' : 'bg-slate-500'}`}
+            />
             {label}
         </span>
     );

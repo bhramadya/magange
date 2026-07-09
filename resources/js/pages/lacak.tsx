@@ -49,7 +49,11 @@ function formatDate(iso: string | null): string {
         return '—';
     }
 
-    return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(iso));
+    return new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+    }).format(new Date(iso));
 }
 
 function readTicketFromUrl(): string {
@@ -57,7 +61,9 @@ function readTicketFromUrl(): string {
         return '';
     }
 
-    return new URLSearchParams(window.location.search).get('tiket')?.trim() ?? '';
+    return (
+        new URLSearchParams(window.location.search).get('tiket')?.trim() ?? ''
+    );
 }
 
 /* ---- mock untuk pratinjau frontend ----------------------------------- */
@@ -87,7 +93,11 @@ function makeApp(over: Partial<InternshipApplication>): InternshipApplication {
     };
 }
 
-const DISKOMINFO = { id: 16, name: 'DINAS KOMUNIKASI DAN INFORMATIKA', code: 'DISKOMINFO' };
+const DISKOMINFO = {
+    id: 16,
+    name: 'DINAS KOMUNIKASI DAN INFORMATIKA',
+    code: 'DISKOMINFO',
+};
 
 // Beberapa tiket contoh untuk demo pencarian.
 const MOCK_DB: Record<string, InternshipApplication> = {
@@ -104,19 +114,44 @@ const MOCK_DB: Record<string, InternshipApplication> = {
     'EMG-2026-100300': makeApp({
         ticket_number: 'EMG-2026-100300',
         status: 'rejected',
-        rejection_reason: 'Kuota magang pada periode yang dipilih telah penuh. Silakan ajukan ulang untuk periode berikutnya.',
+        rejection_reason:
+            'Kuota magang pada periode yang dipilih telah penuh. Silakan ajukan ulang untuk periode berikutnya.',
         institution_name: 'Politeknik Negeri Madiun',
     }),
 };
 
 /* ---- timeline (selaras dasbor mahasiswa) ------------------------------ */
 const TIMELINE_STEPS = [
-    { title: 'Pengajuan Terkirim', desc: 'Berkas pendaftaran diterima sistem.', icon: Send },
-    { title: 'Verifikasi Admin', desc: 'Admin Verifikator memeriksa kelengkapan.', icon: ClipboardCheck },
-    { title: 'Persetujuan OPD', desc: 'OPD tujuan menyetujui penempatan.', icon: Building2 },
-    { title: 'Pelaksanaan Magang', desc: 'Periode magang sedang berjalan.', icon: GraduationCap },
-    { title: 'Laporan & Survei', desc: 'Unggah laporan akhir dan isi survei.', icon: FileText },
-    { title: 'Selesai — e-Sertifikat', desc: 'Sertifikat siap diunduh.', icon: CheckCircle2 },
+    {
+        title: 'Pengajuan Terkirim',
+        desc: 'Berkas pendaftaran diterima sistem.',
+        icon: Send,
+    },
+    {
+        title: 'Verifikasi Admin',
+        desc: 'Admin Verifikator memeriksa kelengkapan.',
+        icon: ClipboardCheck,
+    },
+    {
+        title: 'Persetujuan OPD',
+        desc: 'OPD tujuan menyetujui penempatan.',
+        icon: Building2,
+    },
+    {
+        title: 'Pelaksanaan Magang',
+        desc: 'Periode magang sedang berjalan.',
+        icon: GraduationCap,
+    },
+    {
+        title: 'Laporan & Survei',
+        desc: 'Unggah laporan akhir dan isi survei.',
+        icon: FileText,
+    },
+    {
+        title: 'Selesai — e-Sertifikat',
+        desc: 'Sertifikat siap diunduh.',
+        icon: CheckCircle2,
+    },
 ];
 
 const STEP_OF_STATUS: Record<ApplicationStatus, number> = {
@@ -147,26 +182,52 @@ function StatusTimeline({ status }: { status: ApplicationStatus }) {
                             <span
                                 className={cn(
                                     'flex size-9 shrink-0 items-center justify-center rounded-full ring-4 ring-white',
-                                    done ? 'bg-emerald-500 text-white' : active ? 'bg-[#106feb] text-white' : 'bg-slate-100 text-slate-400',
+                                    done
+                                        ? 'bg-emerald-500 text-white'
+                                        : active
+                                          ? 'bg-[#106feb] text-white'
+                                          : 'bg-slate-100 text-slate-400',
                                 )}
                             >
-                                <Icon className={cn('size-[18px]', active && 'animate-spin')} />
+                                <Icon
+                                    className={cn(
+                                        'size-[18px]',
+                                        active && 'animate-spin',
+                                    )}
+                                />
                             </span>
-                            {!isLast && <span className={cn('mt-1 w-0.5 flex-1', done ? 'bg-emerald-400' : 'bg-slate-200')} />}
+                            {!isLast && (
+                                <span
+                                    className={cn(
+                                        'mt-1 w-0.5 flex-1',
+                                        done
+                                            ? 'bg-emerald-400'
+                                            : 'bg-slate-200',
+                                    )}
+                                />
+                            )}
                         </div>
 
                         <div className="pt-1">
                             <p
                                 className={cn(
                                     'text-sm font-semibold',
-                                    done ? 'text-emerald-700' : active ? 'text-[#12213e]' : 'text-slate-400',
+                                    done
+                                        ? 'text-emerald-700'
+                                        : active
+                                          ? 'text-[#12213e]'
+                                          : 'text-slate-400',
                                 )}
                             >
                                 {step.title}
                             </p>
-                            <p className="mt-0.5 text-xs text-slate-500">{step.desc}</p>
+                            <p className="mt-0.5 text-xs text-slate-500">
+                                {step.desc}
+                            </p>
                             {active && (
-                                <span className="mt-1.5 inline-block text-[11px] font-medium text-[#106feb]">Sedang berlangsung</span>
+                                <span className="mt-1.5 inline-block text-[11px] font-medium text-[#106feb]">
+                                    Sedang berlangsung
+                                </span>
                             )}
                         </div>
                     </li>
@@ -181,7 +242,9 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
         <div>
             <dt className="text-xs font-medium text-slate-500">{label}</dt>
             <dd className="mt-0.5 text-sm font-semibold text-[#12213e]">
-                {value ?? <span className="text-slate-400">— belum ditentukan</span>}
+                {value ?? (
+                    <span className="text-slate-400">— belum ditentukan</span>
+                )}
             </dd>
         </div>
     );
@@ -190,13 +253,21 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
 export default function Lacak({ application, ticket }: LacakProps) {
     const initialTicket = (ticket ?? readTicketFromUrl()).trim();
     const [query, setQuery] = useState<string>(initialTicket);
-    const [state, setState] = useState<LookupState>(application ? 'found' : initialTicket ? 'loading' : 'idle');
-    const [result, setResult] = useState<InternshipApplication | null>(application ?? null);
+    const [state, setState] = useState<LookupState>(
+        application ? 'found' : initialTicket ? 'loading' : 'idle',
+    );
+    const [result, setResult] = useState<InternshipApplication | null>(
+        application ?? null,
+    );
 
     // Resolusi pencarian (simulasi). TODO(backend): ganti dengan props `application`
     // dari controller atau router.get('/lacak', { tiket }).
     function resolve(tiket: string) {
-        const found = MOCK_DB[tiket] ?? (/^EMG-\d{4}-\d{4,6}$/.test(tiket) ? makeApp({ ticket_number: tiket }) : null);
+        const found =
+            MOCK_DB[tiket] ??
+            (/^EMG-\d{4}-\d{4,6}$/.test(tiket)
+                ? makeApp({ ticket_number: tiket })
+                : null);
 
         if (found) {
             setResult(found);
@@ -248,11 +319,18 @@ export default function Lacak({ application, ticket }: LacakProps) {
                                 eM
                             </div>
                             <div className="leading-tight">
-                                <p className="text-sm font-bold text-[#12213e]">E-Magang</p>
-                                <p className="text-[11px] font-medium text-slate-500">Kota Madiun</p>
+                                <p className="text-sm font-bold text-[#12213e]">
+                                    E-Magang
+                                </p>
+                                <p className="text-[11px] font-medium text-slate-500">
+                                    Kota Madiun
+                                </p>
                             </div>
                         </Link>
-                        <Link href="/login" className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#106feb] hover:underline">
+                        <Link
+                            href="/login"
+                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#106feb] hover:underline"
+                        >
                             <LogIn className="size-4" />
                             Masuk
                         </Link>
@@ -265,21 +343,28 @@ export default function Lacak({ application, ticket }: LacakProps) {
                         <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl bg-[#cddcef]/50 text-[#106feb]">
                             <Ticket className="size-7" />
                         </div>
-                        <h1 className="text-2xl font-black text-[#12213e] sm:text-3xl">Lacak Status Permohonan</h1>
+                        <h1 className="text-2xl font-black text-[#12213e] sm:text-3xl">
+                            Lacak Status Permohonan
+                        </h1>
                         <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
-                            Masukkan nomor tiket yang Anda terima saat mengajukan magang untuk melihat perkembangan terkini.
+                            Masukkan nomor tiket yang Anda terima saat
+                            mengajukan magang untuk melihat perkembangan
+                            terkini.
                         </p>
 
-                        <form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-3 sm:flex-row">
+                        <form
+                            onSubmit={handleSubmit}
+                            className="mt-7 flex flex-col gap-3 sm:flex-row"
+                        >
                             <div className="relative flex-1">
-                                <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                                <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-slate-400" />
                                 <input
                                     type="text"
                                     autoFocus
                                     placeholder="EMG-2026-123456"
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
-                                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium uppercase tracking-wide outline-none transition placeholder:normal-case placeholder:tracking-normal focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pr-4 pl-11 text-sm font-medium tracking-wide uppercase transition outline-none placeholder:tracking-normal placeholder:normal-case focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                                 />
                             </div>
                             <button
@@ -331,16 +416,23 @@ export default function Lacak({ application, ticket }: LacakProps) {
                                     <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-500">
                                         <SearchX className="size-7" />
                                     </div>
-                                    <h2 className="mt-4 text-lg font-bold text-[#12213e]">Tiket tidak ditemukan</h2>
+                                    <h2 className="mt-4 text-lg font-bold text-[#12213e]">
+                                        Tiket tidak ditemukan
+                                    </h2>
                                     <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">
-                                        Periksa kembali nomor tiket Anda. Pastikan formatnya sesuai, mis.{' '}
-                                        <span className="font-mono font-semibold text-[#12213e]">EMG-2026-123456</span>.
+                                        Periksa kembali nomor tiket Anda.
+                                        Pastikan formatnya sesuai, mis.{' '}
+                                        <span className="font-mono font-semibold text-[#12213e]">
+                                            EMG-2026-123456
+                                        </span>
+                                        .
                                     </p>
                                     <Link
                                         href="/#daftar"
                                         className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#106feb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0b5ed0]"
                                     >
-                                        Ajukan Magang Baru <ArrowRight className="size-4" />
+                                        Ajukan Magang Baru{' '}
+                                        <ArrowRight className="size-4" />
                                     </Link>
                                 </motion.div>
                             )}
@@ -351,22 +443,31 @@ export default function Lacak({ application, ticket }: LacakProps) {
                                     initial={{ opacity: 0, y: 12 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -8 }}
-                                    transition={{ duration: 0.3, ease: 'circOut' }}
+                                    transition={{
+                                        duration: 0.3,
+                                        ease: 'circOut',
+                                    }}
                                     className="space-y-6"
                                 >
                                     {/* Ringkasan tiket */}
                                     <div className="rounded-2xl border border-slate-200 bg-white p-6">
                                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                             <div>
-                                                <p className="text-xs font-medium text-slate-500">Nomor Tiket</p>
+                                                <p className="text-xs font-medium text-slate-500">
+                                                    Nomor Tiket
+                                                </p>
                                                 <p className="font-mono text-lg font-black tracking-tight text-[#106feb]">
                                                     {result.ticket_number}
                                                 </p>
                                             </div>
-                                            <StatusBadge status={result.status} />
+                                            <StatusBadge
+                                                status={result.status}
+                                            />
                                         </div>
                                         <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                                            Diajukan pada {formatDate(result.created_at)} · {result.institution_name}
+                                            Diajukan pada{' '}
+                                            {formatDate(result.created_at)} ·{' '}
+                                            {result.institution_name}
                                         </p>
                                     </div>
 
@@ -375,10 +476,13 @@ export default function Lacak({ application, ticket }: LacakProps) {
                                         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5">
                                             <div className="flex items-center gap-2 text-rose-700">
                                                 <AlertTriangle className="size-5" />
-                                                <p className="text-sm font-bold">Permohonan Ditolak</p>
+                                                <p className="text-sm font-bold">
+                                                    Permohonan Ditolak
+                                                </p>
                                             </div>
                                             <p className="mt-2 text-sm text-rose-700/90">
-                                                {result.rejection_reason ?? 'Mohon maaf, permohonan Anda belum dapat disetujui.'}
+                                                {result.rejection_reason ??
+                                                    'Mohon maaf, permohonan Anda belum dapat disetujui.'}
                                             </p>
                                         </div>
                                     )}
@@ -387,21 +491,41 @@ export default function Lacak({ application, ticket }: LacakProps) {
                                         {/* Timeline */}
                                         <div className="lg:col-span-2">
                                             <div className="rounded-2xl border border-slate-200 bg-white p-6">
-                                                <h3 className="text-base font-bold text-[#12213e]">Perkembangan Permohonan</h3>
-                                                <p className="mt-0.5 text-sm text-slate-500">Status diperbarui otomatis di setiap tahap.</p>
+                                                <h3 className="text-base font-bold text-[#12213e]">
+                                                    Perkembangan Permohonan
+                                                </h3>
+                                                <p className="mt-0.5 text-sm text-slate-500">
+                                                    Status diperbarui otomatis
+                                                    di setiap tahap.
+                                                </p>
                                                 <div className="mt-6">
-                                                    <StatusTimeline status={result.status} />
+                                                    <StatusTimeline
+                                                        status={result.status}
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
 
                                         {/* Detail */}
                                         <div className="rounded-2xl border border-slate-200 bg-white p-6">
-                                            <h3 className="text-base font-bold text-[#12213e]">Detail</h3>
+                                            <h3 className="text-base font-bold text-[#12213e]">
+                                                Detail
+                                            </h3>
                                             <dl className="mt-4 grid grid-cols-1 gap-4">
-                                                <DetailRow label="Bidang / Tujuan" value={result.tujuan_magang} />
-                                                <DetailRow label="OPD Penempatan" value={result.opd?.name ?? null} />
-                                                <DetailRow label="Bidang Penempatan" value={result.division} />
+                                                <DetailRow
+                                                    label="Bidang / Tujuan"
+                                                    value={result.tujuan_magang}
+                                                />
+                                                <DetailRow
+                                                    label="OPD Penempatan"
+                                                    value={
+                                                        result.opd?.name ?? null
+                                                    }
+                                                />
+                                                <DetailRow
+                                                    label="Bidang Penempatan"
+                                                    value={result.division}
+                                                />
                                                 <DetailRow
                                                     label="Periode"
                                                     value={`${formatDate(result.start_date)} – ${formatDate(result.end_date)}`}
@@ -412,7 +536,9 @@ export default function Lacak({ application, ticket }: LacakProps) {
 
                                     <div className="rounded-2xl bg-[#cddcef]/30 p-5 text-center">
                                         <p className="text-sm text-slate-600">
-                                            Sudah memiliki akun? Masuk untuk mengelola permohonan dan mengunggah laporan akhir.
+                                            Sudah memiliki akun? Masuk untuk
+                                            mengelola permohonan dan mengunggah
+                                            laporan akhir.
                                         </p>
                                         <Link
                                             href="/login"

@@ -41,6 +41,8 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            // Site key reCAPTCHA v2 — dipakai widget di form pendaftaran publik.
+            'recaptchaSiteKey' => config('services.recaptcha.site_key'),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

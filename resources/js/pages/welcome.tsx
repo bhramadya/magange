@@ -1,13 +1,54 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import {
-    ChevronRight, Layout, Shield, Clock, Building2,
-    MapPin, Mail, Phone, CheckCircle2, ArrowRight, ArrowUpRight, Send, Search, ChevronDown,
-    ShieldCheck, Sparkles, Award, Timer,
-    FileText, SearchCheck, Key, Download, Info,
-    Calendar, ChevronLeft, ImagePlus, Users
+    ChevronRight,
+    Layout,
+    Shield,
+    Clock,
+    Building2,
+    MapPin,
+    Mail,
+    Phone,
+    CheckCircle2,
+    ArrowRight,
+    ArrowUpRight,
+    Send,
+    Search,
+    ChevronDown,
+    ShieldCheck,
+    Sparkles,
+    Award,
+    Timer,
+    FileText,
+    SearchCheck,
+    Key,
+    Download,
+    Info,
+    Calendar,
+    ChevronLeft,
+    ImagePlus,
+    Users,
+    Star,
+    Quote,
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView, animate } from 'motion/react';
 import { useState, useEffect, useRef } from 'react';
+
+/* Widget reCAPTCHA v2 (checkbox) — dimuat via script Google saat runtime. */
+declare global {
+    interface Window {
+        grecaptcha?: {
+            render: (
+                el: HTMLElement,
+                opts: {
+                    sitekey: string;
+                    callback: (token: string) => void;
+                    'expired-callback'?: () => void;
+                },
+            ) => number;
+            reset: (id?: number) => void;
+        };
+    }
+}
 
 /* =========================================================================
  *  ANIMATION HELPERS (Framer Motion)
@@ -118,11 +159,17 @@ function AnimatedButton({
     //           badge       │ biru   + panah putih  │ #cddcef + panah biru
     const baseBg = isInverted ? 'bg-[#cddcef]' : 'bg-[#106feb]';
     const baseText = isInverted ? 'text-[#0a1628]' : 'text-white';
-    const hoverText = isInverted ? 'group-hover:text-white' : 'group-hover:text-[#0a1628]';
+    const hoverText = isInverted
+        ? 'group-hover:text-white'
+        : 'group-hover:text-[#0a1628]';
     const fill = isInverted ? 'bg-[#106feb]' : 'bg-[#cddcef]';
     // Badge berganti warna agar selalu kontras dengan lapisan di bawahnya saat itu.
-    const badgeBg = isInverted ? 'bg-[#106feb] group-hover:bg-[#cddcef]' : 'bg-[#cddcef] group-hover:bg-[#106feb]';
-    const arrowColor = isInverted ? 'text-white group-hover:text-[#106feb]' : 'text-[#106feb] group-hover:text-white';
+    const badgeBg = isInverted
+        ? 'bg-[#106feb] group-hover:bg-[#cddcef]'
+        : 'bg-[#cddcef] group-hover:bg-[#106feb]';
+    const arrowColor = isInverted
+        ? 'text-white group-hover:text-[#106feb]'
+        : 'text-[#106feb] group-hover:text-white';
 
     const content = (
         <>
@@ -133,11 +180,15 @@ function AnimatedButton({
                 className={`absolute inset-0 z-0 ${fill} -translate-x-[101%] transition-transform duration-500 ease-out group-hover:translate-x-0`}
             />
             {/* LAPIS 3 — Label: warna teks berubah dinamis saat overlay menutupi */}
-            <span className={`relative z-10 font-semibold transition-colors duration-500 ease-out ${baseText} ${hoverText}`}>
+            <span
+                className={`relative z-10 font-semibold transition-colors duration-500 ease-out ${baseText} ${hoverText}`}
+            >
                 {children}
             </span>
             {/* LAPIS 3 — Badge ikon panah (lingkaran sempurna) di kanan, kontras dinamis */}
-            <span className={`relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full transition-colors duration-500 ease-out ${badgeBg} ${arrowColor}`}>
+            <span
+                className={`relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full transition-colors duration-500 ease-out ${badgeBg} ${arrowColor}`}
+            >
                 <ArrowUpRight className="size-4 transition-transform duration-500 ease-out group-hover:rotate-45" />
             </span>
         </>
@@ -155,14 +206,25 @@ function AnimatedButton({
 
     if (as === 'a') {
         return (
-            <motion.a href={href} onClick={onClick} whileTap={{ scale: 0.97 }} className={shared}>
+            <motion.a
+                href={href}
+                onClick={onClick}
+                whileTap={{ scale: 0.97 }}
+                className={shared}
+            >
                 {content}
             </motion.a>
         );
     }
 
     return (
-        <motion.button type={type} disabled={disabled} onClick={onClick} whileTap={disabled ? undefined : { scale: 0.97 }} className={shared}>
+        <motion.button
+            type={type}
+            disabled={disabled}
+            onClick={onClick}
+            whileTap={disabled ? undefined : { scale: 0.97 }}
+            className={shared}
+        >
             {content}
         </motion.button>
     );
@@ -233,7 +295,7 @@ function OrbitImage({
     return (
         <motion.div
             aria-hidden
-            className="absolute left-1/2 top-1/2 h-0 w-0"
+            className="absolute top-1/2 left-1/2 h-0 w-0"
             initial={{ rotate: startAngle, opacity: 0 }}
             animate={{ rotate: startAngle + dir * 360, opacity: 1 }}
             transition={{
@@ -248,15 +310,30 @@ function OrbitImage({
                     initial={{ rotate: -startAngle }}
                     animate={{ rotate: -startAngle - dir * 360 }}
                     transition={{ duration, repeat: Infinity, ease: 'linear' }}
-                    style={{ width: size, height: size, marginLeft: -size / 2, marginTop: -size / 2 }}
+                    style={{
+                        width: size,
+                        height: size,
+                        marginLeft: -size / 2,
+                        marginTop: -size / 2,
+                    }}
                 >
                     {/* Lapis float: melayang lembut dalam frame tegak */}
                     <motion.div
                         animate={{ y: [0, -10, 0] }}
-                        transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay }}
+                        transition={{
+                            duration: 3.5,
+                            repeat: Infinity,
+                            ease: 'easeInOut',
+                            delay,
+                        }}
                         className="h-full w-full overflow-hidden rounded-2xl border border-white/60 bg-white/80 shadow-[0_12px_30px_-8px_rgba(8,71,156,0.35)] backdrop-blur-sm"
                     >
-                        <img src={src} alt={alt} loading="lazy" className="h-full w-full object-cover" />
+                        <img
+                            src={src}
+                            alt={alt}
+                            loading="lazy"
+                            className="h-full w-full object-cover"
+                        />
                     </motion.div>
                 </motion.div>
             </div>
@@ -272,8 +349,18 @@ function OrbitImage({
  * ========================================================================= */
 const NAMA_HARI = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 const NAMA_BULAN = [
-    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
 ];
 
 function toISODate(d: Date) {
@@ -306,7 +393,9 @@ function DatePicker({
     placeholder?: string;
 }) {
     const [open, setOpen] = useState(false);
-    const [viewDate, setViewDate] = useState(() => (value ? new Date(`${value}T00:00:00`) : new Date()));
+    const [viewDate, setViewDate] = useState(() =>
+        value ? new Date(`${value}T00:00:00`) : new Date(),
+    );
     const ref = useRef<HTMLDivElement>(null);
 
     // Tutup popover saat klik di luar atau menekan Escape.
@@ -350,7 +439,8 @@ function DatePicker({
         cells.push(d);
     }
 
-    const goMonth = (delta: number) => setViewDate(new Date(year, month + delta, 1));
+    const goMonth = (delta: number) =>
+        setViewDate(new Date(year, month + delta, 1));
 
     return (
         <div ref={ref} className="relative">
@@ -364,10 +454,12 @@ function DatePicker({
 
                     setOpen((o) => !o);
                 }}
-                className={`flex w-full items-center justify-between rounded-2xl border bg-white px-4 py-3.5 text-left text-[15px] transition-all focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] ${open ? 'border-transparent ring-2 ring-[#0b4fb0]' : 'border-slate-200'} ${value ? 'text-[#0a1628]' : 'text-[#0a1628]/40'}`}
+                className={`flex w-full items-center justify-between rounded-2xl border bg-white px-4 py-3.5 text-left text-[15px] transition-all focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none ${open ? 'border-transparent ring-2 ring-[#0b4fb0]' : 'border-slate-200'} ${value ? 'text-[#0a1628]' : 'text-[#0a1628]/40'}`}
             >
                 <span>{value ? formatTanggalID(value) : placeholder}</span>
-                <Calendar className={`h-[18px] w-[18px] shrink-0 transition-colors ${open ? 'text-[#0b4fb0]' : 'text-[#0a1628]/40'}`} />
+                <Calendar
+                    className={`h-[18px] w-[18px] shrink-0 transition-colors ${open ? 'text-[#0b4fb0]' : 'text-[#0a1628]/40'}`}
+                />
             </button>
 
             {/* Popover kalender */}
@@ -378,15 +470,25 @@ function DatePicker({
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 8, scale: 0.97 }}
                         transition={{ duration: 0.18, ease: 'easeOut' }}
-                        className="absolute left-0 top-[calc(100%+8px)] z-30 w-[300px] rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_20px_50px_-12px_rgba(8,71,156,0.25)]"
+                        className="absolute top-[calc(100%+8px)] left-0 z-30 w-[300px] rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_20px_50px_-12px_rgba(8,71,156,0.25)]"
                     >
                         {/* Navigasi bulan */}
                         <div className="mb-3 flex items-center justify-between">
-                            <button type="button" onClick={() => goMonth(-1)} className="flex h-8 w-8 items-center justify-center rounded-lg text-[#0a1628]/60 transition-colors hover:bg-[#f5faff] hover:text-[#0b4fb0]">
+                            <button
+                                type="button"
+                                onClick={() => goMonth(-1)}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-[#0a1628]/60 transition-colors hover:bg-[#f5faff] hover:text-[#0b4fb0]"
+                            >
                                 <ChevronLeft className="h-4 w-4" />
                             </button>
-                            <span className="text-[14px] font-semibold text-[#0a1628]">{NAMA_BULAN[month]} {year}</span>
-                            <button type="button" onClick={() => goMonth(1)} className="flex h-8 w-8 items-center justify-center rounded-lg text-[#0a1628]/60 transition-colors hover:bg-[#f5faff] hover:text-[#0b4fb0]">
+                            <span className="text-[14px] font-semibold text-[#0a1628]">
+                                {NAMA_BULAN[month]} {year}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => goMonth(1)}
+                                className="flex h-8 w-8 items-center justify-center rounded-lg text-[#0a1628]/60 transition-colors hover:bg-[#f5faff] hover:text-[#0b4fb0]"
+                            >
                                 <ChevronRight className="h-4 w-4" />
                             </button>
                         </div>
@@ -394,7 +496,12 @@ function DatePicker({
                         {/* Nama hari */}
                         <div className="mb-1 grid grid-cols-7 gap-1">
                             {NAMA_HARI.map((h) => (
-                                <span key={h} className="flex h-8 items-center justify-center text-[11px] font-semibold uppercase text-[#0a1628]/35">{h}</span>
+                                <span
+                                    key={h}
+                                    className="flex h-8 items-center justify-center text-[11px] font-semibold text-[#0a1628]/35 uppercase"
+                                >
+                                    {h}
+                                </span>
                             ))}
                         </div>
 
@@ -423,10 +530,10 @@ function DatePicker({
                                             selected
                                                 ? 'bg-[#106feb] text-white shadow-sm'
                                                 : disabled
-                                                    ? 'cursor-not-allowed text-[#0a1628]/20'
-                                                    : isToday
-                                                        ? 'bg-[#f5faff] text-[#0b4fb0] hover:bg-[#e7f0fc]'
-                                                        : 'text-[#0a1628]/70 hover:bg-[#f5faff] hover:text-[#0b4fb0]'
+                                                  ? 'cursor-not-allowed text-[#0a1628]/20'
+                                                  : isToday
+                                                    ? 'bg-[#f5faff] text-[#0b4fb0] hover:bg-[#e7f0fc]'
+                                                    : 'text-[#0a1628]/70 hover:bg-[#f5faff] hover:text-[#0b4fb0]'
                                         }`}
                                     >
                                         {d}
@@ -441,13 +548,83 @@ function DatePicker({
     );
 }
 
-export default function Welcome() {
+interface WelcomeFaq {
+    id: number;
+    question: string;
+    answer: string;
+}
+
+interface WelcomeOpd {
+    id: number;
+    name: string;
+    code: string;
+}
+
+interface WelcomeTestimonial {
+    id: number;
+    rating: number;
+    comment: string;
+    name: string;
+    institution?: string | null;
+}
+
+interface WelcomeProps {
+    faqs?: WelcomeFaq[];
+    opds?: WelcomeOpd[];
+    testimonials?: WelcomeTestimonial[];
+}
+
+export default function Welcome({
+    faqs = [],
+    opds = [],
+    testimonials = [],
+}: WelcomeProps) {
     const [scrolled, setScrolled] = useState(false);
     // Loading screen — tampil saat halaman pertama dimuat, lalu menyingkap hero.
     const [isLoading, setIsLoading] = useState(true);
     // State tanggal magang — disimpan ISO (yyyy-mm-dd), ditampilkan format Indonesia.
     const [tanggalMulai, setTanggalMulai] = useState('');
     const [tanggalSelesai, setTanggalSelesai] = useState('');
+
+    // Site key reCAPTCHA dari shared props (HandleInertiaRequests).
+    const recaptchaSiteKey =
+        (usePage().props as { recaptchaSiteKey?: string }).recaptchaSiteKey ??
+        '';
+
+    // Formulir pendaftaran publik → POST /pengajuan (multipart karena pas foto).
+    const { data, setData, post, processing, errors, reset } = useForm<{
+        name: string;
+        nis: string;
+        institution_name: string;
+        tujuan_magang: string;
+        major: string;
+        skills: string;
+        address: string;
+        start_date: string;
+        end_date: string;
+        campus_supervisor: string;
+        guardian_name: string;
+        whatsapp_number: string;
+        email: string;
+        photo: File | null;
+        recaptcha_token: string;
+    }>({
+        name: '',
+        nis: '',
+        institution_name: '',
+        tujuan_magang: '',
+        major: '',
+        skills: '',
+        address: '',
+        start_date: '',
+        end_date: '',
+        campus_supervisor: '',
+        guardian_name: '',
+        whatsapp_number: '',
+        email: '',
+        photo: null,
+        recaptcha_token: '',
+    });
 
     // State unggah pas foto — simpan nama berkas + URL pratinjau (object URL).
     const [pasFotoNama, setPasFotoNama] = useState('');
@@ -460,6 +637,7 @@ export default function Welcome() {
             return;
         }
 
+        setData('photo', file);
         setPasFotoNama(file.name);
         setPasFotoPreview((prev) => {
             if (prev) {
@@ -471,65 +649,232 @@ export default function Welcome() {
     };
     // State FAQ
     const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+    // FAQ dari DB (dikelola verifikator); fallback ke set default bila kosong.
+    const faqList: { q: string; a: string }[] =
+        faqs.length > 0
+            ? faqs.map((f) => ({ q: f.question, a: f.answer }))
+            : [
+                  {
+                      q: 'Apa itu E-Magang Kota Madiun?',
+                      a: 'Platform digital resmi untuk mempermudah pendaftaran, verifikasi, dan pemantauan status magang siswa/mahasiswa di lingkungan instansi Pemerintah Kota Madiun.',
+                  },
+                  {
+                      q: 'Apakah pendaftaran dikenakan biaya?',
+                      a: 'Tidak. Seluruh layanan di E-Magang Kota Madiun adalah gratis bagi seluruh pelajar dan mahasiswa.',
+                  },
+                  {
+                      q: 'Berapa lama proses verifikasi berkas?',
+                      a: 'Biasanya memakan waktu 2-3 hari kerja. Anda akan mendapatkan notifikasi status melalui email atau WhatsApp yang terdaftar.',
+                  },
+                  {
+                      q: 'Berapa lama durasi magang yang diperbolehkan?',
+                      a: 'Durasi magang fleksibel mulai dari 1 hingga 6 bulan, menyesuaikan dengan kurikulum atau kebutuhan dari instansi pendidikan Anda.',
+                  },
+                  {
+                      q: 'Apakah magang ini bisa dilakukan secara remote/WFH?',
+                      a: 'Seluruh pelaksanaan magang mengikuti kebijakan operasional masing-masing OPD tujuan, namun mayoritas dilaksanakan secara WFO (On-Site) dengan jam kerja kantor pemerintah.',
+                  },
+                  {
+                      q: 'Bagaimana cara mendapatkan e-Sertifikat?',
+                      a: 'Setelah selesai melaksanakan magang, pastikan Anda telah mengunggah laporan tugas akhir dan mengisi survei evaluasi di dasbor akun Anda.',
+                  },
+              ];
     // State menu mobile (Dropdown Menu dengan AnimatePresence)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    // --- TAMBAHKAN KODE INI (Logika Slider Captcha) ---
-    const [sliderValue, setSliderValue] = useState(0);
-    const [isCaptchaVerified, setIsCaptchaVerified] = useState(false);
+    // --- reCAPTCHA v2 checkbox: render eksplisit + simpan token ke form ---
+    const recaptchaRef = useRef<HTMLDivElement | null>(null);
+    const recaptchaWidgetId = useRef<number | null>(null);
 
-    const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = parseInt(e.target.value);
-        setSliderValue(value);
-
-        if (value >= 95) { // Jika digeser sampai 95%, otomatis mengunci ke 100%
-            setIsCaptchaVerified(true);
-            setSliderValue(100);
+    const resetRecaptcha = () => {
+        if (recaptchaWidgetId.current !== null) {
+            window.grecaptcha?.reset(recaptchaWidgetId.current);
         }
+
+        setData('recaptcha_token', '');
     };
-    // --------------------------------------------------
+
+    useEffect(() => {
+        if (!recaptchaSiteKey) {
+            return;
+        }
+
+        let cancelled = false;
+
+        const renderWidget = () => {
+            if (cancelled || recaptchaWidgetId.current !== null) {
+                return;
+            }
+
+            if (!recaptchaRef.current || !window.grecaptcha?.render) {
+                return;
+            }
+
+            recaptchaWidgetId.current = window.grecaptcha.render(
+                recaptchaRef.current,
+                {
+                    sitekey: recaptchaSiteKey,
+                    callback: (token: string) =>
+                        setData('recaptcha_token', token),
+                    'expired-callback': () => setData('recaptcha_token', ''),
+                },
+            );
+        };
+
+        if (window.grecaptcha?.render) {
+            renderWidget();
+
+            return;
+        }
+
+        const scriptId = 'recaptcha-api';
+
+        if (!document.getElementById(scriptId)) {
+            const script = document.createElement('script');
+            script.id = scriptId;
+            script.src =
+                'https://www.google.com/recaptcha/api.js?render=explicit';
+            script.async = true;
+            script.defer = true;
+            document.body.appendChild(script);
+        }
+
+        const timer = window.setInterval(() => {
+            if (window.grecaptcha?.render) {
+                window.clearInterval(timer);
+                renderWidget();
+            }
+        }, 300);
+
+        return () => {
+            cancelled = true;
+            window.clearInterval(timer);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [recaptchaSiteKey]);
+
+    const handleSubmitPengajuan = (e: React.FormEvent) => {
+        e.preventDefault();
+
+        post('/pengajuan', {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                reset();
+                setPasFotoNama('');
+                setPasFotoPreview('');
+                setTanggalMulai('');
+                setTanggalSelesai('');
+                resetRecaptcha();
+            },
+        });
+    };
 
     // State Fitur Pencarian OPD
-    const [searchOpd, setSearchOpd] = useState("");
+    const [searchOpd, setSearchOpd] = useState('');
 
     // Daftar 35 OPD — tiap instansi dipetakan ke Tag Kompetensi sesuai bidangnya.
     // Tag membantu pelamar memilih penempatan yang relevan dengan jurusan/keahlian.
     const daftarOPD = [
-        { name: "BADAN KEPEGAWAIAN DAERAH", tags: ["SDM / Kepegawaian", "Administrasi"] },
-        { name: "BADAN KESATUAN BANGSA DAN POLITIK", tags: ["Politik & Pemerintahan", "Sosial"] },
-        { name: "BADAN PENANGGULANGAN BENCANA DAERAH", tags: ["Manajemen Bencana", "Kesehatan"] },
-        { name: "BADAN PENDAPATAN DAERAH", tags: ["Akuntansi", "Perpajakan"] },
-        { name: "BADAN PENGELOLAAN KEUANGAN DAN ASET DAERAH", tags: ["Akuntansi", "Administrasi"] },
-        { name: "BADAN PERENCANAAN DAN PEMBANGUNAN DAERAH", tags: ["Perencanaan", "Analisis Data"] },
-        { name: "BAGIAN HUKUM", tags: ["Hukum", "Administrasi"] },
-        { name: "BAGIAN ORGANISASI", tags: ["Manajemen", "Administrasi"] },
-        { name: "BAGIAN PEMERINTAHAN UMUM", tags: ["Administrasi Publik", "Pemerintahan"] },
-        { name: "BAGIAN PENGADAAN BARANG/JASA DAN ADMINISTRASI PEMBANGUNAN", tags: ["Pengadaan", "Administrasi"] },
-        { name: "BAGIAN PEREKONOMIAN DAN KESEJAHTERAAN RAKYAT", tags: ["Ekonomi", "Sosial"] },
-        { name: "BAGIAN UMUM", tags: ["Tata Usaha", "Administrasi"] },
-        { name: "DINAS KEBUDAYAAN, PARIWISATA, KEPEMUDAAN DAN OLAHRAGA", tags: ["Pariwisata", "Seni & Budaya"] },
-        { name: "DINAS KEPENDUDUKAN DAN PENCATATAN SIPIL", tags: ["Administrasi Publik", "Manajemen Data"] },
-        { name: "DINAS KESEHATAN DAN KELUARGA BERENCANA", tags: ["Kesehatan", "Administrasi Publik"] },
-        { name: "DINAS KOMUNIKASI DAN INFORMATIKA", tags: ["IT / Software", "Humas & Jurnalistik"] },
-        { name: "DINAS LINGKUNGAN HIDUP", tags: ["Lingkungan", "Sains"] },
-        { name: "DINAS PEKERJAAN UMUM DAN TATA RUANG", tags: ["Teknik Sipil", "Arsitektur"] },
-        { name: "DINAS PENANAMAN MODAL, PELAYANAN TERPADU SATU PINTU, KOPERASI DAN USAHA MIKRO", tags: ["Ekonomi", "Pelayanan Publik"] },
-        { name: "DINAS PENDIDIKAN", tags: ["Pendidikan", "Administrasi"] },
-        { name: "DINAS PERDAGANGAN", tags: ["Ekonomi", "Bisnis"] },
-        { name: "DINAS PERHUBUNGAN", tags: ["Transportasi", "Teknik"] },
-        { name: "DINAS PERPUSTAKAAN DAN KEARSIPAN", tags: ["Kearsipan", "Literasi"] },
-        { name: "DINAS PERTANIAN DAN KETAHANAN PANGAN", tags: ["Pertanian", "Sains"] },
-        { name: "DINAS PERUMAHAN DAN KAWASAN PERMUKIMAN", tags: ["Teknik Sipil", "Tata Ruang"] },
-        { name: "DINAS SOSIAL, PEMBERDAYAAN PEREMPUAN DAN PERLINDUNGAN ANAK", tags: ["Sosial", "Pemberdayaan"] },
-        { name: "DINAS TENAGA KERJA", tags: ["SDM / Kepegawaian", "Sosial"] },
-        { name: "INSPEKTORAT", tags: ["Audit", "Akuntansi"] },
-        { name: "KECAMATAN KARTOHARJO", tags: ["Pemerintahan", "Pelayanan Publik"] },
-        { name: "KECAMATAN MANGUHARJO", tags: ["Pemerintahan", "Pelayanan Publik"] },
-        { name: "KECAMATAN TAMAN", tags: ["Pemerintahan", "Pelayanan Publik"] },
-        { name: "RUMAH SAKIT UMUM DAERAH", tags: ["Kesehatan", "Administrasi"] },
-        { name: "SATUAN POLISI PAMONG PRAJA", tags: ["Keamanan", "Hukum"] },
-        { name: "SEKRETARIAT DAERAH", tags: ["Pemerintahan", "Administrasi"] },
-        { name: "SEKRETARIAT DPRD", tags: ["Legislatif", "Administrasi"] },
+        {
+            name: 'BADAN KEPEGAWAIAN DAERAH',
+            tags: ['SDM / Kepegawaian', 'Administrasi'],
+        },
+        {
+            name: 'BADAN KESATUAN BANGSA DAN POLITIK',
+            tags: ['Politik & Pemerintahan', 'Sosial'],
+        },
+        {
+            name: 'BADAN PENANGGULANGAN BENCANA DAERAH',
+            tags: ['Manajemen Bencana', 'Kesehatan'],
+        },
+        { name: 'BADAN PENDAPATAN DAERAH', tags: ['Akuntansi', 'Perpajakan'] },
+        {
+            name: 'BADAN PENGELOLAAN KEUANGAN DAN ASET DAERAH',
+            tags: ['Akuntansi', 'Administrasi'],
+        },
+        {
+            name: 'BADAN PERENCANAAN DAN PEMBANGUNAN DAERAH',
+            tags: ['Perencanaan', 'Analisis Data'],
+        },
+        { name: 'BAGIAN HUKUM', tags: ['Hukum', 'Administrasi'] },
+        { name: 'BAGIAN ORGANISASI', tags: ['Manajemen', 'Administrasi'] },
+        {
+            name: 'BAGIAN PEMERINTAHAN UMUM',
+            tags: ['Administrasi Publik', 'Pemerintahan'],
+        },
+        {
+            name: 'BAGIAN PENGADAAN BARANG/JASA DAN ADMINISTRASI PEMBANGUNAN',
+            tags: ['Pengadaan', 'Administrasi'],
+        },
+        {
+            name: 'BAGIAN PEREKONOMIAN DAN KESEJAHTERAAN RAKYAT',
+            tags: ['Ekonomi', 'Sosial'],
+        },
+        { name: 'BAGIAN UMUM', tags: ['Tata Usaha', 'Administrasi'] },
+        {
+            name: 'DINAS KEBUDAYAAN, PARIWISATA, KEPEMUDAAN DAN OLAHRAGA',
+            tags: ['Pariwisata', 'Seni & Budaya'],
+        },
+        {
+            name: 'DINAS KEPENDUDUKAN DAN PENCATATAN SIPIL',
+            tags: ['Administrasi Publik', 'Manajemen Data'],
+        },
+        {
+            name: 'DINAS KESEHATAN DAN KELUARGA BERENCANA',
+            tags: ['Kesehatan', 'Administrasi Publik'],
+        },
+        {
+            name: 'DINAS KOMUNIKASI DAN INFORMATIKA',
+            tags: ['IT / Software', 'Humas & Jurnalistik'],
+        },
+        { name: 'DINAS LINGKUNGAN HIDUP', tags: ['Lingkungan', 'Sains'] },
+        {
+            name: 'DINAS PEKERJAAN UMUM DAN TATA RUANG',
+            tags: ['Teknik Sipil', 'Arsitektur'],
+        },
+        {
+            name: 'DINAS PENANAMAN MODAL, PELAYANAN TERPADU SATU PINTU, KOPERASI DAN USAHA MIKRO',
+            tags: ['Ekonomi', 'Pelayanan Publik'],
+        },
+        { name: 'DINAS PENDIDIKAN', tags: ['Pendidikan', 'Administrasi'] },
+        { name: 'DINAS PERDAGANGAN', tags: ['Ekonomi', 'Bisnis'] },
+        { name: 'DINAS PERHUBUNGAN', tags: ['Transportasi', 'Teknik'] },
+        {
+            name: 'DINAS PERPUSTAKAAN DAN KEARSIPAN',
+            tags: ['Kearsipan', 'Literasi'],
+        },
+        {
+            name: 'DINAS PERTANIAN DAN KETAHANAN PANGAN',
+            tags: ['Pertanian', 'Sains'],
+        },
+        {
+            name: 'DINAS PERUMAHAN DAN KAWASAN PERMUKIMAN',
+            tags: ['Teknik Sipil', 'Tata Ruang'],
+        },
+        {
+            name: 'DINAS SOSIAL, PEMBERDAYAAN PEREMPUAN DAN PERLINDUNGAN ANAK',
+            tags: ['Sosial', 'Pemberdayaan'],
+        },
+        { name: 'DINAS TENAGA KERJA', tags: ['SDM / Kepegawaian', 'Sosial'] },
+        { name: 'INSPEKTORAT', tags: ['Audit', 'Akuntansi'] },
+        {
+            name: 'KECAMATAN KARTOHARJO',
+            tags: ['Pemerintahan', 'Pelayanan Publik'],
+        },
+        {
+            name: 'KECAMATAN MANGUHARJO',
+            tags: ['Pemerintahan', 'Pelayanan Publik'],
+        },
+        { name: 'KECAMATAN TAMAN', tags: ['Pemerintahan', 'Pelayanan Publik'] },
+        {
+            name: 'RUMAH SAKIT UMUM DAERAH',
+            tags: ['Kesehatan', 'Administrasi'],
+        },
+        { name: 'SATUAN POLISI PAMONG PRAJA', tags: ['Keamanan', 'Hukum'] },
+        { name: 'SEKRETARIAT DAERAH', tags: ['Pemerintahan', 'Administrasi'] },
+        { name: 'SEKRETARIAT DPRD', tags: ['Legislatif', 'Administrasi'] },
     ];
 
     // Kuota magang per OPD. Angka di sini deterministik untuk pratinjau —
@@ -541,30 +886,57 @@ export default function Welcome() {
         return { ...opd, quota, quotaUsed };
     });
 
-    const filteredOPD = opdWithQuota.filter(opd => opd.name.toLowerCase().includes(searchOpd.toLowerCase()));
+    const filteredOPD = opdWithQuota.filter((opd) =>
+        opd.name.toLowerCase().includes(searchOpd.toLowerCase()),
+    );
 
     // Tautan navigasi (dipakai ulang oleh navbar desktop & menu mobile)
     const navLinks = [
-        { href: "#fitur", label: "Fitur" },
-        { href: "#instansi", label: "Instansi OPD" },
-        { href: "#alur", label: "Alur Pendaftaran" },
-        { href: "#faq", label: "FAQ" },
-        { href: "#daftar", label: "Kontak" },
+        { href: '#fitur', label: 'Fitur' },
+        { href: '#instansi', label: 'Instansi OPD' },
+        { href: '#alur', label: 'Alur Pendaftaran' },
+        // Tautan testimoni hanya muncul bila ada testimonial (section kondisional).
+        ...(testimonials.length > 0
+            ? [{ href: '#testimonial', label: 'Testimoni' }]
+            : []),
+        { href: '#faq', label: 'FAQ' },
+        { href: '#daftar', label: 'Kontak' },
     ];
 
     // Logo instansi untuk Infinite Logo Slider (abbreviasi dari daftar OPD resmi)
     const instansiLogos = [
-        "Diskominfo", "Dinas Pendidikan", "Dinas Kesehatan", "BAPPEDA", "BKD",
-        "Dinas Sosial", "Satpol PP", "RSUD", "Dinas Perhubungan", "Inspektorat",
-        "BPBD", "Dinas Lingkungan Hidup", "Disdukcapil", "Sekretariat Daerah",
+        'Diskominfo',
+        'Dinas Pendidikan',
+        'Dinas Kesehatan',
+        'BAPPEDA',
+        'BKD',
+        'Dinas Sosial',
+        'Satpol PP',
+        'RSUD',
+        'Dinas Perhubungan',
+        'Inspektorat',
+        'BPBD',
+        'Dinas Lingkungan Hidup',
+        'Disdukcapil',
+        'Sekretariat Daerah',
     ];
 
     // Statistik dengan count-up (angka bersumber dari konten/fakta layanan)
     const statistik = [
-        { value: 35, suffix: "", label: "Instansi OPD Tersedia", icon: Building2 },
-        { value: 4, suffix: "", label: "Langkah Pendaftaran", icon: Sparkles },
-        { value: 100, suffix: "%", label: "Gratis Tanpa Biaya", icon: Award },
-        { value: 3, suffix: " Hari", label: "Estimasi Verifikasi", icon: Timer },
+        {
+            value: 35,
+            suffix: '',
+            label: 'Instansi OPD Tersedia',
+            icon: Building2,
+        },
+        { value: 4, suffix: '', label: 'Langkah Pendaftaran', icon: Sparkles },
+        { value: 100, suffix: '%', label: 'Gratis Tanpa Biaya', icon: Award },
+        {
+            value: 3,
+            suffix: ' Hari',
+            label: 'Estimasi Verifikasi',
+            icon: Timer,
+        },
     ];
 
     // Efek untuk mengubah Navbar saat di-scroll
@@ -592,13 +964,15 @@ export default function Welcome() {
         };
     }, [isLoading]);
 
-
-
     return (
         <>
             <Head title="E-Magang - Dinas Kominfo Kota Madiun">
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+                <link
+                    rel="preconnect"
+                    href="https://fonts.gstatic.com"
+                    crossOrigin=""
+                />
                 <link
                     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
                     rel="stylesheet"
@@ -617,7 +991,10 @@ export default function Welcome() {
                         style={{ fontFamily: "'Inter', sans-serif" }}
                     >
                         {/* Glow halus di belakang konten */}
-                        <div aria-hidden className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[420px] max-w-[80vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0b4fb0]/15 blur-[120px]" />
+                        <div
+                            aria-hidden
+                            className="pointer-events-none absolute top-1/2 left-1/2 h-[420px] w-[420px] max-w-[80vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0b4fb0]/15 blur-[120px]"
+                        />
 
                         {/* Mark ikon brand + ring berputar */}
                         <motion.div
@@ -629,7 +1006,11 @@ export default function Welcome() {
                             <motion.span
                                 aria-hidden
                                 animate={{ rotate: 360 }}
-                                transition={{ duration: 1.1, ease: 'linear', repeat: Infinity }}
+                                transition={{
+                                    duration: 1.1,
+                                    ease: 'linear',
+                                    repeat: Infinity,
+                                }}
                                 className="absolute h-[88px] w-[88px] rounded-full border-[3px] border-[#0b4fb0]/15 border-t-[#106feb] md:h-[104px] md:w-[104px]"
                             />
                             <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#106feb] to-[#0b4fb0] shadow-[0_12px_30px_-6px_rgba(20,99,208,0.6)] md:h-20 md:w-20">
@@ -641,7 +1022,11 @@ export default function Welcome() {
                         <motion.h2
                             initial={{ opacity: 0, y: 12 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.15, ease: 'circOut' }}
+                            transition={{
+                                duration: 0.6,
+                                delay: 0.15,
+                                ease: 'circOut',
+                            }}
                             className="bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text text-[28px] font-bold tracking-tight text-transparent md:text-[34px]"
                         >
                             E-Magang
@@ -649,7 +1034,11 @@ export default function Welcome() {
                         <motion.p
                             initial={{ opacity: 0, y: 12 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.25, ease: 'circOut' }}
+                            transition={{
+                                duration: 0.6,
+                                delay: 0.25,
+                                ease: 'circOut',
+                            }}
                             className="mt-1 text-center text-[13px] font-medium text-[#0a1628]/50 md:text-[14px]"
                         >
                             Portal Magang Pemerintah Kota Madiun
@@ -660,7 +1049,11 @@ export default function Welcome() {
                             <motion.div
                                 initial={{ x: '-100%' }}
                                 animate={{ x: '0%' }}
-                                transition={{ duration: 1.7, delay: 0.3, ease: 'easeInOut' }}
+                                transition={{
+                                    duration: 1.7,
+                                    delay: 0.3,
+                                    ease: 'easeInOut',
+                                }}
                                 className="h-full w-full rounded-full bg-gradient-to-r from-[#106feb] to-[#0b4fb0]"
                             />
                         </div>
@@ -670,24 +1063,27 @@ export default function Welcome() {
 
             {/* Latar Belakang Utama Webild (Light Blue-ish White) */}
             <div
-                className="min-h-screen bg-[#f5faff] text-[#0a1628] selection:bg-[#cddcef] selection:text-[#0a1628] overflow-hidden relative"
+                className="relative min-h-screen overflow-hidden bg-[#f5faff] text-[#0a1628] selection:bg-[#cddcef] selection:text-[#0a1628]"
                 style={{ fontFamily: "'Inter', sans-serif" }}
             >
-
                 {/* Efek Cahaya Halus (Soft Glow) khas Webild SaaS di area atas */}
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1000px] h-[500px] bg-gradient-to-b from-[#cddcef]/30 to-transparent blur-3xl -z-10 pointer-events-none"></div>
+                <div className="pointer-events-none absolute top-0 left-1/2 -z-10 h-[500px] w-full max-w-[1000px] -translate-x-1/2 bg-gradient-to-b from-[#cddcef]/30 to-transparent blur-3xl"></div>
 
                 {/* 1. NAVIGATION BAR — Oval Floating (Glassmorphism) */}
                 <motion.nav
                     initial={{ y: -100, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ duration: 0.7, ease: 'circOut' }}
-                    className="fixed z-[1000] top-5 left-1/2 -translate-x-1/2 w-[90%] max-w-[1200px]"
+                    className="fixed top-5 left-1/2 z-[1000] w-[90%] max-w-[1200px] -translate-x-1/2"
                 >
-                    <div className={`flex items-center justify-between p-2 xl:p-3 rounded-full backdrop-blur-md bg-white/70 border border-white/20 transition-shadow duration-300 ${scrolled ? 'shadow-[0_12px_40px_rgba(8,71,156,0.14)]' : 'shadow-lg shadow-[#106feb]/5'}`}>
-
+                    <div
+                        className={`flex items-center justify-between rounded-full border border-white/20 bg-white/70 p-2 backdrop-blur-md transition-shadow duration-300 xl:p-3 ${scrolled ? 'shadow-[0_12px_40px_rgba(8,71,156,0.14)]' : 'shadow-lg shadow-[#106feb]/5'}`}
+                    >
                         {/* Logo (kiri) */}
-                        <Link href="/" className="pl-4 text-xl tracking-tight bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text text-transparent">
+                        <Link
+                            href="/"
+                            className="bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text pl-4 text-xl tracking-tight text-transparent"
+                        >
                             E-Magang
                         </Link>
 
@@ -701,13 +1097,17 @@ export default function Welcome() {
                             {/* Tombol Hamburger — background biru #106feb, ikon putih */}
                             <button
                                 onClick={() => setMobileMenuOpen((v) => !v)}
-                                className="relative flex items-center justify-center size-10 rounded-full bg-[#106feb] text-white cursor-pointer shadow-md shadow-[#106feb]/30 hover:brightness-110 transition-all"
+                                className="relative flex size-10 cursor-pointer items-center justify-center rounded-full bg-[#106feb] text-white shadow-md shadow-[#106feb]/30 transition-all hover:brightness-110"
                                 aria-label="Buka menu navigasi"
                                 aria-expanded={mobileMenuOpen}
                             >
                                 <div className="flex flex-col gap-1">
-                                    <span className={`w-4 h-0.5 rounded-full bg-white transition-all duration-300 ${mobileMenuOpen ? 'translate-y-[3px] rotate-45' : ''}`}></span>
-                                    <span className={`w-4 h-0.5 rounded-full bg-white transition-all duration-300 ${mobileMenuOpen ? '-translate-y-[3px] -rotate-45' : ''}`}></span>
+                                    <span
+                                        className={`h-0.5 w-4 rounded-full bg-white transition-all duration-300 ${mobileMenuOpen ? 'translate-y-[3px] rotate-45' : ''}`}
+                                    ></span>
+                                    <span
+                                        className={`h-0.5 w-4 rounded-full bg-white transition-all duration-300 ${mobileMenuOpen ? '-translate-y-[3px] -rotate-45' : ''}`}
+                                    ></span>
                                 </div>
                             </button>
                         </div>
@@ -721,15 +1121,17 @@ export default function Welcome() {
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: -10, scale: 0.97 }}
                                 transition={{ duration: 0.25, ease: 'circOut' }}
-                                className="mt-3 rounded-3xl backdrop-blur-md bg-white/80 border border-white/30 shadow-[0_20px_50px_rgba(8,71,156,0.12)] overflow-hidden"
+                                className="mt-3 overflow-hidden rounded-3xl border border-white/30 bg-white/80 shadow-[0_20px_50px_rgba(8,71,156,0.12)] backdrop-blur-md"
                             >
-                                <div className="px-4 py-4 flex flex-col gap-1">
+                                <div className="flex flex-col gap-1 px-4 py-4">
                                     {navLinks.map((link) => (
                                         <a
                                             key={link.href}
                                             href={link.href}
-                                            onClick={() => setMobileMenuOpen(false)}
-                                            className="py-2.5 px-3 rounded-xl text-[15px] font-medium text-[#0a1628]/70 hover:text-[#106feb] hover:bg-[#106feb]/5 transition-colors"
+                                            onClick={() =>
+                                                setMobileMenuOpen(false)
+                                            }
+                                            className="rounded-xl px-3 py-2.5 text-[15px] font-medium text-[#0a1628]/70 transition-colors hover:bg-[#106feb]/5 hover:text-[#106feb]"
                                         >
                                             {link.label}
                                         </a>
@@ -737,7 +1139,7 @@ export default function Welcome() {
                                     <Link
                                         href="/login-otp"
                                         onClick={() => setMobileMenuOpen(false)}
-                                        className="mt-1 py-2.5 px-3 rounded-xl text-left text-[15px] font-medium text-[#0a1628]/70 hover:text-[#106feb] hover:bg-[#106feb]/5 transition-colors"
+                                        className="mt-1 rounded-xl px-3 py-2.5 text-left text-[15px] font-medium text-[#0a1628]/70 transition-colors hover:bg-[#106feb]/5 hover:text-[#106feb]"
                                     >
                                         Masuk Akun
                                     </Link>
@@ -748,103 +1150,176 @@ export default function Welcome() {
                 </motion.nav>
 
                 {/* 2. HERO SECTION */}
-                <section className="relative pt-[140px] pb-20 px-6 max-w-[1200px] mx-auto flex flex-col items-center text-center overflow-visible">
-
+                <section className="relative mx-auto flex max-w-[1200px] flex-col items-center overflow-visible px-6 pt-[140px] pb-20 text-center">
                     {/* Glow Blobs premium di belakang teks & foto */}
-                    <div aria-hidden className="pointer-events-none absolute -z-10 inset-0">
-                        <div className="absolute top-10 left-1/4 -translate-x-1/2 w-[420px] h-[420px] rounded-full bg-[#0b4fb0]/25 blur-[120px]"></div>
-                        <div className="absolute top-24 right-1/4 translate-x-1/2 w-[360px] h-[360px] rounded-full bg-[#106feb]/20 blur-[120px]"></div>
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 w-[520px] h-[300px] rounded-full bg-[#cddcef]/30 blur-[120px]"></div>
+                    <div
+                        aria-hidden
+                        className="pointer-events-none absolute inset-0 -z-10"
+                    >
+                        <div className="absolute top-10 left-1/4 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-[#0b4fb0]/25 blur-[120px]"></div>
+                        <div className="absolute top-24 right-1/4 h-[360px] w-[360px] translate-x-1/2 rounded-full bg-[#106feb]/20 blur-[120px]"></div>
+                        <div className="absolute top-1/2 left-1/2 h-[300px] w-[520px] -translate-x-1/2 rounded-full bg-[#cddcef]/30 blur-[120px]"></div>
                     </div>
 
                     {/* Wadah relatif: jadi titik acuan orbit yang mengelilingi heading */}
                     <div className="relative flex w-full flex-col items-center">
-
                         {/* Lapisan ORBIT — aset asli webild mengorbit di sekitar H1.
                             Hanya tampil di layar lebar (lg+) agar tidak menutupi teks
                             pada perangkat sempit. Dipusatkan pada blok heading. */}
-                        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-[44%] -z-[5] hidden -translate-y-1/2 xl:block">
+                        <div
+                            aria-hidden
+                            className="pointer-events-none absolute inset-x-0 top-[44%] -z-[5] hidden -translate-y-1/2 xl:block"
+                        >
                             <div className="relative mx-auto h-0 w-0">
-                                <OrbitImage src="/images/orbit/avatar-1.webp" alt="" radius={430} size={64} duration={26} startAngle={0} />
-                                <OrbitImage src="/images/orbit/brand-2.webp" alt="" radius={470} size={56} duration={32} startAngle={70} reverse delay={0.2} />
-                                <OrbitImage src="/images/orbit/avatar-3.webp" alt="" radius={400} size={60} duration={24} startAngle={150} delay={0.35} />
-                                <OrbitImage src="/images/orbit/brand-4.webp" alt="" radius={500} size={52} duration={36} startAngle={210} reverse delay={0.15} />
-                                <OrbitImage src="/images/orbit/avatar-2.webp" alt="" radius={360} size={58} duration={22} startAngle={285} delay={0.5} />
-                                <OrbitImage src="/images/orbit/brand-1.webp" alt="" radius={520} size={54} duration={40} startAngle={330} reverse delay={0.3} />
+                                <OrbitImage
+                                    src="/images/orbit/avatar-1.webp"
+                                    alt=""
+                                    radius={430}
+                                    size={64}
+                                    duration={26}
+                                    startAngle={0}
+                                />
+                                <OrbitImage
+                                    src="/images/orbit/brand-2.webp"
+                                    alt=""
+                                    radius={470}
+                                    size={56}
+                                    duration={32}
+                                    startAngle={70}
+                                    reverse
+                                    delay={0.2}
+                                />
+                                <OrbitImage
+                                    src="/images/orbit/avatar-3.webp"
+                                    alt=""
+                                    radius={400}
+                                    size={60}
+                                    duration={24}
+                                    startAngle={150}
+                                    delay={0.35}
+                                />
+                                <OrbitImage
+                                    src="/images/orbit/brand-4.webp"
+                                    alt=""
+                                    radius={500}
+                                    size={52}
+                                    duration={36}
+                                    startAngle={210}
+                                    reverse
+                                    delay={0.15}
+                                />
+                                <OrbitImage
+                                    src="/images/orbit/avatar-2.webp"
+                                    alt=""
+                                    radius={360}
+                                    size={58}
+                                    duration={22}
+                                    startAngle={285}
+                                    delay={0.5}
+                                />
+                                <OrbitImage
+                                    src="/images/orbit/brand-1.webp"
+                                    alt=""
+                                    radius={520}
+                                    size={54}
+                                    duration={40}
+                                    startAngle={330}
+                                    reverse
+                                    delay={0.3}
+                                />
                             </div>
                         </div>
 
-                    {/* Konten teks Hero dengan staggerChildren (judul → sub → tombol) */}
-                    <motion.div
-                        variants={heroContainer}
-                        initial="hidden"
-                        animate="show"
-                        className="relative z-10 flex flex-col items-center"
-                    >
-                        {/* Badge Pengumuman (Pill) */}
+                        {/* Konten teks Hero dengan staggerChildren (judul → sub → tombol) */}
                         <motion.div
-                            variants={heroItem}
-                            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-slate-100 bg-white/60 backdrop-blur-md text-[13px] font-medium text-[#0a1628]/70 mb-8 hover:bg-white hover:border-[#cddcef] transition-all shadow-sm"
+                            variants={heroContainer}
+                            initial="hidden"
+                            animate="show"
+                            className="relative z-10 flex flex-col items-center"
                         >
-                            <span className="flex h-2 w-2 rounded-full bg-[#106feb] animate-pulse"></span>
-                            Portal Resmi Kota Madiun
-                        </motion.div>
+                            {/* Badge Pengumuman (Pill) */}
+                            <motion.div
+                                variants={heroItem}
+                                className="mb-8 inline-flex items-center gap-2 rounded-full border border-slate-100 bg-white/60 px-4 py-1.5 text-[13px] font-medium text-[#0a1628]/70 shadow-sm backdrop-blur-md transition-all hover:border-[#cddcef] hover:bg-white"
+                            >
+                                <span className="flex h-2 w-2 animate-pulse rounded-full bg-[#106feb]"></span>
+                                Portal Resmi Kota Madiun
+                            </motion.div>
 
-                        {/* Headline Utama — Inter Bold, gradien #0a1628 → #0b4fb0 */}
-                        <motion.h1
-                            variants={heroItem}
-                            className="text-[42px] md:text-[68px] font-bold tracking-tight leading-[1.05] max-w-4xl mb-6 bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text text-transparent"
-                        >
-                            Pusat Kendali Karir <br className="hidden md:block" />
-                            <span className="relative mt-2 inline-block leading-[1.15]">
-                                <span className="relative z-10 bg-gradient-to-r from-[#106feb] via-[#0b4fb0] to-[#106feb] bg-clip-text pb-[0.15em] text-transparent">
-                                    Digital Anda
+                            {/* Headline Utama — Inter Bold, gradien #0a1628 → #0b4fb0 */}
+                            <motion.h1
+                                variants={heroItem}
+                                className="mb-6 max-w-4xl bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text text-[42px] leading-[1.05] font-bold tracking-tight text-transparent md:text-[68px]"
+                            >
+                                Pusat Kendali Karir{' '}
+                                <br className="hidden md:block" />
+                                <span className="relative mt-2 inline-block leading-[1.15]">
+                                    <span className="relative z-10 bg-gradient-to-r from-[#106feb] via-[#0b4fb0] to-[#106feb] bg-clip-text pb-[0.15em] text-transparent">
+                                        Digital Anda
+                                    </span>
                                 </span>
-                            </span>
-                        </motion.h1>
+                            </motion.h1>
 
-                        {/* Deskripsi Sub-headline */}
-                        <motion.p
-                            variants={heroItem}
-                            className="text-[18px] md:text-[20px] text-[#0a1628]/60 max-w-2xl mb-10 leading-[1.6] font-medium"
-                        >
-                            Kelola pendaftaran, pantau status verifikasi, dan temukan bidang penempatan yang tepat di instansi pemerintahan dalam satu platform cerdas.
-                        </motion.p>
+                            {/* Deskripsi Sub-headline */}
+                            <motion.p
+                                variants={heroItem}
+                                className="mb-10 max-w-2xl text-[18px] leading-[1.6] font-medium text-[#0a1628]/60 md:text-[20px]"
+                            >
+                                Kelola pendaftaran, pantau status verifikasi,
+                                dan temukan bidang penempatan yang tepat di
+                                instansi pemerintahan dalam satu platform
+                                cerdas.
+                            </motion.p>
 
-                        {/* Grup Tombol Aksi */}
-                        <motion.div
-                            variants={heroItem}
-                            className="flex flex-col sm:flex-row items-center gap-4"
-                        >
-                            <AnimatedButton as="a" href="#daftar" className="w-full sm:w-auto">
-                                Mulai Pengajuan Magang
-                            </AnimatedButton>
-                            <AnimatedButton as="a" href="#alur" variant="inverted" className="w-full sm:w-auto">
-                                Pelajari Alur
-                            </AnimatedButton>
+                            {/* Grup Tombol Aksi */}
+                            <motion.div
+                                variants={heroItem}
+                                className="flex flex-col items-center gap-4 sm:flex-row"
+                            >
+                                <AnimatedButton
+                                    as="a"
+                                    href="#daftar"
+                                    className="w-full sm:w-auto"
+                                >
+                                    Mulai Pengajuan Magang
+                                </AnimatedButton>
+                                <AnimatedButton
+                                    as="a"
+                                    href="#alur"
+                                    variant="inverted"
+                                    className="w-full sm:w-auto"
+                                >
+                                    Pelajari Alur
+                                </AnimatedButton>
+                            </motion.div>
+
+                            {/* Baris penanda kepercayaan — memperkuat keyakinan calon pendaftar */}
+                            <motion.div
+                                variants={heroItem}
+                                className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-[13px] font-medium text-[#0a1628]/55"
+                            >
+                                <span className="inline-flex items-center gap-2">
+                                    <CheckCircle2 className="h-4 w-4 text-[#106feb]" />
+                                    100% Gratis Tanpa Biaya
+                                </span>
+                                <span
+                                    aria-hidden
+                                    className="hidden h-1 w-1 rounded-full bg-[#0a1628]/20 sm:inline-block"
+                                />
+                                <span className="inline-flex items-center gap-2">
+                                    <ShieldCheck className="h-4 w-4 text-[#106feb]" />
+                                    Data Terlindungi
+                                </span>
+                                <span
+                                    aria-hidden
+                                    className="hidden h-1 w-1 rounded-full bg-[#0a1628]/20 sm:inline-block"
+                                />
+                                <span className="inline-flex items-center gap-2">
+                                    <Building2 className="h-4 w-4 text-[#106feb]" />
+                                    35 Instansi Resmi
+                                </span>
+                            </motion.div>
                         </motion.div>
-
-                        {/* Baris penanda kepercayaan — memperkuat keyakinan calon pendaftar */}
-                        <motion.div
-                            variants={heroItem}
-                            className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-[13px] font-medium text-[#0a1628]/55"
-                        >
-                            <span className="inline-flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4 text-[#106feb]" />
-                                100% Gratis Tanpa Biaya
-                            </span>
-                            <span aria-hidden className="hidden h-1 w-1 rounded-full bg-[#0a1628]/20 sm:inline-block" />
-                            <span className="inline-flex items-center gap-2">
-                                <ShieldCheck className="h-4 w-4 text-[#106feb]" />
-                                Data Terlindungi
-                            </span>
-                            <span aria-hidden className="hidden h-1 w-1 rounded-full bg-[#0a1628]/20 sm:inline-block" />
-                            <span className="inline-flex items-center gap-2">
-                                <Building2 className="h-4 w-4 text-[#106feb]" />
-                                35 Instansi Resmi
-                            </span>
-                        </motion.div>
-                    </motion.div>
                     </div>
 
                     {/* 3. VISUAL UTAMA — Foto Gedung (scale 0.95 → 1 saat scroll) */}
@@ -853,12 +1328,12 @@ export default function Welcome() {
                         whileInView={{ opacity: 1, scale: 1, y: 0 }}
                         viewport={{ once: true, margin: '80px' }}
                         transition={{ duration: 0.9, ease: 'circOut' }}
-                        className="w-full max-w-md md:max-w-2xl lg:max-w-4xl mt-24 relative group"
+                        className="group relative mt-24 w-full max-w-md md:max-w-2xl lg:max-w-4xl"
                     >
                         {/* Soft Layered Shadow (efek kedalaman 3D) */}
-                        <div className="absolute -inset-4 bg-[#0b4fb0]/20 blur-[80px] rounded-[40px] -z-10"></div>
+                        <div className="absolute -inset-4 -z-10 rounded-[40px] bg-[#0b4fb0]/20 blur-[80px]"></div>
 
-                        <div className="relative rounded-3xl overflow-hidden border border-white/40 bg-white shadow-[0_20px_40px_-12px_rgba(8,71,156,0.25),0_40px_80px_-20px_rgba(20,99,208,0.3)] transition-transform duration-700 hover:-translate-y-2">
+                        <div className="relative overflow-hidden rounded-3xl border border-white/40 bg-white shadow-[0_20px_40px_-12px_rgba(8,71,156,0.25),0_40px_80px_-20px_rgba(20,99,208,0.3)] transition-transform duration-700 hover:-translate-y-2">
                             <img
                                 src="/images/gedung-pemerintahan.png"
                                 alt="Gedung Pemerintah Kota Madiun"
@@ -873,13 +1348,15 @@ export default function Welcome() {
                                         fallback.classList.remove('hidden');
                                     }
                                 }}
-                                className="w-full aspect-[4/3] lg:aspect-[16/9] object-cover"
+                                className="aspect-[4/3] w-full object-cover lg:aspect-[16/9]"
                             />
                             {/* Placeholder gradien (di-unhide oleh onError bila gambar gagal dimuat) */}
-                            <div className="hidden w-full aspect-[4/3] lg:aspect-[16/9] bg-gradient-to-br from-[#0a1628] via-[#0b4fb0] to-[#cddcef] flex-col items-center justify-center">
+                            <div className="hidden aspect-[4/3] w-full flex-col items-center justify-center bg-gradient-to-br from-[#0a1628] via-[#0b4fb0] to-[#cddcef] lg:aspect-[16/9]">
                                 <div className="flex flex-col items-center gap-3 text-white/90">
-                                    <Building2 className="w-12 h-12" />
-                                    <span className="text-[15px] font-medium">Gedung Pemerintah Kota Madiun</span>
+                                    <Building2 className="h-12 w-12" />
+                                    <span className="text-[15px] font-medium">
+                                        Gedung Pemerintah Kota Madiun
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -905,55 +1382,68 @@ export default function Welcome() {
                                 <span className="mt-1 text-3xl font-bold tracking-tight text-[#0a1628]">
                                     <CountUp to={s.value} suffix={s.suffix} />
                                 </span>
-                                <span className="text-[13px] font-medium leading-tight text-[#0a1628]/55">{s.label}</span>
+                                <span className="text-[13px] leading-tight font-medium text-[#0a1628]/55">
+                                    {s.label}
+                                </span>
                             </motion.div>
                         ))}
                     </motion.div>
                 </section>
 
                 {/* 3.5. INFINITE LOGO SLIDER (Instansi) */}
-                <section className="py-16 border-y border-slate-100 bg-white/60 overflow-hidden">
-
-
+                <section className="overflow-hidden border-y border-slate-100 bg-white/60 py-16">
                     {/* Track bergerak terus-menerus (infinite loop seamless) */}
                     <div className="relative">
                         {/* Fade tepi kiri & kanan */}
-                        <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#f5faff] to-transparent z-10 pointer-events-none"></div>
-                        <div className="absolute right-0 top-0 bottom-0 w-24 bg-gradient-to-l from-[#f5faff] to-transparent z-10 pointer-events-none"></div>
+                        <div className="pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-24 bg-gradient-to-r from-[#f5faff] to-transparent"></div>
+                        <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-24 bg-gradient-to-l from-[#f5faff] to-transparent"></div>
 
                         <motion.div
-                            className="flex gap-4 w-max"
+                            className="flex w-max gap-4"
                             animate={{ x: ['0%', '-50%'] }}
-                            transition={{ duration: 30, ease: 'linear', repeat: Infinity, repeatType: 'loop' }}
+                            transition={{
+                                duration: 30,
+                                ease: 'linear',
+                                repeat: Infinity,
+                                repeatType: 'loop',
+                            }}
                         >
-                            {[...instansiLogos, ...instansiLogos].map((logo, idx) => (
-                                <div
-                                    key={idx}
-                                    className="flex items-center gap-3 shrink-0 px-6 py-3 rounded-full border border-slate-100 bg-white shadow-[0_4px_20px_rgba(8,71,156,0.04)]"
-                                >
-                                    <div className="w-8 h-8 rounded-[8px] bg-[#f5faff] border border-[#cddcef]/40 flex items-center justify-center">
-                                        <Building2 className="w-4 h-4 text-[#106feb]" />
+                            {[...instansiLogos, ...instansiLogos].map(
+                                (logo, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="flex shrink-0 items-center gap-3 rounded-full border border-slate-100 bg-white px-6 py-3 shadow-[0_4px_20px_rgba(8,71,156,0.04)]"
+                                    >
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#cddcef]/40 bg-[#f5faff]">
+                                            <Building2 className="h-4 w-4 text-[#106feb]" />
+                                        </div>
+                                        <span className="text-[15px] font-medium whitespace-nowrap text-[#0a1628]/70">
+                                            {logo}
+                                        </span>
                                     </div>
-                                    <span className="text-[15px] font-medium text-[#0a1628]/70 whitespace-nowrap">{logo}</span>
-                                </div>
-                            ))}
+                                ),
+                            )}
                         </motion.div>
                     </div>
                 </section>
 
                 {/* 4. FITUR UNGGULAN (WEBILD BENTO GRID STYLE) */}
-                <section id="fitur" className="py-24 md:py-32 px-6 max-w-[1200px] mx-auto">
-
+                <section
+                    id="fitur"
+                    className="mx-auto max-w-[1200px] px-6 py-24 md:py-32"
+                >
                     {/* Section Header — judul gradien #0a1628 → #0b4fb0 */}
-                    <Reveal className="flex flex-col items-center text-center gap-3 mb-12 md:mb-16">
-                        <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-slate-100 bg-white w-fit text-[#0a1628]/70 shadow-sm">
+                    <Reveal className="mb-12 flex flex-col items-center gap-3 text-center md:mb-16">
+                        <div className="mb-1 w-fit rounded-full border border-slate-100 bg-white px-3 py-1 text-[14px] text-[#0a1628]/70 shadow-sm">
                             <p>Kenapa E-Magang?</p>
                         </div>
-                        <h2 className="text-[32px] md:text-[48px] font-bold tracking-tight leading-[1.15] max-w-2xl text-balance bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text pb-[0.1em] text-transparent">
+                        <h2 className="max-w-2xl bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text pb-[0.1em] text-[32px] leading-[1.15] font-bold tracking-tight text-balance text-transparent md:text-[48px]">
                             Kenapa E-Magang?
                         </h2>
-                        <p className="text-[16px] md:text-[18px] text-[#0a1628]/60 max-w-2xl leading-relaxed text-balance mt-1">
-                            Kami merancang platform ini untuk menghilangkan kerumitan birokrasi manual, mempercepat persetujuan, dan memberikan transparansi penuh.
+                        <p className="mt-1 max-w-2xl text-[16px] leading-relaxed text-balance text-[#0a1628]/60 md:text-[18px]">
+                            Kami merancang platform ini untuk menghilangkan
+                            kerumitan birokrasi manual, mempercepat persetujuan,
+                            dan memberikan transparansi penuh.
                         </p>
                     </Reveal>
 
@@ -965,24 +1455,30 @@ export default function Welcome() {
                         viewport={{ once: true, margin: '-80px' }}
                         className="flex flex-col gap-5 md:gap-6"
                     >
-
                         {/* Baris Atas — 2 kolom (stack jadi 1 kolom di mobile) */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6">
                             {/* Kartu 1 — Validasi Real-time */}
                             <motion.div
                                 variants={bentoItem}
                                 whileHover={{ y: -12 }}
-                                transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-                                className="group h-full flex flex-col gap-4 p-8 md:p-10 border border-slate-100 bg-white rounded-3xl shadow-sm transition-shadow duration-300 hover:shadow-2xl"
+                                transition={{
+                                    type: 'spring',
+                                    stiffness: 300,
+                                    damping: 22,
+                                }}
+                                className="group flex h-full flex-col gap-4 rounded-3xl border border-slate-100 bg-white p-8 shadow-sm transition-shadow duration-300 hover:shadow-2xl md:p-10"
                             >
-                                <div className="w-14 h-14 rounded-2xl bg-[#0b4fb0]/8 border border-[#0b4fb0]/15 flex items-center justify-center mb-2 transition-colors duration-300 group-hover:bg-[#0b4fb0]/12">
-                                    <Clock className="w-7 h-7 text-[#0b4fb0]" />
+                                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#0b4fb0]/15 bg-[#0b4fb0]/8 transition-colors duration-300 group-hover:bg-[#0b4fb0]/12">
+                                    <Clock className="h-7 w-7 text-[#0b4fb0]" />
                                 </div>
-                                <h3 className="text-[22px] font-bold leading-snug text-[#0a1628]">
+                                <h3 className="text-[22px] leading-snug font-bold text-[#0a1628]">
                                     Validasi Real-time
                                 </h3>
                                 <p className="text-[16px] leading-relaxed text-[#0a1628]/60">
-                                    Pantau status pengajuan Anda secara langsung. Sistem akan memberi notifikasi begitu berkas Anda disetujui oleh verifikator dan OPD terkait.
+                                    Pantau status pengajuan Anda secara
+                                    langsung. Sistem akan memberi notifikasi
+                                    begitu berkas Anda disetujui oleh
+                                    verifikator dan OPD terkait.
                                 </p>
                             </motion.div>
 
@@ -990,17 +1486,24 @@ export default function Welcome() {
                             <motion.div
                                 variants={bentoItem}
                                 whileHover={{ y: -12 }}
-                                transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-                                className="group h-full flex flex-col gap-4 p-8 md:p-10 border border-slate-100 bg-white rounded-3xl shadow-sm transition-shadow duration-300 hover:shadow-2xl"
+                                transition={{
+                                    type: 'spring',
+                                    stiffness: 300,
+                                    damping: 22,
+                                }}
+                                className="group flex h-full flex-col gap-4 rounded-3xl border border-slate-100 bg-white p-8 shadow-sm transition-shadow duration-300 hover:shadow-2xl md:p-10"
                             >
-                                <div className="w-14 h-14 rounded-2xl bg-[#0b4fb0]/8 border border-[#0b4fb0]/15 flex items-center justify-center mb-2 transition-colors duration-300 group-hover:bg-[#0b4fb0]/12">
-                                    <Shield className="w-7 h-7 text-[#0b4fb0]" />
+                                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#0b4fb0]/15 bg-[#0b4fb0]/8 transition-colors duration-300 group-hover:bg-[#0b4fb0]/12">
+                                    <Shield className="h-7 w-7 text-[#0b4fb0]" />
                                 </div>
-                                <h3 className="text-[22px] font-bold leading-snug text-[#0a1628]">
+                                <h3 className="text-[22px] leading-snug font-bold text-[#0a1628]">
                                     Akses Dasbor Aman (Tanpa Sandi)
                                 </h3>
                                 <p className="text-[16px] leading-relaxed text-[#0a1628]/60">
-                                    Lupakan rutinitas mereset kata sandi. Gunakan sistem OTP (One Time Password) via Email/WA untuk login yang instan dan terenkripsi.
+                                    Lupakan rutinitas mereset kata sandi.
+                                    Gunakan sistem OTP (One Time Password) via
+                                    Email/WA untuk login yang instan dan
+                                    terenkripsi.
                                 </p>
                             </motion.div>
                         </div>
@@ -1009,82 +1512,105 @@ export default function Welcome() {
                         <motion.div
                             variants={bentoItem}
                             whileHover={{ y: -12 }}
-                            transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-                            className="group relative overflow-hidden flex flex-col md:flex-row md:items-center gap-8 md:gap-10 p-8 md:p-12 border border-slate-100 bg-white rounded-3xl shadow-sm transition-shadow duration-300 hover:shadow-2xl"
+                            transition={{
+                                type: 'spring',
+                                stiffness: 300,
+                                damping: 22,
+                            }}
+                            className="group relative flex flex-col gap-8 overflow-hidden rounded-3xl border border-slate-100 bg-white p-8 shadow-sm transition-shadow duration-300 hover:shadow-2xl md:flex-row md:items-center md:gap-10 md:p-12"
                         >
                             {/* Konten teks */}
                             <div className="flex flex-col gap-4 md:flex-1">
-                                <div className="w-14 h-14 rounded-2xl bg-[#0b4fb0]/8 border border-[#0b4fb0]/15 flex items-center justify-center mb-2 transition-colors duration-300 group-hover:bg-[#0b4fb0]/12">
-                                    <Award className="w-7 h-7 text-[#0b4fb0]" />
+                                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#0b4fb0]/15 bg-[#0b4fb0]/8 transition-colors duration-300 group-hover:bg-[#0b4fb0]/12">
+                                    <Award className="h-7 w-7 text-[#0b4fb0]" />
                                 </div>
-                                <h3 className="text-[24px] md:text-[28px] font-bold leading-snug text-[#0a1628]">
+                                <h3 className="text-[24px] leading-snug font-bold text-[#0a1628] md:text-[28px]">
                                     E-Sertifikat Resmi Ber-TTE
                                 </h3>
-                                <p className="text-[16px] md:text-[17px] leading-relaxed text-[#0a1628]/60 max-w-2xl">
-                                    Begitu masa magang selesai dan laporan disetujui, e-Sertifikat resmi dengan Tanda Tangan Elektronik (TTE) dari Diskominfo akan diterbitkan langsung ke dasbor Anda, siap digunakan untuk portofolio karir.
+                                <p className="max-w-2xl text-[16px] leading-relaxed text-[#0a1628]/60 md:text-[17px]">
+                                    Begitu masa magang selesai dan laporan
+                                    disetujui, e-Sertifikat resmi dengan Tanda
+                                    Tangan Elektronik (TTE) dari Diskominfo akan
+                                    diterbitkan langsung ke dasbor Anda, siap
+                                    digunakan untuk portofolio karir.
                                 </p>
                             </div>
 
                             {/* Visual — ilustrasi kartu sertifikat ber-TTE */}
                             <div className="relative shrink-0 md:w-[320px]">
                                 {/* Blob biru lembut di belakang ilustrasi */}
-                                <div aria-hidden className="absolute -inset-6 -z-10 rounded-[3rem] bg-[#0b4fb0]/10 blur-2xl" />
+                                <div
+                                    aria-hidden
+                                    className="absolute -inset-6 -z-10 rounded-[3rem] bg-[#0b4fb0]/10 blur-2xl"
+                                />
                                 <div className="relative rounded-3xl border border-slate-100 bg-gradient-to-br from-[#f5faff] to-white p-6 shadow-lg transition-transform duration-500 group-hover:-rotate-2">
                                     {/* Header sertifikat */}
-                                    <div className="flex items-center justify-between mb-5">
+                                    <div className="mb-5 flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-9 h-9 rounded-xl bg-[#0b4fb0] flex items-center justify-center">
-                                                <Building2 className="w-5 h-5 text-white" />
+                                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0b4fb0]">
+                                                <Building2 className="h-5 w-5 text-white" />
                                             </div>
-                                            <span className="text-[12px] font-semibold text-[#0a1628]/70 leading-tight">Diskominfo<br />Kota Madiun</span>
+                                            <span className="text-[12px] leading-tight font-semibold text-[#0a1628]/70">
+                                                Diskominfo
+                                                <br />
+                                                Kota Madiun
+                                            </span>
                                         </div>
-                                        <ShieldCheck className="w-7 h-7 text-[#0b4fb0]" />
+                                        <ShieldCheck className="h-7 w-7 text-[#0b4fb0]" />
                                     </div>
                                     {/* Garis-garis konten sertifikat */}
-                                    <div className="space-y-2.5 mb-6">
+                                    <div className="mb-6 space-y-2.5">
                                         <div className="h-2.5 w-3/4 rounded-full bg-[#0b4fb0]/15" />
                                         <div className="h-2.5 w-full rounded-full bg-slate-100" />
                                         <div className="h-2.5 w-5/6 rounded-full bg-slate-100" />
                                     </div>
                                     {/* Footer: badge TTE terverifikasi */}
                                     <div className="flex items-center gap-2 rounded-2xl border border-[#0b4fb0]/15 bg-[#0b4fb0]/8 px-3 py-2">
-                                        <CheckCircle2 className="w-5 h-5 text-[#0b4fb0] shrink-0" />
-                                        <span className="text-[13px] font-semibold text-[#0b4fb0]">Tertanda Elektronik (TTE) — Terverifikasi</span>
+                                        <CheckCircle2 className="h-5 w-5 shrink-0 text-[#0b4fb0]" />
+                                        <span className="text-[13px] font-semibold text-[#0b4fb0]">
+                                            Tertanda Elektronik (TTE) —
+                                            Terverifikasi
+                                        </span>
                                     </div>
                                 </div>
                             </div>
                         </motion.div>
-
                     </motion.div>
                 </section>
 
                 {/* 4.5. DAFTAR INSTANSI / OPD SECTION (WEBILD STYLE) */}
-                <section id="instansi" className="py-24 md:py-32 px-6 relative z-10 bg-white border-t border-slate-100">
-                    <div className="max-w-[1200px] mx-auto">
-
+                <section
+                    id="instansi"
+                    className="relative z-10 border-t border-slate-100 bg-white px-6 py-24 md:py-32"
+                >
+                    <div className="mx-auto max-w-[1200px]">
                         {/* Section Header */}
-                        <Reveal className="flex flex-col items-center text-center gap-2 mb-12">
-                            <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-slate-100 bg-[#f5faff] w-fit text-[#0a1628]/70 shadow-sm">
+                        <Reveal className="mb-12 flex flex-col items-center gap-2 text-center">
+                            <div className="mb-1 w-fit rounded-full border border-slate-100 bg-[#f5faff] px-3 py-1 text-[14px] text-[#0a1628]/70 shadow-sm">
                                 <p>Direktori Instansi</p>
                             </div>
-                            <h2 className="text-[32px] md:text-[42px] font-extrabold tracking-tight leading-[1.15] mb-4 bg-gradient-to-r from-[#0a1628] via-[#106feb] to-[#cddcef] bg-clip-text text-transparent">
+                            <h2 className="mb-4 bg-gradient-to-r from-[#0a1628] via-[#106feb] to-[#cddcef] bg-clip-text text-[32px] leading-[1.15] font-extrabold tracking-tight text-transparent md:text-[42px]">
                                 Temukan Tempat Magangmu
                             </h2>
-                            <p className="text-[16px] md:text-[18px] text-[#0a1628]/60 max-w-2xl mx-auto leading-relaxed">
-                                Pilih dari 35 instansi Pemerintah Kota Madiun. Ketik nama dinas atau badan pada kolom pencarian di bawah.
+                            <p className="mx-auto max-w-2xl text-[16px] leading-relaxed text-[#0a1628]/60 md:text-[18px]">
+                                Pilih dari 35 instansi Pemerintah Kota Madiun.
+                                Ketik nama dinas atau badan pada kolom pencarian
+                                di bawah.
                             </p>
                         </Reveal>
 
                         {/* Search Bar (Pill — modern, ikon kiri, ring fokus #0b4fb0) */}
-                        <div className="flex justify-center mb-12">
-                            <div className="relative w-full max-w-2xl group">
-                                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[#0a1628]/40 w-5 h-5 group-focus-within:text-[#0b4fb0] transition-colors pointer-events-none" />
+                        <div className="mb-12 flex justify-center">
+                            <div className="group relative w-full max-w-2xl">
+                                <Search className="pointer-events-none absolute top-1/2 left-5 h-5 w-5 -translate-y-1/2 text-[#0a1628]/40 transition-colors group-focus-within:text-[#0b4fb0]" />
                                 <input
                                     type="text"
                                     value={searchOpd}
                                     placeholder="Cari dinas, badan, atau bidang kompetensi..."
-                                    className="w-full bg-white border border-slate-200 rounded-full py-4 pl-14 pr-6 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all shadow-sm"
-                                    onChange={(e) => setSearchOpd(e.target.value)}
+                                    className="w-full rounded-full border border-slate-200 bg-white py-4 pr-6 pl-14 text-[15px] text-[#0a1628] shadow-sm transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                    onChange={(e) =>
+                                        setSearchOpd(e.target.value)
+                                    }
                                 />
                             </div>
                         </div>
@@ -1098,7 +1624,7 @@ export default function Welcome() {
                                 initial="hidden"
                                 whileInView="show"
                                 viewport={{ once: true, margin: '-40px' }}
-                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
+                                className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:grid-cols-3"
                             >
                                 <AnimatePresence mode="popLayout">
                                     {filteredOPD.map((opd) => (
@@ -1108,39 +1634,60 @@ export default function Welcome() {
                                             variants={staggerItem}
                                             initial="hidden"
                                             animate="show"
-                                            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                                            exit={{
+                                                opacity: 0,
+                                                scale: 0.9,
+                                                transition: { duration: 0.2 },
+                                            }}
                                             whileHover={{ y: -8 }}
-                                            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-                                            className="group relative flex flex-col h-full overflow-hidden rounded-3xl border border-slate-100 bg-white p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-500 hover:border-[#0b4fb0]/20 hover:shadow-[0_30px_70px_-20px_rgba(20,99,208,0.35)] cursor-default"
+                                            transition={{
+                                                type: 'spring',
+                                                stiffness: 300,
+                                                damping: 24,
+                                            }}
+                                            className="group relative flex h-full cursor-default flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)] transition-all duration-500 hover:border-[#0b4fb0]/20 hover:shadow-[0_30px_70px_-20px_rgba(20,99,208,0.35)]"
                                         >
                                             {/* Aura glow — muncul lembut saat hover */}
-                                            <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-gradient-to-br from-[#0b4fb0]/25 to-[#cddcef]/10 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100" />
+                                            <div
+                                                aria-hidden
+                                                className="pointer-events-none absolute -top-16 -right-16 h-44 w-44 rounded-full bg-gradient-to-br from-[#0b4fb0]/25 to-[#cddcef]/10 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
+                                            />
 
                                             {/* Garis aksen atas — "menggambar" dari kiri saat hover */}
-                                            <div aria-hidden className="absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 bg-gradient-to-r from-[#106feb] via-[#0b4fb0] to-[#cddcef] transition-transform duration-500 ease-out group-hover:scale-x-100" />
+                                            <div
+                                                aria-hidden
+                                                className="absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 bg-gradient-to-r from-[#106feb] via-[#0b4fb0] to-[#cddcef] transition-transform duration-500 ease-out group-hover:scale-x-100"
+                                            />
 
                                             {/* Watermark ikon instansi */}
-                                            <Building2 aria-hidden className="pointer-events-none absolute -bottom-7 -right-5 h-32 w-32 text-[#0b4fb0]/[0.04] transition-all duration-500 group-hover:scale-110 group-hover:text-[#0b4fb0]/[0.07]" />
+                                            <Building2
+                                                aria-hidden
+                                                className="pointer-events-none absolute -right-5 -bottom-7 h-32 w-32 text-[#0b4fb0]/[0.04] transition-all duration-500 group-hover:scale-110 group-hover:text-[#0b4fb0]/[0.07]"
+                                            />
 
                                             {/* Header kartu: ikon + nama instansi */}
                                             <div className="relative flex items-start gap-4">
                                                 <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-slate-100 bg-gradient-to-br from-[#f5faff] to-[#e7f0fc] shadow-sm transition-all duration-500 group-hover:border-transparent group-hover:from-[#106feb] group-hover:to-[#0b4fb0] group-hover:shadow-[0_10px_24px_-8px_rgba(20,99,208,0.6)]">
                                                     <Building2 className="h-6 w-6 text-[#0b4fb0] transition-colors duration-500 group-hover:text-white" />
                                                 </div>
-                                                <h3 className="mt-1 text-[15px] font-semibold leading-[1.5] text-[#0a1628] transition-colors duration-300 group-hover:text-[#0b4fb0]">
+                                                <h3 className="mt-1 text-[15px] leading-[1.5] font-semibold text-[#0a1628] transition-colors duration-300 group-hover:text-[#0b4fb0]">
                                                     {opd.name}
                                                 </h3>
                                             </div>
 
                                             {/* Ketersediaan kuota magang */}
                                             {(() => {
-                                                const sisa = Math.max(0, opd.quota - opd.quotaUsed);
+                                                const sisa = Math.max(
+                                                    0,
+                                                    opd.quota - opd.quotaUsed,
+                                                );
                                                 const penuh = sisa === 0;
 
                                                 return (
                                                     <div className="relative mt-5 flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-[#f5faff] px-4 py-2.5">
                                                         <span className="flex items-center gap-1.5 text-[12px] font-medium text-[#0a1628]/60">
-                                                            <Users className="h-3.5 w-3.5 text-[#0b4fb0]" /> Kuota Magang
+                                                            <Users className="h-3.5 w-3.5 text-[#0b4fb0]" />{' '}
+                                                            Kuota Magang
                                                         </span>
                                                         <span
                                                             className={
@@ -1149,8 +1696,13 @@ export default function Welcome() {
                                                                     : 'rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600'
                                                             }
                                                         >
-                                                            {penuh ? 'Penuh' : `${sisa} tersisa`}
-                                                            <span className="font-normal text-[#0a1628]/40"> / {opd.quota}</span>
+                                                            {penuh
+                                                                ? 'Penuh'
+                                                                : `${sisa} tersisa`}
+                                                            <span className="font-normal text-[#0a1628]/40">
+                                                                {' '}
+                                                                / {opd.quota}
+                                                            </span>
                                                         </span>
                                                     </div>
                                                 );
@@ -1161,7 +1713,7 @@ export default function Welcome() {
                                                 {opd.tags.map((tag) => (
                                                     <span
                                                         key={tag}
-                                                        className="rounded-full border border-[#0b4fb0]/10 bg-[#f5faff] px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-[#106feb] transition-colors duration-300 group-hover:border-[#0b4fb0]/20 group-hover:bg-[#e7f0fc]"
+                                                        className="rounded-full border border-[#0b4fb0]/10 bg-[#f5faff] px-3 py-1 text-[10px] font-bold tracking-wide text-[#106feb] uppercase transition-colors duration-300 group-hover:border-[#0b4fb0]/20 group-hover:bg-[#e7f0fc]"
                                                     >
                                                         {tag}
                                                     </span>
@@ -1176,43 +1728,51 @@ export default function Welcome() {
                             <motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="text-center py-12 bg-[#f5faff] border border-dashed border-slate-200 rounded-3xl"
+                                className="rounded-3xl border border-dashed border-slate-200 bg-[#f5faff] py-12 text-center"
                             >
-                                <p className="text-[15px] text-[#0a1628]/60">Instansi "{searchOpd}" tidak ditemukan. Coba kata kunci lain.</p>
+                                <p className="text-[15px] text-[#0a1628]/60">
+                                    Instansi "{searchOpd}" tidak ditemukan. Coba
+                                    kata kunci lain.
+                                </p>
                             </motion.div>
                         )}
-
                     </div>
                 </section>
 
-
-
                 {/* 5. ALUR PENDAFTARAN (TIMELINE) */}
-                <section id="alur" className="py-24 md:py-32 border-t border-slate-100 bg-white">
-                    <div className="max-w-[1200px] mx-auto px-6">
-
+                <section
+                    id="alur"
+                    className="border-t border-slate-100 bg-white py-24 md:py-32"
+                >
+                    <div className="mx-auto max-w-[1200px] px-6">
                         {/* Section Header */}
-                        <Reveal className="flex flex-col items-center text-center gap-2 mb-16">
-                            <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-slate-100 bg-[#f5faff] w-fit text-[#0a1628]/70 shadow-sm">
+                        <Reveal className="mb-16 flex flex-col items-center gap-2 text-center">
+                            <div className="mb-1 w-fit rounded-full border border-slate-100 bg-[#f5faff] px-3 py-1 text-[14px] text-[#0a1628]/70 shadow-sm">
                                 <p>Cara Kerja</p>
                             </div>
-                            <h2 className="text-[32px] md:text-[42px] font-extrabold tracking-tight leading-[1.15] max-w-2xl bg-gradient-to-r from-[#0a1628] via-[#106feb] to-[#cddcef] bg-clip-text text-transparent">
+                            <h2 className="max-w-2xl bg-gradient-to-r from-[#0a1628] via-[#106feb] to-[#cddcef] bg-clip-text text-[32px] leading-[1.15] font-extrabold tracking-tight text-transparent md:text-[42px]">
                                 4 Langkah Menuju Penempatan
                             </h2>
                         </Reveal>
 
                         {/* Wrapper relatif — menampung garis penghubung "Draw Line" di belakang kartu */}
                         <div className="relative">
-
                             {/* Garis Penghubung Antar Langkah (Desktop) — animasi Draw Line dari kiri ke kanan.
                                 Garis dotted biru muda; tertutup kartu putih & hanya tampak di sela antar langkah. */}
                             <motion.div
                                 initial={{ scaleX: 0 }}
                                 whileInView={{ scaleX: 1 }}
                                 viewport={{ once: true, margin: '-80px' }}
-                                transition={{ duration: 1.2, ease: 'easeInOut', delay: 0.2 }}
-                                style={{ backgroundImage: 'repeating-linear-gradient(to right, #cddcef 0 8px, transparent 8px 18px)' }}
-                                className="hidden lg:block absolute top-[88px] left-[12%] right-[12%] h-[2px] origin-left pointer-events-none"
+                                transition={{
+                                    duration: 1.2,
+                                    ease: 'easeInOut',
+                                    delay: 0.2,
+                                }}
+                                style={{
+                                    backgroundImage:
+                                        'repeating-linear-gradient(to right, #cddcef 0 8px, transparent 8px 18px)',
+                                }}
+                                className="pointer-events-none absolute top-[88px] right-[12%] left-[12%] hidden h-[2px] origin-left lg:block"
                             />
 
                             {/* Grid 4 Kolom untuk Alur (stagger kiri → kanan saat scroll) */}
@@ -1221,54 +1781,122 @@ export default function Welcome() {
                                 initial="hidden"
                                 whileInView="show"
                                 viewport={{ once: true, margin: '-80px' }}
-                                className="relative grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+                                className="relative grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4"
                             >
-
                                 {[
-                                    { num: "01", title: "Isi Formulir & Unggah Dokumen", icon: FileText, desc: <>Isi formulir pendaftaran dan unggah dokumen wajib seperti <strong className="font-semibold text-[#0a1628]">Surat Pengantar</strong> dari Sekolah/Kampus serta <strong className="font-semibold text-[#0a1628]">CV/Portofolio</strong> terbaru.</> },
-                                    { num: "02", title: "Proses Verifikasi", icon: SearchCheck, desc: <>Berkas Anda akan diverifikasi secara teliti oleh tim internal dalam waktu <strong className="font-semibold text-[#0a1628]">maksimal 3x24 jam kerja</strong>.</> },
-                                    { num: "03", title: "Login OTP Dasbor", icon: Key, desc: <>Akses dasbor personal Anda menggunakan <strong className="font-bold text-[#0b4fb0]">OTP</strong> via Email/WA tanpa kata sandi untuk mengunduh surat persetujuan.</> },
-                                    { num: "04", title: "E-Sertifikat & Evaluasi", icon: Award, desc: <>Unggah laporan tugas akhir Anda dan isi survei layanan untuk mendapatkan <strong className="font-bold text-[#0b4fb0]">E-Sertifikat</strong> kelulusan resmi.</> },
+                                    {
+                                        num: '01',
+                                        title: 'Isi Formulir & Unggah Dokumen',
+                                        icon: FileText,
+                                        desc: (
+                                            <>
+                                                Isi formulir pendaftaran dan
+                                                unggah dokumen wajib seperti{' '}
+                                                <strong className="font-semibold text-[#0a1628]">
+                                                    Surat Pengantar
+                                                </strong>{' '}
+                                                dari Sekolah/Kampus serta{' '}
+                                                <strong className="font-semibold text-[#0a1628]">
+                                                    CV/Portofolio
+                                                </strong>{' '}
+                                                terbaru.
+                                            </>
+                                        ),
+                                    },
+                                    {
+                                        num: '02',
+                                        title: 'Proses Verifikasi',
+                                        icon: SearchCheck,
+                                        desc: (
+                                            <>
+                                                Berkas Anda akan diverifikasi
+                                                secara teliti oleh tim internal
+                                                dalam waktu{' '}
+                                                <strong className="font-semibold text-[#0a1628]">
+                                                    maksimal 3x24 jam kerja
+                                                </strong>
+                                                .
+                                            </>
+                                        ),
+                                    },
+                                    {
+                                        num: '03',
+                                        title: 'Login OTP Dasbor',
+                                        icon: Key,
+                                        desc: (
+                                            <>
+                                                Akses dasbor personal Anda
+                                                menggunakan{' '}
+                                                <strong className="font-bold text-[#0b4fb0]">
+                                                    OTP
+                                                </strong>{' '}
+                                                via Email/WA tanpa kata sandi
+                                                untuk mengunduh surat
+                                                persetujuan.
+                                            </>
+                                        ),
+                                    },
+                                    {
+                                        num: '04',
+                                        title: 'E-Sertifikat & Evaluasi',
+                                        icon: Award,
+                                        desc: (
+                                            <>
+                                                Unggah laporan tugas akhir Anda
+                                                dan isi survei layanan untuk
+                                                mendapatkan{' '}
+                                                <strong className="font-bold text-[#0b4fb0]">
+                                                    E-Sertifikat
+                                                </strong>{' '}
+                                                kelulusan resmi.
+                                            </>
+                                        ),
+                                    },
                                 ].map((step) => (
                                     <motion.div
                                         key={step.num}
                                         variants={staggerItem}
                                         whileHover={{ scale: 1.05 }}
-                                        transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-                                        className="group relative flex flex-col h-full bg-white border border-slate-100 rounded-3xl p-8 shadow-sm overflow-hidden"
+                                        transition={{
+                                            type: 'spring',
+                                            stiffness: 300,
+                                            damping: 22,
+                                        }}
+                                        className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white p-8 shadow-sm"
                                     >
                                         {/* Angka besar latar belakang (Inter Bold, biru muda transparan) */}
-                                        <span className="absolute -top-2 right-5 text-[88px] font-extrabold leading-none tracking-tighter text-[#0b4fb0]/10 select-none pointer-events-none">
+                                        <span className="pointer-events-none absolute -top-2 right-5 text-[88px] leading-none font-extrabold tracking-tighter text-[#0b4fb0]/10 select-none">
                                             {step.num}
                                         </span>
 
                                         {/* Ikon Langkah — abu-abu, berubah biru cerah saat hover */}
-                                        <div className="relative w-14 h-14 rounded-2xl bg-[#f5faff] border border-slate-100 flex items-center justify-center mb-6 text-[#0a1628]/40 group-hover:text-[#0b4fb0] group-hover:border-[#0b4fb0]/20 transition-colors duration-300">
-                                            <step.icon className="w-7 h-7" />
+                                        <div className="relative mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-[#f5faff] text-[#0a1628]/40 transition-colors duration-300 group-hover:border-[#0b4fb0]/20 group-hover:text-[#0b4fb0]">
+                                            <step.icon className="h-7 w-7" />
                                         </div>
 
-                                        <h3 className="relative text-[18px] font-bold text-[#0a1628] mb-3">{step.title}</h3>
-                                        <p className="relative text-[15px] text-[#0a1628]/60 leading-relaxed">
+                                        <h3 className="relative mb-3 text-[18px] font-bold text-[#0a1628]">
+                                            {step.title}
+                                        </h3>
+                                        <p className="relative text-[15px] leading-relaxed text-[#0a1628]/60">
                                             {step.desc}
                                         </p>
                                     </motion.div>
                                 ))}
-
                             </motion.div>
                         </div>
 
                         {/* Tombol Unduh Panduan — center, sliding animation (overlay putih
                             menggeser menutupi background biru; badge ikon membalik kontras). */}
-                        <Reveal className="flex justify-center mt-16">
+                        <Reveal className="mt-16 flex justify-center">
                             <a
                                 href="#"
                                 download
-                                className="group relative inline-flex items-center justify-between gap-3 overflow-hidden rounded-full bg-[#106feb] py-2 pl-7 pr-2 shadow-lg shadow-[#106feb]/25 transition-shadow duration-300 hover:shadow-xl hover:shadow-[#106feb]/35"
+                                className="group relative inline-flex items-center justify-between gap-3 overflow-hidden rounded-full bg-[#106feb] py-2 pr-2 pl-7 shadow-lg shadow-[#106feb]/25 transition-shadow duration-300 hover:shadow-xl hover:shadow-[#106feb]/35"
                             >
                                 {/* LAPIS — overlay putih geser dari kanan → kiri */}
                                 <span
                                     aria-hidden
-                                    className="absolute inset-0 z-0 bg-white translate-x-full transition-transform duration-500 ease-out group-hover:translate-x-0"
+                                    className="absolute inset-0 z-0 translate-x-full bg-white transition-transform duration-500 ease-out group-hover:translate-x-0"
                                 />
                                 <span className="relative z-10 text-[15px] font-semibold text-white transition-colors duration-500 ease-out group-hover:text-[#106feb]">
                                     Unduh Panduan Lengkap
@@ -1283,48 +1911,61 @@ export default function Welcome() {
                 </section>
 
                 {/* 5.5. FAQ SECTION (WEBILD STYLE) */}
-                <section id="faq" className="py-24 md:py-32 px-6 bg-[#f5faff]">
-                    <div className="max-w-[1200px] mx-auto">
-                        <Reveal className="flex flex-col items-center text-center gap-2 mb-16">
-                            <div className="px-3 py-1 mb-1 text-[14px] rounded-full border border-slate-100 bg-white w-fit text-[#0a1628]/70 shadow-sm">
+                <section id="faq" className="bg-[#f5faff] px-6 py-24 md:py-32">
+                    <div className="mx-auto max-w-[1200px]">
+                        <Reveal className="mb-16 flex flex-col items-center gap-2 text-center">
+                            <div className="mb-1 w-fit rounded-full border border-slate-100 bg-white px-3 py-1 text-[14px] text-[#0a1628]/70 shadow-sm">
                                 <p>Bantuan & FAQ</p>
                             </div>
-                            <h2 className="text-[32px] md:text-[42px] font-extrabold tracking-tight bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text text-transparent">
+                            <h2 className="bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text text-[32px] font-extrabold tracking-tight text-transparent md:text-[42px]">
                                 Pertanyaan Umum
                             </h2>
                         </Reveal>
 
-                        <div className="flex flex-col gap-4 max-w-3xl mx-auto">
-                            {[
-                                { q: "Apa itu E-Magang Kota Madiun?", a: "Platform digital resmi untuk mempermudah pendaftaran, verifikasi, dan pemantauan status magang siswa/mahasiswa di lingkungan instansi Pemerintah Kota Madiun." },
-                                { q: "Apakah pendaftaran dikenakan biaya?", a: "Tidak. Seluruh layanan di E-Magang Kota Madiun adalah gratis bagi seluruh pelajar dan mahasiswa." },
-                                { q: "Berapa lama proses verifikasi berkas?", a: "Biasanya memakan waktu 2-3 hari kerja. Anda akan mendapatkan notifikasi status melalui email atau WhatsApp yang terdaftar." },
-                                { q: "Berapa lama durasi magang yang diperbolehkan?", a: "Durasi magang fleksibel mulai dari 1 hingga 6 bulan, menyesuaikan dengan kurikulum atau kebutuhan dari instansi pendidikan Anda." },
-                                { q: "Apakah magang ini bisa dilakukan secara remote/WFH?", a: "Seluruh pelaksanaan magang mengikuti kebijakan operasional masing-masing OPD tujuan, namun mayoritas dilaksanakan secara WFO (On-Site) dengan jam kerja kantor pemerintah." },
-                                { q: "Bagaimana cara mendapatkan e-Sertifikat?", a: "Setelah selesai melaksanakan magang, pastikan Anda telah mengunggah laporan tugas akhir dan mengisi survei evaluasi di dasbor akun Anda." }
-                            ].map((item, index) => (
+                        <div className="mx-auto flex max-w-3xl flex-col gap-4">
+                            {faqList.map((item, index) => (
                                 <Reveal key={index} delay={index * 0.06}>
-                                    <div
-                                        className="bg-white border border-slate-100 rounded-2xl overflow-hidden shadow-[0_8px_30px_rgba(8,71,156,0.05)] hover:border-[#cddcef] transition-colors duration-300"
-                                    >
+                                    <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_8px_30px_rgba(8,71,156,0.05)] transition-colors duration-300 hover:border-[#cddcef]">
                                         <button
-                                            onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                                            className="w-full flex items-center justify-between p-6 text-left focus:outline-none"
+                                            onClick={() =>
+                                                setOpenFaq(
+                                                    openFaq === index
+                                                        ? null
+                                                        : index,
+                                                )
+                                            }
+                                            className="flex w-full items-center justify-between p-6 text-left focus:outline-none"
                                         >
-                                            <span className="text-[16px] font-bold text-[#0a1628]">{item.q}</span>
-                                            <ChevronDown className={`w-5 h-5 text-[#106feb] shrink-0 transition-transform duration-300 ${openFaq === index ? 'rotate-180' : ''}`} />
+                                            <span className="text-[16px] font-bold text-[#0a1628]">
+                                                {item.q}
+                                            </span>
+                                            <ChevronDown
+                                                className={`h-5 w-5 shrink-0 text-[#106feb] transition-transform duration-300 ${openFaq === index ? 'rotate-180' : ''}`}
+                                            />
                                         </button>
                                         {/* Micro-interaction: AnimatePresence untuk transisi halus accordion */}
                                         <AnimatePresence initial={false}>
                                             {openFaq === index && (
                                                 <motion.div
-                                                    initial={{ height: 0, opacity: 0 }}
-                                                    animate={{ height: 'auto', opacity: 1 }}
-                                                    exit={{ height: 0, opacity: 0 }}
-                                                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                                                    initial={{
+                                                        height: 0,
+                                                        opacity: 0,
+                                                    }}
+                                                    animate={{
+                                                        height: 'auto',
+                                                        opacity: 1,
+                                                    }}
+                                                    exit={{
+                                                        height: 0,
+                                                        opacity: 0,
+                                                    }}
+                                                    transition={{
+                                                        duration: 0.3,
+                                                        ease: 'easeInOut',
+                                                    }}
                                                     className="overflow-hidden border-t border-[#f5faff]"
                                                 >
-                                                    <p className="p-6 pt-4 text-[15px] text-[#0a1628]/60 leading-relaxed">
+                                                    <p className="p-6 pt-4 text-[15px] leading-relaxed text-[#0a1628]/60">
                                                         {item.a}
                                                     </p>
                                                 </motion.div>
@@ -1337,8 +1978,80 @@ export default function Welcome() {
                     </div>
                 </section>
 
+                {/* 5.75. TESTIMONIAL — dari survei kepuasan peserta yang telah selesai */}
+                {testimonials.length > 0 && (
+                    <section
+                        id="testimonial"
+                        className="border-t border-slate-100 bg-white px-6 py-24 md:py-32"
+                    >
+                        <div className="mx-auto max-w-[1200px]">
+                            <Reveal className="mb-16 flex flex-col items-center gap-2 text-center">
+                                <div className="mb-1 w-fit rounded-full border border-slate-100 bg-[#f5faff] px-3 py-1 text-[14px] text-[#0a1628]/70 shadow-sm">
+                                    <p>Testimoni Peserta</p>
+                                </div>
+                                <h2 className="bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text text-[32px] font-extrabold tracking-tight text-transparent md:text-[42px]">
+                                    Kata Mereka yang Telah Magang
+                                </h2>
+                                <p className="max-w-xl text-[15px] text-[#0a1628]/60">
+                                    Umpan balik jujur dari peserta setelah
+                                    menyelesaikan magang di lingkungan
+                                    Pemerintah Kota Madiun.
+                                </p>
+                            </Reveal>
+
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                                {testimonials.map((t, index) => (
+                                    <Reveal key={t.id} delay={index * 0.06}>
+                                        <figure className="flex h-full flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgba(8,71,156,0.05)] transition-colors duration-300 hover:border-[#cddcef]">
+                                            <div className="flex items-center justify-between">
+                                                <div
+                                                    className="flex gap-0.5"
+                                                    aria-label={`Rating ${t.rating} dari 5`}
+                                                >
+                                                    {Array.from({
+                                                        length: 5,
+                                                    }).map((_, i) => (
+                                                        <Star
+                                                            key={i}
+                                                            className={`h-4 w-4 ${i < t.rating ? 'fill-amber-400 text-amber-400' : 'fill-slate-200 text-slate-200'}`}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <Quote className="h-6 w-6 text-[#cddcef]" />
+                                            </div>
+                                            <blockquote className="flex-1 text-[15px] leading-relaxed text-[#0a1628]/70">
+                                                “{t.comment}”
+                                            </blockquote>
+                                            <figcaption className="flex items-center gap-3 border-t border-slate-100 pt-2">
+                                                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#106feb]/10 text-sm font-bold text-[#106feb]">
+                                                    {t.name
+                                                        .charAt(0)
+                                                        .toUpperCase()}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm font-bold text-[#0a1628]">
+                                                        {t.name}
+                                                    </p>
+                                                    {t.institution && (
+                                                        <p className="truncate text-xs text-[#0a1628]/50">
+                                                            {t.institution}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </figcaption>
+                                        </figure>
+                                    </Reveal>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                )}
+
                 {/* 6. KONTAK & FORM PENDAFTARAN */}
-                <section id="daftar" className="py-24 md:py-32 px-6 bg-white border-t border-slate-100">
+                <section
+                    id="daftar"
+                    className="border-t border-slate-100 bg-white px-6 py-24 md:py-32"
+                >
                     {/* Banner penutup — sudut sangat membulat, background biru muda fresh,
                         padding lega, fade-in saat masuk viewport. */}
                     <motion.div
@@ -1346,332 +2059,550 @@ export default function Welcome() {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true, margin: '-80px' }}
                         transition={{ duration: 0.8, ease: 'circOut' }}
-                        className="max-w-[1200px] mx-auto rounded-[3rem] bg-gradient-to-br from-[#f5faff] via-[#f5faff] to-[#e7f0fc] border border-slate-100 shadow-sm md:shadow-[0_30px_80px_rgba(8,71,156,0.06)] py-16 md:py-20 px-6 md:px-12"
+                        className="mx-auto max-w-[1200px] rounded-[3rem] border border-slate-100 bg-gradient-to-br from-[#f5faff] via-[#f5faff] to-[#e7f0fc] px-6 py-16 shadow-sm md:px-12 md:py-20 md:shadow-[0_30px_80px_rgba(8,71,156,0.06)]"
                     >
-                    <div className="grid lg:grid-cols-12 gap-12 items-start">
-
-                        {/* --- SISI KIRI: INFORMASI KONTAK --- */}
-                        <Reveal className="lg:col-span-5 flex flex-col gap-8">
-                            <div>
-                                <div className="px-3 py-1 mb-4 text-[14px] rounded-full border border-slate-100 bg-white w-fit text-[#0a1628]/70 shadow-sm">
-                                    <p>Mulai Sekarang</p>
+                        <div className="grid items-start gap-12 lg:grid-cols-12">
+                            {/* --- SISI KIRI: INFORMASI KONTAK --- */}
+                            <Reveal className="flex flex-col gap-8 lg:col-span-5">
+                                <div>
+                                    <div className="mb-4 w-fit rounded-full border border-slate-100 bg-white px-3 py-1 text-[14px] text-[#0a1628]/70 shadow-sm">
+                                        <p>Mulai Sekarang</p>
+                                    </div>
+                                    <h2 className="mb-4 bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text text-[32px] leading-[1.15] font-extrabold tracking-tight text-balance text-transparent md:text-[42px]">
+                                        Siap Mendaftar?
+                                    </h2>
+                                    <p className="text-[16px] leading-relaxed text-balance text-[#0a1628]/60 md:text-[18px]">
+                                        Lengkapi formulir di samping. Sistem
+                                        terintegrasi kami akan membuatkan akun
+                                        dan mengirimkan berkas Anda ke meja
+                                        verifikasi.
+                                    </p>
                                 </div>
-                                <h2 className="text-[32px] md:text-[42px] font-extrabold tracking-tight leading-[1.15] mb-4 text-balance bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text text-transparent">
-                                    Siap Mendaftar?
-                                </h2>
-                                <p className="text-[16px] md:text-[18px] text-[#0a1628]/60 leading-relaxed text-balance">
-                                    Lengkapi formulir di samping. Sistem terintegrasi kami akan membuatkan akun dan mengirimkan berkas Anda ke meja verifikasi.
-                                </p>
-                            </div>
 
-                            <div className="flex flex-col gap-4">
-                                <motion.div
-                                    whileHover={{ y: -6, transition: { duration: 0.3 } }}
-                                    className="flex gap-4 items-start bg-white p-6 rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgba(8,71,156,0.05)] hover:shadow-[0_16px_40px_rgba(37,99,235,0.1)] transition-shadow"
-                                >
-                                    <MapPin className="w-6 h-6 text-[#106feb] shrink-0 mt-0.5" />
-                                    <div>
-                                        <h4 className="text-[16px] font-bold text-[#0a1628] mb-1">Alamat Kantor</h4>
-                                        <p className="text-[15px] text-[#0a1628]/60 leading-relaxed">Jl. Perintis Kemerdekaan No.32, Kota Madiun, Jawa Timur 63117</p>
-                                    </div>
-                                </motion.div>
-                                <motion.div
-                                    whileHover={{ y: -6, transition: { duration: 0.3 } }}
-                                    className="flex gap-4 items-center bg-white p-6 rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgba(8,71,156,0.05)] hover:shadow-[0_16px_40px_rgba(37,99,235,0.1)] transition-shadow"
-                                >
-                                    <Mail className="w-6 h-6 text-[#106feb] shrink-0" />
-                                    <div>
-                                        <h4 className="text-[16px] font-bold text-[#0a1628] mb-1">Email Layanan</h4>
-                                        <p className="text-[15px] text-[#0a1628]/60">kominfo@madiunkota.go.id</p>
-                                    </div>
-                                </motion.div>
-                                <motion.div
-                                    whileHover={{ y: -6, transition: { duration: 0.3 } }}
-                                    className="flex gap-4 items-center bg-white p-6 rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgba(8,71,156,0.05)] hover:shadow-[0_16px_40px_rgba(37,99,235,0.1)] transition-shadow"
-                                >
-                                    <Phone className="w-6 h-6 text-[#106feb] shrink-0" />
-                                    <div>
-                                        <h4 className="text-[16px] font-bold text-[#0a1628] mb-1">Telepon</h4>
-                                        <p className="text-[15px] text-[#0a1628]/60">(0351) 467327</p>
-                                    </div>
-                                </motion.div>
-                            </div>
-                        </Reveal>
-
-                        {/* --- SISI KANAN: FORMULIR PENGAJUAN --- */}
-                        <Reveal delay={0.1} className="lg:col-span-7">
-                            <div className="bg-white border border-slate-100 rounded-3xl p-6 md:p-10 shadow-[0_20px_60px_rgba(8,71,156,0.08)] relative overflow-hidden">
-                                {/* Efek Cahaya Halus di Pojok Kanan Form */}
-                                <div className="absolute -right-20 -top-20 w-[300px] h-[300px] bg-[#cddcef]/20 rounded-full blur-[80px] pointer-events-none"></div>
-
-                                <form onSubmit={(e) => e.preventDefault()} className="flex flex-col gap-6 relative z-10">
-
-                                    <div className="grid sm:grid-cols-2 gap-6">
-                                        {/* Input: NIS / NIM */}
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-[14px] font-semibold text-[#0a1628]">NIS / NIM</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Nomor Induk Siswa/Mahasiswa"
-                                                className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
-                                            />
-                                        </div>
-                                        {/* Input: Nama Lengkap */}
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-[14px] font-semibold text-[#0a1628]">Nama Lengkap</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Nama lengkap sesuai KTP/Kartu Pelajar"
-                                                className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid sm:grid-cols-2 gap-6">
-                                        {/* Input: Instansi Asal */}
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-[14px] font-semibold text-[#0a1628]">Asal Sekolah / Kampus</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Contoh: Universitas Brawijaya"
-                                                className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
-                                            />
-                                        </div>
-                                        {/* Input: Tujuan Bidang */}
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-[14px] font-semibold text-[#0a1628]">Tujuan Bidang OPD</label>
-                                            <select className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all appearance-none cursor-pointer">
-                                                <option value="">-- Pilih Instansi / Bidang --</option>
-                                                {/* Menggunakan daftar OPD resmi (35 instansi) */}
-                                                {daftarOPD.map((opd, idx) => (
-                                                    <option key={idx} value={idx + 1}>{opd.name}</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    {/* Input: Jurusan (opsional) */}
-                                    <div className="flex flex-col gap-2">
-                                        <label className="text-[14px] font-semibold text-[#0a1628]">
-                                            Jurusan <span className="font-normal text-[#0a1628]/40">(opsional)</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Contoh: Teknik Informatika / Multimedia"
-                                            className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
-                                        />
-                                    </div>
-
-                                    {/* Input: Keahlian / Keterampilan */}
-                                    <div className="flex flex-col gap-2">
-                                        <label className="text-[14px] font-semibold text-[#0a1628]">Keahlian / Keterampilan</label>
-                                        <textarea
-                                            rows={3}
-                                            placeholder="Sebutkan keahlian atau keterampilan yang dikuasai, mis. desain grafis, pemrograman web, analisis data…"
-                                            className="w-full resize-none bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
-                                        />
-                                        <p className="text-[12px] text-[#0a1628]/45">Membantu admin menempatkanmu di bidang yang sesuai.</p>
-                                    </div>
-
-                                    <div className="flex flex-col gap-2">
-                                        <label className="text-[14px] font-semibold text-[#0a1628]">Alamat Lengkap</label>
-                                        <textarea
-                                            rows={3}
-                                            placeholder="Alamat domisili lengkap beserta RT/RW, kelurahan, dan kecamatan"
-                                            className="w-full resize-none bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
-                                        />
-                                    </div>
-
-                                    <div className="grid sm:grid-cols-2 gap-6">
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-[14px] font-semibold text-[#0a1628]">Tanggal Mulai</label>
-                                            <DatePicker
-                                                value={tanggalMulai}
-                                                min={toISODate(new Date())}
-                                                placeholder="Pilih tanggal mulai"
-                                                onChange={(iso) => {
-                                                    setTanggalMulai(iso);
-
-                                                    // Reset tanggal selesai bila jadi lebih awal dari tanggal mulai baru.
-                                                    if (tanggalSelesai && tanggalSelesai < iso) {
-                                                        setTanggalSelesai('');
-                                                    }
-                                                }}
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-[14px] font-semibold text-[#0a1628]">Tanggal Selesai</label>
-                                            <DatePicker
-                                                value={tanggalSelesai}
-                                                min={tanggalMulai || toISODate(new Date())}
-                                                placeholder="Pilih tanggal selesai"
-                                                onChange={setTanggalSelesai}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid sm:grid-cols-2 gap-6">
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-[14px] font-semibold text-[#0a1628]">Nama Dosen / Guru Pembimbing</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Nama lengkap pembimbing berserta gelar"
-                                                className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-[14px] font-semibold text-[#0a1628]">Nama Penanggung Jawab</label>
-                                            <input
-                                                type="text"
-                                                placeholder="Nama orang tua / wali yang dapat dihubungi"
-                                                className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div className="grid sm:grid-cols-2 gap-6">
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-[14px] font-semibold text-[#0a1628]">Nomor WhatsApp</label>
-                                            <input
-                                                type="tel"
-                                                placeholder="Contoh: 081234567890"
-                                                className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
-                                            />
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-[14px] font-semibold text-[#0a1628]">Email Aktif</label>
-                                            <input
-                                                type="email"
-                                                placeholder="Gunakan email utama Anda"
-                                                className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3.5 text-[15px] text-[#0a1628] placeholder:text-[#0a1628]/40 focus:outline-none focus:ring-2 focus:ring-[#0b4fb0] focus:border-transparent transition-all"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Input: Pas Foto — dropzone dengan pratinjau thumbnail */}
-                                    <div className="flex flex-col gap-2">
-                                        <label className="text-[14px] font-semibold text-[#0a1628]">Pas Foto</label>
-                                        <label className="group flex cursor-pointer items-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-[#f5faff] px-4 py-4 transition-colors hover:border-[#0b4fb0] hover:bg-[#e7f0fc]">
-                                            <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">
-                                                {pasFotoPreview ? (
-                                                    <img src={pasFotoPreview} alt="Pratinjau pas foto" className="h-full w-full object-cover" />
-                                                ) : (
-                                                    <ImagePlus className="h-6 w-6 text-[#0b4fb0] transition-transform duration-300 group-hover:scale-110" />
-                                                )}
-                                            </span>
-                                            <span className="flex flex-col">
-                                                <span className="text-[14px] font-medium text-[#0a1628]">{pasFotoNama || 'Unggah Pas Foto Anda'}</span>
-                                                <span className="text-[12px] text-[#0a1628]/50">Format JPG/PNG, latar polos, maks. 2MB.</span>
-                                            </span>
-                                            <input
-                                                type="file"
-                                                accept="image/png,image/jpeg"
-                                                onChange={handlePasFoto}
-                                                className="hidden"
-                                            />
-                                        </label>
-                                    </div>
-
-                                    {/* --- SAAS LIGHT MODE SLIDER CAPTCHA --- */}
-                                    <div className="mt-6 pt-8 border-t border-[#e5e7eb]">
-                                        <label className="text-[14px] font-semibold text-[#0a1628] mb-3 block">Validasi Anti-Spam</label>
-
-                                        <div className="relative w-full h-[56px] bg-[#f5faff] border border-[#e5e7eb] rounded-full overflow-hidden flex items-center group shadow-inner">
-
-                                            {/* Background Pengisi */}
-                                            <div
-                                                className="absolute left-0 top-0 bottom-0 bg-[#106feb]/10 transition-all duration-75"
-                                                style={{ width: `${isCaptchaVerified ? 100 : sliderValue}%` }}
-                                            ></div>
-
-                                            {/* Teks Instruksi */}
-                                            <div className="absolute w-full text-center z-0 text-[15px] font-medium select-none pointer-events-none transition-colors">
-                                                {isCaptchaVerified ? (
-                                                    <span className="text-[#106feb] flex items-center justify-center gap-2">
-                                                        <CheckCircle2 className="w-5 h-5" /> Terverifikasi
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-[#0a1628]/40 group-hover:text-[#0a1628]/60">
-                                                        Geser untuk memverifikasi &gt;&gt;
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {/* Input Range Murni */}
-                                            <input
-                                                type="range"
-                                                min="0" max="100"
-                                                value={isCaptchaVerified ? 100 : sliderValue}
-                                                onChange={handleSliderChange}
-                                                disabled={isCaptchaVerified}
-                                                className={`absolute z-20 w-full h-full opacity-0 cursor-ew-resize ${isCaptchaVerified ? 'pointer-events-none' : ''}`}
-                                            />
-
-                                            {/* Gagang Slider (Pill) */}
-                                            <div
-                                                className={`absolute z-10 h-[44px] w-[70px] bg-white border border-[#e5e7eb] rounded-full flex items-center justify-center pointer-events-none transition-all duration-75 shadow-sm ${isCaptchaVerified ? 'border-[#106feb] bg-[#106feb]' : ''}`}
-                                                style={{ left: `calc(${isCaptchaVerified ? 100 : sliderValue}% - ${isCaptchaVerified ? 74 : (sliderValue * 0.74) + 6}px)` }}
-                                            >
-                                                {isCaptchaVerified ? (
-                                                    <CheckCircle2 className="w-6 h-6 text-white" />
-                                                ) : (
-                                                    <ArrowRight className="w-6 h-6 text-[#0a1628]/40" />
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Informasi Penting — nomor WhatsApp aktif untuk akun & OTP */}
-                                    <div className="flex items-start gap-3 mt-6 rounded-2xl bg-[#f5faff] border border-slate-200 px-4 py-3.5">
-                                        <Info className="w-5 h-5 text-[#0b4fb0] shrink-0 mt-0.5" />
-                                        <p className="text-[13px] text-[#0a1628]/60 leading-relaxed">
-                                            Pastikan alamat E-Mail yang Anda masukkan adalah E-Mail aktif, karena akun dasbor dan link OTP akan dikirimkan ke alamat tersebut.
-                                        </p>
-                                    </div>
-
-                                    {/* Tombol Submit — Sliding Animation (overlay #cddcef geser
-                                        dari kiri menutupi background biru #106feb). */}
-                                    <motion.button
-                                        type="submit"
-                                        disabled={!isCaptchaVerified}
-                                        whileTap={isCaptchaVerified ? { scale: 0.98 } : undefined}
-                                        className={`group relative w-full overflow-hidden rounded-full py-1.5 pl-7 pr-1.5 mt-2 flex items-center justify-between gap-3 transition-shadow duration-300 ${
-                                            isCaptchaVerified
-                                            ? "bg-[#106feb] shadow-lg shadow-[#106feb]/30 hover:shadow-xl hover:shadow-[#106feb]/40 cursor-pointer"
-                                            : "bg-[#e5e7eb] cursor-not-allowed"
-                                        }`}
+                                <div className="flex flex-col gap-4">
+                                    <motion.div
+                                        whileHover={{
+                                            y: -6,
+                                            transition: { duration: 0.3 },
+                                        }}
+                                        className="flex items-start gap-4 rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgba(8,71,156,0.05)] transition-shadow hover:shadow-[0_16px_40px_rgba(37,99,235,0.1)]"
                                     >
-                                        {/* Overlay #cddcef geser dari kiri (hanya saat captcha terverifikasi) */}
-                                        {isCaptchaVerified && (
-                                            <span
-                                                aria-hidden
-                                                className="absolute inset-0 z-0 bg-[#cddcef] -translate-x-[101%] transition-transform duration-500 ease-out group-hover:translate-x-0"
-                                            />
-                                        )}
-                                        <span className={`relative z-10 text-[16px] font-semibold transition-colors duration-500 ease-out ${isCaptchaVerified ? "text-white group-hover:text-[#0a1628]" : "text-[#0a1628]/40"}`}>
-                                            Kirim Berkas Pengajuan Magang
-                                        </span>
-                                        {/* Lingkaran ikon — membalik kontras saat overlay menutupi */}
-                                        <span className={`relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-500 ease-out ${isCaptchaVerified ? "bg-[#cddcef] text-[#106feb] group-hover:bg-[#106feb] group-hover:text-white" : "bg-white/60 text-[#0a1628]/30"}`}>
-                                            <Send className="size-5 transition-transform duration-500 ease-out group-hover:translate-x-0.5" />
-                                        </span>
-                                    </motion.button>
+                                        <MapPin className="mt-0.5 h-6 w-6 shrink-0 text-[#106feb]" />
+                                        <div>
+                                            <h4 className="mb-1 text-[16px] font-bold text-[#0a1628]">
+                                                Alamat Kantor
+                                            </h4>
+                                            <p className="text-[15px] leading-relaxed text-[#0a1628]/60">
+                                                Jl. Perintis Kemerdekaan No.32,
+                                                Kota Madiun, Jawa Timur 63117
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                    <motion.div
+                                        whileHover={{
+                                            y: -6,
+                                            transition: { duration: 0.3 },
+                                        }}
+                                        className="flex items-center gap-4 rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgba(8,71,156,0.05)] transition-shadow hover:shadow-[0_16px_40px_rgba(37,99,235,0.1)]"
+                                    >
+                                        <Mail className="h-6 w-6 shrink-0 text-[#106feb]" />
+                                        <div>
+                                            <h4 className="mb-1 text-[16px] font-bold text-[#0a1628]">
+                                                Email Layanan
+                                            </h4>
+                                            <p className="text-[15px] text-[#0a1628]/60">
+                                                kominfo@madiunkota.go.id
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                    <motion.div
+                                        whileHover={{
+                                            y: -6,
+                                            transition: { duration: 0.3 },
+                                        }}
+                                        className="flex items-center gap-4 rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgba(8,71,156,0.05)] transition-shadow hover:shadow-[0_16px_40px_rgba(37,99,235,0.1)]"
+                                    >
+                                        <Phone className="h-6 w-6 shrink-0 text-[#106feb]" />
+                                        <div>
+                                            <h4 className="mb-1 text-[16px] font-bold text-[#0a1628]">
+                                                Telepon
+                                            </h4>
+                                            <p className="text-[15px] text-[#0a1628]/60">
+                                                (0351) 467327
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                </div>
+                            </Reveal>
 
-                                </form>
-                            </div>
-                        </Reveal>
-                    </div>
+                            {/* --- SISI KANAN: FORMULIR PENGAJUAN --- */}
+                            <Reveal delay={0.1} className="lg:col-span-7">
+                                <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_20px_60px_rgba(8,71,156,0.08)] md:p-10">
+                                    {/* Efek Cahaya Halus di Pojok Kanan Form */}
+                                    <div className="pointer-events-none absolute -top-20 -right-20 h-[300px] w-[300px] rounded-full bg-[#cddcef]/20 blur-[80px]"></div>
+
+                                    <form
+                                        onSubmit={handleSubmitPengajuan}
+                                        className="relative z-10 flex flex-col gap-6"
+                                    >
+                                        <div className="grid gap-6 sm:grid-cols-2">
+                                            {/* Input: NIS / NIM */}
+                                            <div className="flex flex-col gap-2">
+                                                <label className="text-[14px] font-semibold text-[#0a1628]">
+                                                    NIS / NIM
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={data.nis}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'nis',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Nomor Induk Siswa/Mahasiswa"
+                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                                />
+                                            </div>
+                                            {/* Input: Nama Lengkap */}
+                                            <div className="flex flex-col gap-2">
+                                                <label className="text-[14px] font-semibold text-[#0a1628]">
+                                                    Nama Lengkap
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={data.name}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'name',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Nama lengkap sesuai KTP/Kartu Pelajar"
+                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid gap-6 sm:grid-cols-2">
+                                            {/* Input: Instansi Asal */}
+                                            <div className="flex flex-col gap-2">
+                                                <label className="text-[14px] font-semibold text-[#0a1628]">
+                                                    Asal Sekolah / Kampus
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={
+                                                        data.institution_name
+                                                    }
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'institution_name',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Contoh: Universitas Brawijaya"
+                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                                />
+                                            </div>
+                                            {/* Input: Tujuan Bidang */}
+                                            <div className="flex flex-col gap-2">
+                                                <label className="text-[14px] font-semibold text-[#0a1628]">
+                                                    Tujuan Bidang OPD
+                                                </label>
+                                                <select
+                                                    value={data.tujuan_magang}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'tujuan_magang',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    className="w-full cursor-pointer appearance-none rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                                >
+                                                    <option value="">
+                                                        -- Pilih Instansi /
+                                                        Bidang --
+                                                    </option>
+                                                    {/* OPD dari DB bila tersedia; fallback daftar statis. */}
+                                                    {(opds.length > 0
+                                                        ? opds.map(
+                                                              (o) => o.name,
+                                                          )
+                                                        : daftarOPD.map(
+                                                              (o) => o.name,
+                                                          )
+                                                    ).map((name, idx) => (
+                                                        <option
+                                                            key={idx}
+                                                            value={name}
+                                                        >
+                                                            {name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* Input: Jurusan (opsional) */}
+                                        <div className="flex flex-col gap-2">
+                                            <label className="text-[14px] font-semibold text-[#0a1628]">
+                                                Jurusan{' '}
+                                                <span className="font-normal text-[#0a1628]/40">
+                                                    (opsional)
+                                                </span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={data.major}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'major',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="Contoh: Teknik Informatika / Multimedia"
+                                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                            />
+                                        </div>
+
+                                        {/* Input: Keahlian / Keterampilan */}
+                                        <div className="flex flex-col gap-2">
+                                            <label className="text-[14px] font-semibold text-[#0a1628]">
+                                                Keahlian / Keterampilan
+                                            </label>
+                                            <textarea
+                                                rows={3}
+                                                value={data.skills}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'skills',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="Sebutkan keahlian atau keterampilan yang dikuasai, mis. desain grafis, pemrograman web, analisis data…"
+                                                className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                            />
+                                            <p className="text-[12px] text-[#0a1628]/45">
+                                                Membantu admin menempatkanmu di
+                                                bidang yang sesuai.
+                                            </p>
+                                        </div>
+
+                                        <div className="flex flex-col gap-2">
+                                            <label className="text-[14px] font-semibold text-[#0a1628]">
+                                                Alamat Lengkap
+                                            </label>
+                                            <textarea
+                                                rows={3}
+                                                value={data.address}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'address',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="Alamat domisili lengkap beserta RT/RW, kelurahan, dan kecamatan"
+                                                className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                            />
+                                        </div>
+
+                                        <div className="grid gap-6 sm:grid-cols-2">
+                                            <div className="flex flex-col gap-2">
+                                                <label className="text-[14px] font-semibold text-[#0a1628]">
+                                                    Tanggal Mulai
+                                                </label>
+                                                <DatePicker
+                                                    value={tanggalMulai}
+                                                    min={toISODate(new Date())}
+                                                    placeholder="Pilih tanggal mulai"
+                                                    onChange={(iso) => {
+                                                        setTanggalMulai(iso);
+                                                        setData(
+                                                            'start_date',
+                                                            iso,
+                                                        );
+
+                                                        // Reset tanggal selesai bila jadi lebih awal dari tanggal mulai baru.
+                                                        if (
+                                                            tanggalSelesai &&
+                                                            tanggalSelesai < iso
+                                                        ) {
+                                                            setTanggalSelesai(
+                                                                '',
+                                                            );
+                                                            setData(
+                                                                'end_date',
+                                                                '',
+                                                            );
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <label className="text-[14px] font-semibold text-[#0a1628]">
+                                                    Tanggal Selesai
+                                                </label>
+                                                <DatePicker
+                                                    value={tanggalSelesai}
+                                                    min={
+                                                        tanggalMulai ||
+                                                        toISODate(new Date())
+                                                    }
+                                                    placeholder="Pilih tanggal selesai"
+                                                    onChange={(iso) => {
+                                                        setTanggalSelesai(iso);
+                                                        setData(
+                                                            'end_date',
+                                                            iso,
+                                                        );
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid gap-6 sm:grid-cols-2">
+                                            <div className="flex flex-col gap-2">
+                                                <label className="text-[14px] font-semibold text-[#0a1628]">
+                                                    Nama Dosen / Guru Pembimbing
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={
+                                                        data.campus_supervisor
+                                                    }
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'campus_supervisor',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Nama lengkap pembimbing berserta gelar"
+                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                                />
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <label className="text-[14px] font-semibold text-[#0a1628]">
+                                                    Nama Penanggung Jawab
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={data.guardian_name}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'guardian_name',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Nama orang tua / wali yang dapat dihubungi"
+                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="grid gap-6 sm:grid-cols-2">
+                                            <div className="flex flex-col gap-2">
+                                                <label className="text-[14px] font-semibold text-[#0a1628]">
+                                                    Nomor WhatsApp
+                                                </label>
+                                                <input
+                                                    type="tel"
+                                                    value={data.whatsapp_number}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'whatsapp_number',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Contoh: 081234567890"
+                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                                />
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <label className="text-[14px] font-semibold text-[#0a1628]">
+                                                    Email Aktif
+                                                </label>
+                                                <input
+                                                    type="email"
+                                                    value={data.email}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'email',
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Gunakan email utama Anda"
+                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Input: Pas Foto — dropzone dengan pratinjau thumbnail */}
+                                        <div className="flex flex-col gap-2">
+                                            <label className="text-[14px] font-semibold text-[#0a1628]">
+                                                Pas Foto
+                                            </label>
+                                            <label className="group flex cursor-pointer items-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-[#f5faff] px-4 py-4 transition-colors hover:border-[#0b4fb0] hover:bg-[#e7f0fc]">
+                                                <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">
+                                                    {pasFotoPreview ? (
+                                                        <img
+                                                            src={pasFotoPreview}
+                                                            alt="Pratinjau pas foto"
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <ImagePlus className="h-6 w-6 text-[#0b4fb0] transition-transform duration-300 group-hover:scale-110" />
+                                                    )}
+                                                </span>
+                                                <span className="flex flex-col">
+                                                    <span className="text-[14px] font-medium text-[#0a1628]">
+                                                        {pasFotoNama ||
+                                                            'Unggah Pas Foto Anda'}
+                                                    </span>
+                                                    <span className="text-[12px] text-[#0a1628]/50">
+                                                        Format JPG/PNG, latar
+                                                        polos, maks. 2MB.
+                                                    </span>
+                                                </span>
+                                                <input
+                                                    type="file"
+                                                    accept="image/png,image/jpeg"
+                                                    onChange={handlePasFoto}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                        </div>
+
+                                        {/* --- reCAPTCHA v2 (checkbox) — gerbang anti-bot Fase 1 --- */}
+                                        <div className="mt-6 border-t border-[#e5e7eb] pt-8">
+                                            <label className="mb-3 block text-[14px] font-semibold text-[#0a1628]">
+                                                Validasi Anti-Spam
+                                            </label>
+
+                                            {recaptchaSiteKey ? (
+                                                <div
+                                                    ref={recaptchaRef}
+                                                    className="min-h-[78px]"
+                                                />
+                                            ) : (
+                                                <p className="text-[13px] text-amber-600">
+                                                    Kunci reCAPTCHA belum
+                                                    dikonfigurasi. Hubungi
+                                                    administrator.
+                                                </p>
+                                            )}
+
+                                            {errors.recaptcha_token && (
+                                                <p className="mt-2 text-[13px] text-rose-600">
+                                                    {errors.recaptcha_token}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* Ringkasan galat validasi lain (mis. email/durasi/tanggal). */}
+                                        {Object.keys(errors).filter(
+                                            (k) => k !== 'recaptcha_token',
+                                        ).length > 0 && (
+                                            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
+                                                <p className="text-[13px] font-semibold text-rose-700">
+                                                    Periksa kembali isian
+                                                    berikut:
+                                                </p>
+                                                <ul className="mt-1 list-disc pl-5 text-[13px] text-rose-600">
+                                                    {Object.entries(errors)
+                                                        .filter(
+                                                            ([k]) =>
+                                                                k !==
+                                                                'recaptcha_token',
+                                                        )
+                                                        .map(([k, msg]) => (
+                                                            <li key={k}>
+                                                                {msg}
+                                                            </li>
+                                                        ))}
+                                                </ul>
+                                            </div>
+                                        )}
+
+                                        {/* Informasi Penting — nomor WhatsApp aktif untuk akun & OTP */}
+                                        <div className="mt-6 flex items-start gap-3 rounded-2xl border border-slate-200 bg-[#f5faff] px-4 py-3.5">
+                                            <Info className="mt-0.5 h-5 w-5 shrink-0 text-[#0b4fb0]" />
+                                            <p className="text-[13px] leading-relaxed text-[#0a1628]/60">
+                                                Pastikan alamat E-Mail yang Anda
+                                                masukkan adalah E-Mail aktif,
+                                                karena akun dasbor dan link OTP
+                                                akan dikirimkan ke alamat
+                                                tersebut.
+                                            </p>
+                                        </div>
+
+                                        {/* Tombol Submit — Sliding Animation (overlay #cddcef geser
+                                        dari kiri menutupi background biru #106feb). */}
+                                        <motion.button
+                                            type="submit"
+                                            disabled={
+                                                !data.recaptcha_token ||
+                                                processing
+                                            }
+                                            whileTap={
+                                                data.recaptcha_token &&
+                                                !processing
+                                                    ? { scale: 0.98 }
+                                                    : undefined
+                                            }
+                                            className={`group relative mt-2 flex w-full items-center justify-between gap-3 overflow-hidden rounded-full py-1.5 pr-1.5 pl-7 transition-shadow duration-300 ${
+                                                data.recaptcha_token &&
+                                                !processing
+                                                    ? 'cursor-pointer bg-[#106feb] shadow-lg shadow-[#106feb]/30 hover:shadow-xl hover:shadow-[#106feb]/40'
+                                                    : 'cursor-not-allowed bg-[#e5e7eb]'
+                                            }`}
+                                        >
+                                            {/* Overlay #cddcef geser dari kiri (hanya saat captcha terverifikasi) */}
+                                            {data.recaptcha_token &&
+                                                !processing && (
+                                                    <span
+                                                        aria-hidden
+                                                        className="absolute inset-0 z-0 -translate-x-[101%] bg-[#cddcef] transition-transform duration-500 ease-out group-hover:translate-x-0"
+                                                    />
+                                                )}
+                                            <span
+                                                className={`relative z-10 text-[16px] font-semibold transition-colors duration-500 ease-out ${data.recaptcha_token && !processing ? 'text-white group-hover:text-[#0a1628]' : 'text-[#0a1628]/40'}`}
+                                            >
+                                                {processing
+                                                    ? 'Mengirim…'
+                                                    : 'Kirim Berkas Pengajuan Magang'}
+                                            </span>
+                                            {/* Lingkaran ikon — membalik kontras saat overlay menutupi */}
+                                            <span
+                                                className={`relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-500 ease-out ${data.recaptcha_token && !processing ? 'bg-[#cddcef] text-[#106feb] group-hover:bg-[#106feb] group-hover:text-white' : 'bg-white/60 text-[#0a1628]/30'}`}
+                                            >
+                                                <Send className="size-5 transition-transform duration-500 ease-out group-hover:translate-x-0.5" />
+                                            </span>
+                                        </motion.button>
+                                    </form>
+                                </div>
+                            </Reveal>
+                        </div>
                     </motion.div>
                 </section>
 
                 {/* 7. FOOTER */}
                 <footer className="relative overflow-hidden bg-[#020c1b] px-6 pt-20 pb-10 text-white">
                     {/* Aksen garis gradien di tepi atas */}
-                    <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#106feb]/60 to-transparent" />
+                    <div
+                        aria-hidden
+                        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#106feb]/60 to-transparent"
+                    />
                     {/* Glow lembut */}
-                    <div aria-hidden className="pointer-events-none absolute -top-24 left-1/2 h-[420px] w-[640px] max-w-[90vw] -translate-x-1/2 rounded-full bg-[#0b4fb0]/15 blur-[140px]" />
+                    <div
+                        aria-hidden
+                        className="pointer-events-none absolute -top-24 left-1/2 h-[420px] w-[640px] max-w-[90vw] -translate-x-1/2 rounded-full bg-[#0b4fb0]/15 blur-[140px]"
+                    />
                     {/* Watermark ikon besar */}
-                    <Building2 aria-hidden className="pointer-events-none absolute -bottom-12 -right-8 h-64 w-64 text-white/[0.025]" />
+                    <Building2
+                        aria-hidden
+                        className="pointer-events-none absolute -right-8 -bottom-12 h-64 w-64 text-white/[0.025]"
+                    />
 
                     <div className="relative mx-auto max-w-7xl">
                         <div className="grid grid-cols-1 gap-12 md:grid-cols-12">
@@ -1681,10 +2612,16 @@ export default function Welcome() {
                                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#106feb] to-[#0b4fb0] shadow-[0_10px_24px_-8px_rgba(20,99,208,0.7)]">
                                         <Layout className="h-5 w-5 text-white" />
                                     </div>
-                                    <span className="bg-gradient-to-r from-white via-white to-[#cddcef] bg-clip-text text-2xl font-extrabold tracking-tight text-transparent">E-Magang.</span>
+                                    <span className="bg-gradient-to-r from-white via-white to-[#cddcef] bg-clip-text text-2xl font-extrabold tracking-tight text-transparent">
+                                        E-Magang.
+                                    </span>
                                 </div>
                                 <p className="max-w-sm text-[15px] leading-relaxed text-white/55">
-                                    Portal resmi pendaftaran magang Pemerintah Kota Madiun. Satu pintu untuk menghubungkan pelajar dan mahasiswa dengan instansi pemerintah secara mudah, transparan, dan gratis.
+                                    Portal resmi pendaftaran magang Pemerintah
+                                    Kota Madiun. Satu pintu untuk menghubungkan
+                                    pelajar dan mahasiswa dengan instansi
+                                    pemerintah secara mudah, transparan, dan
+                                    gratis.
                                 </p>
                                 <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[13px] font-medium text-white/70">
                                     <ShieldCheck className="h-4 w-4 text-[#106feb]" />
@@ -1694,13 +2631,23 @@ export default function Welcome() {
 
                             {/* Kolom navigasi */}
                             <div className="md:col-span-3">
-                                <h4 className="mb-5 text-[13px] font-bold uppercase tracking-wider text-white/40">Navigasi</h4>
+                                <h4 className="mb-5 text-[13px] font-bold tracking-wider text-white/40 uppercase">
+                                    Navigasi
+                                </h4>
                                 <ul className="flex flex-col gap-3.5">
                                     {navLinks.map((link) => (
                                         <li key={link.href}>
-                                            <a href={link.href} className="group relative inline-flex items-center text-[15px] text-white/60 transition-colors hover:text-white">
-                                                <ArrowRight aria-hidden className="absolute left-0 h-3.5 w-3.5 -translate-x-1 text-[#106feb] opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100" />
-                                                <span className="transition-transform duration-300 group-hover:translate-x-5">{link.label}</span>
+                                            <a
+                                                href={link.href}
+                                                className="group relative inline-flex items-center text-[15px] text-white/60 transition-colors hover:text-white"
+                                            >
+                                                <ArrowRight
+                                                    aria-hidden
+                                                    className="absolute left-0 h-3.5 w-3.5 -translate-x-1 text-[#106feb] opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
+                                                />
+                                                <span className="transition-transform duration-300 group-hover:translate-x-5">
+                                                    {link.label}
+                                                </span>
                                             </a>
                                         </li>
                                     ))}
@@ -1709,20 +2656,31 @@ export default function Welcome() {
 
                             {/* Kolom kontak */}
                             <div className="md:col-span-4">
-                                <h4 className="mb-5 text-[13px] font-bold uppercase tracking-wider text-white/40">Hubungi Kami</h4>
+                                <h4 className="mb-5 text-[13px] font-bold tracking-wider text-white/40 uppercase">
+                                    Hubungi Kami
+                                </h4>
                                 <ul className="flex flex-col gap-4">
                                     <li className="flex items-start gap-3 text-[15px] text-white/60">
                                         <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[#106feb]" />
-                                        <span className="leading-relaxed">Jl. Perintis Kemerdekaan No.32, Kota Madiun, Jawa Timur 63117</span>
+                                        <span className="leading-relaxed">
+                                            Jl. Perintis Kemerdekaan No.32, Kota
+                                            Madiun, Jawa Timur 63117
+                                        </span>
                                     </li>
                                     <li>
-                                        <a href="mailto:kominfo@madiunkota.go.id" className="flex items-center gap-3 text-[15px] text-white/60 transition-colors hover:text-white">
+                                        <a
+                                            href="mailto:kominfo@madiunkota.go.id"
+                                            className="flex items-center gap-3 text-[15px] text-white/60 transition-colors hover:text-white"
+                                        >
                                             <Mail className="h-5 w-5 shrink-0 text-[#106feb]" />
                                             kominfo@madiunkota.go.id
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="tel:0351467327" className="flex items-center gap-3 text-[15px] text-white/60 transition-colors hover:text-white">
+                                        <a
+                                            href="tel:0351467327"
+                                            className="flex items-center gap-3 text-[15px] text-white/60 transition-colors hover:text-white"
+                                        >
                                             <Phone className="h-5 w-5 shrink-0 text-[#106feb]" />
                                             (0351) 467327
                                         </a>
@@ -1734,16 +2692,27 @@ export default function Welcome() {
                         {/* Garis pemisah + bottom bar */}
                         <div className="mt-16 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 sm:flex-row">
                             <p className="text-center text-[14px] text-white/45 sm:text-left">
-                                © {new Date().getFullYear()} Dinas Komunikasi dan Informatika Kota Madiun. Hak cipta dilindungi.
+                                © {new Date().getFullYear()} Dinas Komunikasi
+                                dan Informatika Kota Madiun. Hak cipta
+                                dilindungi.
                             </p>
                             <div className="flex items-center gap-6 text-[14px] text-white/45">
-                                <a href="#" className="transition-colors hover:text-white">Kebijakan Privasi</a>
-                                <a href="#" className="transition-colors hover:text-white">Syarat &amp; Ketentuan</a>
+                                <a
+                                    href="#"
+                                    className="transition-colors hover:text-white"
+                                >
+                                    Kebijakan Privasi
+                                </a>
+                                <a
+                                    href="#"
+                                    className="transition-colors hover:text-white"
+                                >
+                                    Syarat &amp; Ketentuan
+                                </a>
                             </div>
                         </div>
                     </div>
                 </footer>
-
             </div>
         </>
     );

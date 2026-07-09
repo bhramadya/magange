@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Enums\ApplicationStatus;
+use Database\Factories\InternshipApplicationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,14 +16,18 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $ticket_number
  * @property int $user_id
+ * @property string|null $nis
  * @property string $tujuan_magang
  * @property int $duration_months
  * @property Carbon $start_date
  * @property Carbon $end_date
  * @property string $institution_name
+ * @property string|null $address
  * @property string $campus_supervisor
+ * @property string|null $guardian_name
  * @property string|null $major
  * @property string|null $skills
+ * @property string|null $photo_path
  * @property ApplicationStatus $status
  * @property int|null $opd_id
  * @property string|null $division
@@ -40,14 +46,18 @@ use Illuminate\Support\Carbon;
 #[Fillable([
     'ticket_number',
     'user_id',
+    'nis',
     'tujuan_magang',
     'duration_months',
     'start_date',
     'end_date',
     'institution_name',
+    'address',
     'campus_supervisor',
+    'guardian_name',
     'major',
     'skills',
+    'photo_path',
     'status',
     'opd_id',
     'division',
@@ -63,6 +73,9 @@ use Illuminate\Support\Carbon;
 ])]
 class InternshipApplication extends Model
 {
+    /** @use HasFactory<InternshipApplicationFactory> */
+    use HasFactory;
+
     /**
      * @return array<string, string>
      */
@@ -155,5 +168,16 @@ class InternshipApplication extends Model
     public function survey(): HasOne
     {
         return $this->hasOne(SatisfactionSurvey::class, 'application_id');
+    }
+
+    /**
+     * Sertifikat magang (1:1). Tersedia setelah verifikator mengunggah &
+     * membuka kunci unduhan (is_download_locked = false).
+     *
+     * @return HasOne<Certificate, $this>
+     */
+    public function certificate(): HasOne
+    {
+        return $this->hasOne(Certificate::class, 'application_id');
     }
 }

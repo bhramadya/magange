@@ -19,24 +19,24 @@ return new class extends Migration
         Schema::create('internship_applications', function (Blueprint $table) {
             $table->id();
             $table->string('ticket_number', 30)
-                  ->unique()
-                  ->comment('Auto-gen: MGG-2025-0001');
+                ->unique()
+                ->comment('Auto-gen: MGG-2025-0001');
 
             // ── Pemohon ──────────────────────────────────────────────
             $table->foreignId('user_id')
-                  ->constrained('users')
-                  ->cascadeOnDelete();
+                ->constrained('users')
+                ->cascadeOnDelete();
 
             // ── Data pengajuan ────────────────────────────────────────
             $table->text('tujuan_magang')
-                  ->comment('Bidang/minat yg diinginkan mahasiswa');
+                ->comment('Bidang/minat yg diinginkan mahasiswa');
             $table->tinyInteger('duration_months')->unsigned();
             $table->date('start_date');
             $table->date('end_date');
             $table->string('institution_name')
-                  ->comment('Asal kampus / instansi');
+                ->comment('Asal kampus / instansi');
             $table->string('campus_supervisor')
-                  ->comment('Dosen pembimbing');
+                ->comment('Dosen pembimbing');
 
             // ── Status & alur ─────────────────────────────────────────
             $table->enum('status', [
@@ -51,34 +51,34 @@ return new class extends Migration
 
             // ── Data penempatan (diisi Admin Verifikator saat forward) ─
             $table->foreignId('opd_id')
-                  ->nullable()
-                  ->comment('Diisi Admin Verifikator saat forward')
-                  ->constrained('opds')
-                  ->nullOnDelete();
+                ->nullable()
+                ->comment('Diisi Admin Verifikator saat forward')
+                ->constrained('opds')
+                ->nullOnDelete();
             $table->string('division')
-                  ->nullable()
-                  ->comment('Bidang penempatan di OPD');
+                ->nullable()
+                ->comment('Bidang penempatan di OPD');
             $table->string('field_supervisor')
-                  ->nullable()
-                  ->comment('Pembimbing lapangan OPD');
+                ->nullable()
+                ->comment('Pembimbing lapangan OPD');
             $table->string('person_in_charge')
-                  ->nullable()
-                  ->comment('Penanggung jawab OPD');
+                ->nullable()
+                ->comment('Penanggung jawab OPD');
 
             // ── Aksi Admin Verifikator ────────────────────────────────
             $table->foreignId('forwarded_by')
-                  ->nullable()
-                  ->comment('Admin Verifikator yg memforward')
-                  ->constrained('users')
-                  ->nullOnDelete();
+                ->nullable()
+                ->comment('Admin Verifikator yg memforward')
+                ->constrained('users')
+                ->nullOnDelete();
             $table->timestamp('forwarded_at')->nullable();
 
             // ── Aksi Admin OPD ────────────────────────────────────────
             $table->foreignId('opd_decision_by')
-                  ->nullable()
-                  ->comment('Admin OPD yg ACC / Tolak')
-                  ->constrained('users')
-                  ->nullOnDelete();
+                ->nullable()
+                ->comment('Admin OPD yg ACC / Tolak')
+                ->constrained('users')
+                ->nullOnDelete();
             $table->timestamp('opd_decision_at')->nullable();
             $table->text('rejection_reason')->nullable();
 

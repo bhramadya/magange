@@ -22,7 +22,12 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import {
+    Sheet,
+    SheetContent,
+    SheetTitle,
+    SheetTrigger,
+} from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import type { MagangUser } from '@/types/magang';
 
@@ -43,29 +48,102 @@ export interface MagangNavItem {
 // Menu "Pengaturan" dihilangkan sepenuhnya (revisi mentor) agar tak rancu
 // mengubah data profil sendiri — berlaku untuk semua role.
 export const mahasiswaNav: MagangNavItem[] = [
-    { key: 'dashboard', title: 'Dasbor', href: '/dashboard', icon: LayoutDashboard },
-    { key: 'pengajuan', title: 'Pengajuan Saya', href: '/pengajuan', icon: FileText },
-    { key: 'penyelesaian', title: 'Penyelesaian', href: '/penyelesaian', icon: Award },
+    {
+        key: 'dashboard',
+        title: 'Dasbor',
+        href: '/dashboard',
+        icon: LayoutDashboard,
+    },
+    {
+        key: 'pengajuan',
+        title: 'Pengajuan Saya',
+        href: '/pengajuan',
+        icon: FileText,
+    },
+    {
+        key: 'penyelesaian',
+        title: 'Penyelesaian',
+        href: '/penyelesaian',
+        icon: Award,
+    },
     // `?role=` menandai peran saat pratinjau (belum ada auth) supaya halaman
     // Bantuan bersama menampilkan sidebar peran yang benar — lihat bantuan.tsx.
-    { key: 'bantuan', title: 'Bantuan', href: '/bantuan?role=mahasiswa', icon: HelpCircle },
+    {
+        key: 'bantuan',
+        title: 'Bantuan',
+        href: '/bantuan?role=mahasiswa',
+        icon: HelpCircle,
+    },
 ];
 
 // Navigasi untuk role Admin Verifikator. Menu "Pengaturan" dihilangkan (lihat
 // catatan di atas) — sama seperti mahasiswa & OPD.
 export const verifikatorNav: MagangNavItem[] = [
-    { key: 'dashboard', title: 'Dasbor', href: '/verifikator', icon: LayoutDashboard },
-    { key: 'masuk', title: 'Pengajuan Masuk', href: '/verifikator/masuk', icon: Inbox },
-    { key: 'riwayat', title: 'Riwayat', href: '/verifikator/riwayat', icon: History },
-    { key: 'bantuan', title: 'Bantuan', href: '/bantuan?role=admin_verifikator', icon: HelpCircle },
+    {
+        key: 'dashboard',
+        title: 'Dasbor',
+        href: '/verifikator',
+        icon: LayoutDashboard,
+    },
+    {
+        key: 'masuk',
+        title: 'Pengajuan Masuk',
+        href: '/verifikator/masuk',
+        icon: Inbox,
+    },
+    {
+        key: 'laporan',
+        title: 'Laporan',
+        href: '/verifikator/laporan',
+        icon: FileText,
+    },
+    {
+        key: 'riwayat',
+        title: 'Riwayat',
+        href: '/verifikator/riwayat',
+        icon: History,
+    },
+    {
+        key: 'kuota',
+        title: 'Kelola Kuota OPD',
+        href: '/verifikator/kuota',
+        icon: Users,
+    },
+    {
+        key: 'faq',
+        title: 'Kelola FAQ',
+        href: '/verifikator/faq',
+        icon: HelpCircle,
+    },
+    {
+        key: 'bantuan',
+        title: 'Bantuan',
+        href: '/bantuan?role=admin_verifikator',
+        icon: HelpCircle,
+    },
 ];
 
 // Navigasi untuk role Admin OPD. Tanpa "Pengaturan" (lihat catatan di atas).
 export const opdNav: MagangNavItem[] = [
     { key: 'dashboard', title: 'Dasbor', href: '/opd', icon: LayoutDashboard },
-    { key: 'keputusan', title: 'Perlu Keputusan', href: '/opd/keputusan', icon: ClipboardCheck },
-    { key: 'peserta', title: 'Peserta Aktif', href: '/opd/peserta', icon: Users },
-    { key: 'bantuan', title: 'Bantuan', href: '/bantuan?role=admin_opd', icon: HelpCircle },
+    {
+        key: 'keputusan',
+        title: 'Perlu Keputusan',
+        href: '/opd/keputusan',
+        icon: ClipboardCheck,
+    },
+    {
+        key: 'peserta',
+        title: 'Peserta Aktif',
+        href: '/opd/peserta',
+        icon: Users,
+    },
+    {
+        key: 'bantuan',
+        title: 'Bantuan',
+        href: '/bantuan?role=admin_opd',
+        icon: HelpCircle,
+    },
 ];
 
 const ROLE_LABEL: Record<MagangUser['role'], string> = {
@@ -90,7 +168,9 @@ function Brand() {
             </div>
             <div className="leading-tight">
                 <p className="text-sm font-bold text-[#0a1628]">E-Magang</p>
-                <p className="text-[11px] font-medium text-slate-500">Kota Madiun</p>
+                <p className="text-[11px] font-medium text-slate-500">
+                    Kota Madiun
+                </p>
             </div>
         </Link>
     );
@@ -123,7 +203,14 @@ function NavList({
                                 : 'text-slate-600 hover:bg-[#cddcef]/40 hover:text-[#0a1628]',
                         )}
                     >
-                        <Icon className={cn('size-[18px]', isActive ? 'text-white' : 'text-slate-400 group-hover:text-[#106feb]')} />
+                        <Icon
+                            className={cn(
+                                'size-[18px]',
+                                isActive
+                                    ? 'text-white'
+                                    : 'text-slate-400 group-hover:text-[#106feb]',
+                            )}
+                        />
                         {item.title}
                     </Link>
                 );
@@ -165,9 +252,12 @@ export default function MagangLayout({
                     <div className="mb-3 flex size-10 items-center justify-center rounded-2xl bg-[#106feb] text-white">
                         <Award className="size-5" />
                     </div>
-                    <p className="mb-1 text-sm font-bold text-[#0a1628]">Butuh Bantuan?</p>
+                    <p className="mb-1 text-sm font-bold text-[#0a1628]">
+                        Butuh Bantuan?
+                    </p>
                     <p className="mb-4 text-xs leading-relaxed text-slate-600">
-                        Hubungi admin jika ada kendala atau pertanyaan seputar magang.
+                        Hubungi admin jika ada kendala atau pertanyaan seputar
+                        magang.
                     </p>
                     <Link
                         href={bantuanHref}
@@ -191,16 +281,27 @@ export default function MagangLayout({
                             >
                                 <Menu className="size-5" />
                             </SheetTrigger>
-                            <SheetContent side="left" className="w-72 bg-white p-6">
-                                <SheetTitle className="sr-only">Menu Navigasi</SheetTitle>
+                            <SheetContent
+                                side="left"
+                                className="w-72 bg-white p-6"
+                            >
+                                <SheetTitle className="sr-only">
+                                    Menu Navigasi
+                                </SheetTitle>
                                 <Brand />
                                 <div className="mt-8">
-                                    <NavList items={navItems} active={active} onNavigate={() => setMobileOpen(false)} />
+                                    <NavList
+                                        items={navItems}
+                                        active={active}
+                                        onNavigate={() => setMobileOpen(false)}
+                                    />
                                 </div>
                             </SheetContent>
                         </Sheet>
 
-                        <h1 className="text-base font-bold text-[#0a1628] sm:text-lg">{title}</h1>
+                        <h1 className="text-base font-bold text-[#0a1628] sm:text-lg">
+                            {title}
+                        </h1>
 
                         <div className="ml-auto flex items-center gap-1 sm:gap-2">
                             <DropdownMenu>
@@ -209,31 +310,52 @@ export default function MagangLayout({
                                         {initials(user.name)}
                                     </span>
                                     <span className="hidden text-left leading-tight sm:block">
-                                        <span className="block text-sm font-semibold text-[#0a1628]">{user.name}</span>
-                                        <span className="block text-[11px] text-slate-500">{ROLE_LABEL[user.role]}</span>
+                                        <span className="block text-sm font-semibold text-[#0a1628]">
+                                            {user.name}
+                                        </span>
+                                        <span className="block text-[11px] text-slate-500">
+                                            {ROLE_LABEL[user.role]}
+                                        </span>
                                     </span>
                                     <ChevronDown className="hidden size-4 text-slate-400 sm:block" />
                                 </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56">
-                                <DropdownMenuLabel>
-                                    <p className="text-sm font-semibold text-[#0a1628]">{user.name}</p>
-                                    <p className="text-xs font-normal text-slate-500">{user.email}</p>
-                                </DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                {/* Menu "Pengaturan" dihilangkan sepenuhnya (revisi mentor) untuk semua role. */}
-                                <DropdownMenuItem asChild variant="destructive">
-                                    <Link href="/logout" method="post" as="button" className="w-full cursor-pointer">
-                                        <LogOut className="size-4" />
-                                        Keluar
-                                    </Link>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                                <DropdownMenuContent
+                                    align="end"
+                                    className="w-56"
+                                >
+                                    <DropdownMenuLabel>
+                                        <p className="text-sm font-semibold text-[#0a1628]">
+                                            {user.name}
+                                        </p>
+                                        <p className="text-xs font-normal text-slate-500">
+                                            {user.email}
+                                        </p>
+                                    </DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    {/* Menu "Pengaturan" dihilangkan sepenuhnya (revisi mentor) untuk semua role. */}
+                                    <DropdownMenuItem
+                                        asChild
+                                        variant="destructive"
+                                    >
+                                        <Link
+                                            href="/logout"
+                                            method="post"
+                                            as="button"
+                                            className="w-full cursor-pointer"
+                                        >
+                                            <LogOut className="size-4" />
+                                            Keluar
+                                        </Link>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
-                </div>
-            </header>
+                </header>
 
-                <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:py-8">{children}</main>
+                <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:py-8">
+                    {children}
+                </main>
             </div>
         </div>
     );

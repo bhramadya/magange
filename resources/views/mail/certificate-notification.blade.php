@@ -1,5 +1,5 @@
 <x-mail::message>
-# E-Magang Kota Madiun
+@include('mail.partials.header', ['badge' => 'Sertifikat Terbit', 'badgeBg' => '#dcfce7', 'badgeText' => '#15803d'])
 
 Halo {{ $certificate->application->user->name }},
 

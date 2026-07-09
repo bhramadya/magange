@@ -17,7 +17,11 @@ import {
 import { motion } from 'motion/react';
 import { StatusBadge } from '@/components/status-badge';
 import MagangLayout from '@/layouts/magang-layout';
-import type { InternshipApplication, MagangUser } from '@/types/magang';
+import type {
+    ApplicationStatus,
+    InternshipApplication,
+    MagangUser,
+} from '@/types/magang';
 import { STATUS_META } from '@/types/magang';
 
 /* =========================================================================
@@ -51,7 +55,11 @@ const MOCK_APPLICATION: InternshipApplication = {
     institution_name: 'Universitas Negeri Madiun',
     campus_supervisor: 'Dr. Indah Permatasari, M.Kom.',
     status: 'ongoing',
-    opd: { id: 16, name: 'DINAS KOMUNIKASI DAN INFORMATIKA', code: 'DISKOMINFO' },
+    opd: {
+        id: 16,
+        name: 'DINAS KOMUNIKASI DAN INFORMATIKA',
+        code: 'DISKOMINFO',
+    },
     division: 'Bidang Pengembangan Aplikasi',
     field_supervisor: 'Bayu Pratama, S.Kom.',
     person_in_charge: 'Bayu Pratama, S.Kom.',
@@ -67,18 +75,46 @@ const MOCK_APPLICATION: InternshipApplication = {
 /* ---------------------------------- util ---------------------------------- */
 
 function formatDate(iso: string): string {
-    return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(iso));
+    return new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+    }).format(new Date(iso));
 }
 
 /* --------------------------------- timeline -------------------------------- */
 
 const TIMELINE_STEPS = [
-    { title: 'Pengajuan Terkirim', desc: 'Berkas pendaftaran diterima sistem.', icon: Send },
-    { title: 'Verifikasi Admin', desc: 'Admin Verifikator memeriksa kelengkapan.', icon: ClipboardCheck },
-    { title: 'Persetujuan OPD', desc: 'OPD tujuan menyetujui penempatan.', icon: Building2 },
-    { title: 'Pelaksanaan Magang', desc: 'Periode magang sedang berjalan.', icon: GraduationCap },
-    { title: 'Laporan & Survei', desc: 'Unggah laporan akhir dan isi survei.', icon: FileText },
-    { title: 'Selesai — e-Sertifikat', desc: 'Sertifikat siap diunduh.', icon: CheckCircle2 },
+    {
+        title: 'Pengajuan Terkirim',
+        desc: 'Berkas pendaftaran diterima sistem.',
+        icon: Send,
+    },
+    {
+        title: 'Verifikasi Admin',
+        desc: 'Admin Verifikator memeriksa kelengkapan.',
+        icon: ClipboardCheck,
+    },
+    {
+        title: 'Persetujuan OPD',
+        desc: 'OPD tujuan menyetujui penempatan.',
+        icon: Building2,
+    },
+    {
+        title: 'Pelaksanaan Magang',
+        desc: 'Periode magang sedang berjalan.',
+        icon: GraduationCap,
+    },
+    {
+        title: 'Laporan & Survei',
+        desc: 'Unggah laporan akhir dan isi survei.',
+        icon: FileText,
+    },
+    {
+        title: 'Selesai — e-Sertifikat',
+        desc: 'Sertifikat siap diunduh.',
+        icon: CheckCircle2,
+    },
 ];
 
 // Indeks tahap aktif per status.
@@ -117,22 +153,32 @@ function StatusTimeline({ status }: { status: ApplicationStatus }) {
                                           : 'bg-slate-100 text-slate-400'
                                 }`}
                             >
-                                <Icon className={`size-[18px] ${active ? 'animate-spin' : ''}`} />
+                                <Icon
+                                    className={`size-[18px] ${active ? 'animate-spin' : ''}`}
+                                />
                             </span>
                             {!isLast && (
-                                <span className={`mt-1 w-0.5 flex-1 ${done ? 'bg-emerald-400' : 'bg-slate-200'}`} />
+                                <span
+                                    className={`mt-1 w-0.5 flex-1 ${done ? 'bg-emerald-400' : 'bg-slate-200'}`}
+                                />
                             )}
                         </div>
 
                         <div className="pt-1">
                             <p
                                 className={`text-sm font-semibold ${
-                                    done ? 'text-emerald-700' : active ? 'text-[#12213e]' : 'text-slate-400'
+                                    done
+                                        ? 'text-emerald-700'
+                                        : active
+                                          ? 'text-[#12213e]'
+                                          : 'text-slate-400'
                                 }`}
                             >
                                 {step.title}
                             </p>
-                            <p className="mt-0.5 text-xs text-slate-500">{step.desc}</p>
+                            <p className="mt-0.5 text-xs text-slate-500">
+                                {step.desc}
+                            </p>
                             {active && (
                                 <span className="mt-1.5 inline-block text-[11px] font-medium text-[#106feb]">
                                     Sedang berlangsung
@@ -163,7 +209,9 @@ function StatCard({
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <div
                 className={`flex size-10 items-center justify-center rounded-xl ${
-                    accent ? 'bg-[#106feb] text-white' : 'bg-[#cddcef]/40 text-[#106feb]'
+                    accent
+                        ? 'bg-[#106feb] text-white'
+                        : 'bg-[#cddcef]/40 text-[#106feb]'
                 }`}
             >
                 <Icon className="size-5" />
@@ -180,7 +228,11 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
     return (
         <div>
             <dt className="text-xs font-medium text-slate-500">{label}</dt>
-            <dd className="mt-0.5 text-sm font-semibold text-[#12213e]">{value ?? <span className="text-slate-400">— belum ditentukan</span>}</dd>
+            <dd className="mt-0.5 text-sm font-semibold text-[#12213e]">
+                {value ?? (
+                    <span className="text-slate-400">— belum ditentukan</span>
+                )}
+            </dd>
         </div>
     );
 }
@@ -196,7 +248,8 @@ function ActionPanel({ application }: { application: InternshipApplication }) {
                     <p className="text-sm font-bold">Pengajuan Ditolak</p>
                 </div>
                 <p className="mt-2 text-sm text-rose-700/90">
-                    {application.rejection_reason ?? 'Mohon maaf, pengajuan Anda belum dapat disetujui.'}
+                    {application.rejection_reason ??
+                        'Mohon maaf, pengajuan Anda belum dapat disetujui.'}
                 </p>
                 <Link
                     href="/#daftar"
@@ -208,7 +261,10 @@ function ActionPanel({ application }: { application: InternshipApplication }) {
         );
     }
 
-    if (application.status === 'ongoing' || application.status === 'completion_submitted') {
+    if (
+        application.status === 'ongoing' ||
+        application.status === 'completion_submitted'
+    ) {
         const submitted = application.status === 'completion_submitted';
 
         return (
@@ -223,7 +279,10 @@ function ActionPanel({ application }: { application: InternshipApplication }) {
                     href="/penyelesaian"
                     className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#106feb] hover:bg-white/90"
                 >
-                    <Upload className="size-4" /> {submitted ? 'Lihat Status Laporan' : 'Unggah Laporan Akhir'}
+                    <Upload className="size-4" />{' '}
+                    {submitted
+                        ? 'Lihat Status Laporan'
+                        : 'Unggah Laporan Akhir'}
                 </Link>
             </div>
         );
@@ -237,7 +296,8 @@ function ActionPanel({ application }: { application: InternshipApplication }) {
                     <p className="text-sm font-bold">Magang Selesai</p>
                 </div>
                 <p className="mt-2 text-sm text-emerald-700/90">
-                    Selamat! Anda telah menyelesaikan magang. e-Sertifikat Anda siap diunduh.
+                    Selamat! Anda telah menyelesaikan magang. e-Sertifikat Anda
+                    siap diunduh.
                 </p>
                 <Link
                     href="/penyelesaian"
@@ -254,10 +314,13 @@ function ActionPanel({ application }: { application: InternshipApplication }) {
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <div className="flex items-center gap-2 text-[#106feb]">
                 <Clock className="size-5" />
-                <p className="text-sm font-bold text-[#12213e]">Sedang Diproses</p>
+                <p className="text-sm font-bold text-[#12213e]">
+                    Sedang Diproses
+                </p>
             </div>
             <p className="mt-2 text-sm text-slate-500">
-                Pengajuan Anda sedang ditinjau. Status akan diperbarui dan notifikasi dikirim via email/WhatsApp.
+                Pengajuan Anda sedang ditinjau. Status akan diperbarui dan
+                notifikasi dikirim via email/WhatsApp.
             </p>
         </div>
     );
@@ -271,9 +334,12 @@ function EmptyState() {
             <div className="flex size-14 items-center justify-center rounded-2xl bg-[#cddcef]/40 text-[#106feb]">
                 <FileText className="size-7" />
             </div>
-            <h2 className="mt-4 text-lg font-bold text-[#12213e]">Belum ada pengajuan magang</h2>
+            <h2 className="mt-4 text-lg font-bold text-[#12213e]">
+                Belum ada pengajuan magang
+            </h2>
             <p className="mt-1 max-w-sm text-sm text-slate-500">
-                Anda belum mengajukan permohonan magang. Mulai sekarang dan pantau seluruh prosesnya dari dasbor ini.
+                Anda belum mengajukan permohonan magang. Mulai sekarang dan
+                pantau seluruh prosesnya dari dasbor ini.
             </p>
             <Link
                 href="/#daftar"
@@ -285,7 +351,10 @@ function EmptyState() {
     );
 }
 
-export default function MahasiswaDashboard({ user = MOCK_USER, application = MOCK_APPLICATION }: DashboardProps) {
+export default function MahasiswaDashboard({
+    user = MOCK_USER,
+    application = MOCK_APPLICATION,
+}: DashboardProps) {
     return (
         <MagangLayout user={user} title="Dasbor" active="dashboard">
             <Head title="Dasbor" />
@@ -293,13 +362,20 @@ export default function MahasiswaDashboard({ user = MOCK_USER, application = MOC
             {/* Sambutan */}
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="text-sm text-slate-500">Selamat datang kembali,</p>
-                    <h2 className="text-2xl font-black text-[#12213e]">{user.name} 👋</h2>
+                    <p className="text-sm text-slate-500">
+                        Selamat datang kembali,
+                    </p>
+                    <h2 className="text-2xl font-black text-[#12213e]">
+                        {user.name} 👋
+                    </h2>
                 </div>
                 {application && (
                     <div className="flex items-center gap-3">
                         <span className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
-                            No. Tiket: <span className="text-[#106feb]">{application.ticket_number}</span>
+                            No. Tiket:{' '}
+                            <span className="text-[#106feb]">
+                                {application.ticket_number}
+                            </span>
                         </span>
                         <StatusBadge status={application.status} />
                     </div>
@@ -319,13 +395,26 @@ export default function MahasiswaDashboard({ user = MOCK_USER, application = MOC
                         transition={{ duration: 0.5, ease: 'circOut' }}
                         className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4"
                     >
-                        <StatCard icon={Clock} label="Status Saat Ini" value={STATUS_META[application.status].label} accent />
+                        <StatCard
+                            icon={Clock}
+                            label="Status Saat Ini"
+                            value={STATUS_META[application.status].label}
+                            accent
+                        />
                         <StatCard
                             icon={Building2}
                             label="OPD Tujuan"
-                            value={application.opd ? application.opd.code : 'Belum ditentukan'}
+                            value={
+                                application.opd
+                                    ? application.opd.code
+                                    : 'Belum ditentukan'
+                            }
                         />
-                        <StatCard icon={CalendarDays} label="Durasi" value={`${application.duration_months} Bulan`} />
+                        <StatCard
+                            icon={CalendarDays}
+                            label="Durasi"
+                            value={`${application.duration_months} Bulan`}
+                        />
                         <StatCard
                             icon={GraduationCap}
                             label="Periode"
@@ -337,10 +426,17 @@ export default function MahasiswaDashboard({ user = MOCK_USER, application = MOC
                         {/* Timeline */}
                         <div className="lg:col-span-2">
                             <div className="rounded-2xl border border-slate-200 bg-white p-6">
-                                <h3 className="text-base font-bold text-[#12213e]">Lacak Status Pengajuan</h3>
-                                <p className="mt-0.5 text-sm text-slate-500">Pantau perjalanan magang Anda dari awal hingga sertifikat.</p>
+                                <h3 className="text-base font-bold text-[#12213e]">
+                                    Lacak Status Pengajuan
+                                </h3>
+                                <p className="mt-0.5 text-sm text-slate-500">
+                                    Pantau perjalanan magang Anda dari awal
+                                    hingga sertifikat.
+                                </p>
                                 <div className="mt-6">
-                                    <StatusTimeline status={application.status} />
+                                    <StatusTimeline
+                                        status={application.status}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -350,14 +446,34 @@ export default function MahasiswaDashboard({ user = MOCK_USER, application = MOC
                             <ActionPanel application={application} />
 
                             <div className="rounded-2xl border border-slate-200 bg-white p-6">
-                                <h3 className="text-base font-bold text-[#12213e]">Detail Pengajuan</h3>
+                                <h3 className="text-base font-bold text-[#12213e]">
+                                    Detail Pengajuan
+                                </h3>
                                 <dl className="mt-4 grid grid-cols-1 gap-4">
-                                    <DetailRow label="Tujuan Magang" value={application.tujuan_magang} />
-                                    <DetailRow label="Asal Instansi" value={application.institution_name} />
-                                    <DetailRow label="Pembimbing Kampus/Sekolah" value={application.campus_supervisor} />
-                                    <DetailRow label="OPD Penempatan" value={application.opd?.name ?? null} />
-                                    <DetailRow label="Bidang Penempatan" value={application.division} />
-                                    <DetailRow label="Penanggung Jawab" value={application.person_in_charge} />
+                                    <DetailRow
+                                        label="Tujuan Magang"
+                                        value={application.tujuan_magang}
+                                    />
+                                    <DetailRow
+                                        label="Asal Instansi"
+                                        value={application.institution_name}
+                                    />
+                                    <DetailRow
+                                        label="Pembimbing Kampus/Sekolah"
+                                        value={application.campus_supervisor}
+                                    />
+                                    <DetailRow
+                                        label="OPD Penempatan"
+                                        value={application.opd?.name ?? null}
+                                    />
+                                    <DetailRow
+                                        label="Bidang Penempatan"
+                                        value={application.division}
+                                    />
+                                    <DetailRow
+                                        label="Penanggung Jawab"
+                                        value={application.person_in_charge}
+                                    />
                                 </dl>
                             </div>
                         </div>

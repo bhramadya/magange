@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Contracts\OtpServiceContract;
 use App\Contracts\PengajuanServiceContract;
 use App\Enums\ApplicationStatus;
 use App\Enums\UserRole;
@@ -20,7 +21,10 @@ class SubmissionService implements PengajuanServiceContract
 {
     private const ACTION = 'submit_pengajuan';
 
-    public function __construct(private RateLimitService $rateLimit) {}
+    public function __construct(
+        private RateLimitService $rateLimit,
+        private OtpServiceContract $otpService,
+    ) {}
 
     /**
      * Terima pengajuan publik, buat user pemohon bila belum ada, lalu
@@ -28,6 +32,7 @@ class SubmissionService implements PengajuanServiceContract
      *
      * @param  array{
      *     name: string,
+     *     nis?: string|null,
      *     email: string,
      *     whatsapp_number?: string|null,
      *     tujuan_magang: string,
@@ -35,14 +40,19 @@ class SubmissionService implements PengajuanServiceContract
      *     start_date: string,
      *     end_date: string,
      *     institution_name: string,
+     *     address?: string|null,
      *     campus_supervisor: string,
+     *     guardian_name?: string|null,
      *     major?: string|null,
      *     skills?: string|null,
+     *     photo_path?: string|null,
      * }  $validatedData
      */
     public function submit(array $validatedData, string $ipAddress): InternshipApplication
     {
-        $application = DB::transaction(function () use ($validatedData): InternshipApplication {
+        $submitter = null;
+
+        $application = DB::transaction(function () use ($validatedData, &$submitter): InternshipApplication {
             $user = User::firstOrCreate(
                 ['email' => $validatedData['email']],
                 [
@@ -56,18 +66,24 @@ class SubmissionService implements PengajuanServiceContract
             $application = InternshipApplication::create([
                 'ticket_number' => $this->generateTicketNumber(),
                 'user_id' => $user->id,
+                'nis' => $validatedData['nis'] ?? null,
                 'tujuan_magang' => $validatedData['tujuan_magang'],
                 'duration_months' => $validatedData['duration_months'],
                 'start_date' => $validatedData['start_date'],
                 'end_date' => $validatedData['end_date'],
                 'institution_name' => $validatedData['institution_name'],
+                'address' => $validatedData['address'] ?? null,
                 'campus_supervisor' => $validatedData['campus_supervisor'],
+                'guardian_name' => $validatedData['guardian_name'] ?? null,
                 'major' => $validatedData['major'] ?? null,
                 'skills' => $validatedData['skills'] ?? null,
+                'photo_path' => $validatedData['photo_path'] ?? null,
                 'status' => ApplicationStatus::PendingVerifikator,
             ]);
 
             $this->logStatus($application, null, ApplicationStatus::PendingVerifikator, $user, 'Pengajuan dibuat');
+
+            $submitter = $user;
 
             return $application;
         });
@@ -76,6 +92,13 @@ class SubmissionService implements PengajuanServiceContract
         $this->rateLimit->log($validatedData['email'], self::ACTION, $ipAddress);
 
         SendApplicationConfirmationJob::dispatch($application);
+
+        // Alur Fase 1: langsung kirim OTP ke email pemohon supaya ia bisa masuk
+        // ke dasbor tanpa memasukkan email lagi (halaman login-otp lompat ke
+        // langkah kode). Hormati batas permintaan OTP; abaikan bila terlampaui.
+        if ($submitter !== null && $this->otpService->canRequest($submitter->email, $ipAddress)) {
+            $this->otpService->generate($submitter, $ipAddress);
+        }
 
         return $application;
     }

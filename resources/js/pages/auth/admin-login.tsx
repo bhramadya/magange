@@ -14,10 +14,12 @@ export default function AdminLogin() {
     const { data, setData, post, processing, errors } = useForm({
         username: '',
         password: '',
+        remember: true,
     });
 
     function submit(e: FormEvent) {
         e.preventDefault();
+        // Dilayani Laravel Fortify (config fortify.paths.login = admin/login).
         post('/admin/login');
     }
 
@@ -39,51 +41,72 @@ export default function AdminLogin() {
                         <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-[#106feb] text-white shadow-md shadow-[#106feb]/25">
                             <ShieldCheck className="size-7" />
                         </div>
-                        <h1 className="text-xl font-black tracking-tight text-[#0a1628]">Login Admin</h1>
+                        <h1 className="text-xl font-black tracking-tight text-[#0a1628]">
+                            Login Admin
+                        </h1>
                         <p className="mt-1 text-sm text-slate-500">
-                            Khusus Admin Verifikator &amp; Admin OPD E-Magang Kota Madiun.
+                            Khusus Admin Verifikator &amp; Admin OPD E-Magang
+                            Kota Madiun.
                         </p>
                     </div>
 
                     <form onSubmit={submit} className="space-y-5">
                         {/* Username */}
                         <div className="space-y-1.5">
-                            <label htmlFor="username" className="text-sm font-semibold text-[#0a1628]">
+                            <label
+                                htmlFor="username"
+                                className="text-sm font-semibold text-[#0a1628]"
+                            >
                                 Username
                             </label>
                             <div className="relative">
-                                <User2 className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                                <User2 className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-slate-400" />
                                 <input
                                     id="username"
                                     type="text"
                                     autoComplete="username"
                                     value={data.username}
-                                    onChange={(e) => setData('username', e.target.value)}
+                                    onChange={(e) =>
+                                        setData('username', e.target.value)
+                                    }
                                     placeholder="cth. verifikator"
-                                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pr-4 pl-10 text-sm transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                                 />
                             </div>
-                            {errors.username && <p className="text-xs font-medium text-rose-600">{errors.username}</p>}
+                            {errors.username && (
+                                <p className="text-xs font-medium text-rose-600">
+                                    {errors.username}
+                                </p>
+                            )}
                         </div>
 
                         {/* Password */}
                         <div className="space-y-1.5">
-                            <label htmlFor="password" className="text-sm font-semibold text-[#0a1628]">
+                            <label
+                                htmlFor="password"
+                                className="text-sm font-semibold text-[#0a1628]"
+                            >
                                 Password
                             </label>
                             <div className="relative">
-                                <Lock className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                                <Lock className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-slate-400" />
                                 <input
                                     id="password"
                                     type="password"
                                     autoComplete="current-password"
                                     value={data.password}
-                                    onChange={(e) => setData('password', e.target.value)}
+                                    onChange={(e) =>
+                                        setData('password', e.target.value)
+                                    }
                                     placeholder="••••••••"
-                                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pr-4 pl-10 text-sm transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                                 />
                             </div>
-                            {errors.password && <p className="text-xs font-medium text-rose-600">{errors.password}</p>}
+                            {errors.password && (
+                                <p className="text-xs font-medium text-rose-600">
+                                    {errors.password}
+                                </p>
+                            )}
                         </div>
 
                         <button
@@ -91,14 +114,21 @@ export default function AdminLogin() {
                             disabled={processing}
                             className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#106feb] text-sm font-bold text-white shadow-sm transition hover:bg-[#0b4fb0] disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            {processing ? <Loader2 className="size-4 animate-spin" /> : <ShieldCheck className="size-4" />}
+                            {processing ? (
+                                <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                                <ShieldCheck className="size-4" />
+                            )}
                             Masuk
                         </button>
                     </form>
 
                     <p className="mt-6 text-center text-xs text-slate-400">
                         Peserta magang?{' '}
-                        <Link href="/login-otp" className="font-semibold text-[#106feb] hover:underline">
+                        <Link
+                            href="/login-otp"
+                            className="font-semibold text-[#106feb] hover:underline"
+                        >
                             Masuk dengan OTP email
                         </Link>
                     </p>

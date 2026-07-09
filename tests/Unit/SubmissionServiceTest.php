@@ -8,6 +8,7 @@ use App\Jobs\SendJobRejectionEmail;
 use App\Models\ApplicationStatusLog;
 use App\Models\Opd;
 use App\Models\User;
+use App\Services\OtpService;
 use App\Services\RateLimitService;
 use App\Services\SubmissionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,7 +18,8 @@ use Tests\TestCase;
 uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->service = new SubmissionService(new RateLimitService);
+    $rateLimit = new RateLimitService;
+    $this->service = new SubmissionService($rateLimit, new OtpService($rateLimit));
 });
 
 /**
