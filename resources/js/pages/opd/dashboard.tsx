@@ -318,6 +318,7 @@ function QuotaEditor({ opd }: { opd: Opd }) {
     const [editing, setEditing] = useState(false);
     const [value, setValue] = useState(String(opd.quota ?? 0));
     const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const parsed = Number(value);
     const valid = Number.isInteger(parsed) && parsed >= used && parsed <= 1000;
@@ -329,13 +330,23 @@ function QuotaEditor({ opd }: { opd: Opd }) {
             return;
         }
 
+        setError(null);
         setProcessing(true);
-        // TODO(backend): router.patch(`/kuota/${opd.id}`, { quota_total: parsed })
-        setTimeout(() => {
-            setTotal(parsed);
-            setProcessing(false);
-            setEditing(false);
-        }, 700);
+        // Admin OPD hanya boleh kuota OPD-nya sendiri (403 di UpdateQuotaRequest).
+        router.patch(
+            `/kuota/${opd.id}`,
+            { quota_total: parsed },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setTotal(parsed);
+                    setEditing(false);
+                },
+                onError: (errs) =>
+                    setError(errs.quota_total ?? 'Gagal memperbarui kuota.'),
+                onFinish: () => setProcessing(false),
+            },
+        );
     }
 
     return (
@@ -347,11 +358,11 @@ function QuotaEditor({ opd }: { opd: Opd }) {
                         OPD
                     </p>
                     <p className="mt-0.5 text-xs text-slate-500">
-                        Terpakai {used} dari {total} kursi — sisa{' '}
+                        Sisa{' '}
                         <span className="font-semibold text-emerald-600">
-                            {sisa}
-                        </span>
-                        .
+                            {sisa} kursi
+                        </span>{' '}
+                        — terpakai {used}.
                     </p>
                 </div>
                 {!editing && (
@@ -394,6 +405,11 @@ function QuotaEditor({ opd }: { opd: Opd }) {
                             <p className="text-xs text-rose-500">
                                 Kuota minimal {used} (yang sudah terpakai) dan
                                 maksimal 1000.
+                            </p>
+                        )}
+                        {error && (
+                            <p className="text-xs font-medium text-rose-600">
+                                {error}
                             </p>
                         )}
                     </div>

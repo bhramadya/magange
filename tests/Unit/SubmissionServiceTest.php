@@ -122,6 +122,28 @@ test('approve accepts a forwarded application and increments the OPD quota', fun
     Queue::assertPushed(GenerateJobAcceptanceLetter::class);
 });
 
+test('approve refuses when the OPD quota is already full', function () {
+    Queue::fake();
+    // Kuota penuh: quota_used == quota_total. Approve tidak boleh menembus batas.
+    $opd = Opd::create(['name' => 'Dinas Kominfo', 'code' => 'DKI', 'quota_total' => 1, 'quota_used' => 1]);
+    $verifikator = User::factory()->verifikator()->create();
+    $opdAdmin = User::factory()->opdAdmin($opd->id)->create();
+    $app = $this->service->submit(pengajuanPayload(), '127.0.0.1');
+    $this->service->forwardToOpd($app, ['opd_id' => $opd->id], $verifikator);
+
+    expect(fn () => $this->service->approve($app, [
+        'division' => 'Bidang Aplikasi',
+        'field_supervisor' => 'Pak Joko',
+        'person_in_charge' => 'Bu Sari',
+    ], $opdAdmin))->toThrow(DomainException::class);
+
+    // Tidak ada efek samping: kuota tak bertambah, status tetap forwarded.
+    expect($opd->refresh()->quota_used)->toBe(1)
+        ->and($app->refresh()->status)->toBe(ApplicationStatus::ForwardedOpd);
+
+    Queue::assertNotPushed(GenerateJobAcceptanceLetter::class);
+});
+
 test('approve rejects an application not forwarded to the OPD', function () {
     Queue::fake();
     $opdAdmin = User::factory()->create();
