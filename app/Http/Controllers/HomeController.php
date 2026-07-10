@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\OpdResource;
 use App\Models\Faq;
 use App\Models\Opd;
 use App\Models\SatisfactionSurvey;
@@ -22,10 +23,15 @@ class HomeController extends Controller
                 ->where('is_active', true)
                 ->orderBy('sort_order')
                 ->get(['id', 'question', 'answer']),
-            'opds' => Opd::query()
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(['id', 'name', 'code']),
+            // Sumber tunggal kuota: OpdResource (quota_total/quota_used dari tabel
+            // opds), identik dengan dasbor OPD & Verifikator. Jangan menghitung
+            // ulang kuota di frontend.
+            'opds' => OpdResource::collection(
+                Opd::query()
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->get()
+            ),
             'testimonials' => $this->testimonials(),
         ]);
     }

@@ -94,10 +94,11 @@ function OpdQuotaRow({ opd }: { opd: Opd }) {
                     {opd.name}
                 </p>
                 <p className="text-xs text-slate-500">
-                    {opd.code} • terpakai {used}/{total} • sisa{' '}
+                    {opd.code} • sisa{' '}
                     <span className="font-semibold text-emerald-600">
-                        {sisa}
-                    </span>
+                        {sisa} kursi
+                    </span>{' '}
+                    • terpakai {used}
                 </p>
                 {error && (
                     <p className="mt-1 text-xs font-medium text-rose-600">

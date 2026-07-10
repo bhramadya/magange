@@ -332,6 +332,7 @@ function QuotaEditor({ opd }: { opd: Opd }) {
 
         setError(null);
         setProcessing(true);
+        // Admin OPD hanya boleh kuota OPD-nya sendiri (403 di UpdateQuotaRequest).
         router.patch(
             `/kuota/${opd.id}`,
             { quota_total: parsed },
@@ -357,11 +358,11 @@ function QuotaEditor({ opd }: { opd: Opd }) {
                         OPD
                     </p>
                     <p className="mt-0.5 text-xs text-slate-500">
-                        Terpakai {used} dari {total} kursi — sisa{' '}
+                        Sisa{' '}
                         <span className="font-semibold text-emerald-600">
-                            {sisa}
-                        </span>
-                        .
+                            {sisa} kursi
+                        </span>{' '}
+                        — terpakai {used}.
                     </p>
                 </div>
                 {!editing && (

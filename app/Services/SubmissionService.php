@@ -149,6 +149,21 @@ class SubmissionService implements PengajuanServiceContract
         DB::transaction(function () use ($app, $data, $actor): void {
             $from = $app->status;
 
+            // Kunci baris OPD agar cek & increment kuota bebas race condition.
+            // Menyetujui saat kuota penuh akan membuat quota_used > quota_total
+            // (inkonsistensi yang tampil sebagai "sisa negatif" di landing page).
+            if ($app->opd_id !== null) {
+                $opd = Opd::whereKey($app->opd_id)->lockForUpdate()->firstOrFail();
+
+                if ($opd->quota_used >= $opd->quota_total) {
+                    throw new DomainException(
+                        "Kuota OPD {$opd->name} sudah penuh ({$opd->quota_used}/{$opd->quota_total}).",
+                    );
+                }
+
+                $opd->increment('quota_used');
+            }
+
             $app->update([
                 'division' => $data['division'],
                 'field_supervisor' => $data['field_supervisor'],
@@ -157,10 +172,6 @@ class SubmissionService implements PengajuanServiceContract
                 'opd_decision_by' => $actor->id,
                 'opd_decision_at' => Date::now(),
             ]);
-
-            if ($app->opd_id !== null) {
-                Opd::whereKey($app->opd_id)->increment('quota_used');
-            }
 
             $this->logStatus($app, $from, ApplicationStatus::Approved, $actor, 'Disetujui OPD');
         });

@@ -558,6 +558,8 @@ interface WelcomeOpd {
     id: number;
     name: string;
     code: string;
+    quota: number;
+    quota_used: number;
 }
 
 interface WelcomeTestimonial {
@@ -877,13 +879,19 @@ export default function Welcome({
         { name: 'SEKRETARIAT DPRD', tags: ['Legislatif', 'Administrasi'] },
     ];
 
-    // Kuota magang per OPD. Angka di sini deterministik untuk pratinjau —
-    // backend mengganti dengan kuota nyata (Opd.quota & Opd.quota_used).
-    const opdWithQuota = daftarOPD.map((opd, i) => {
-        const quota = 4 + (i % 5) * 2; // 4–12
-        const quotaUsed = i % (quota + 1); // selalu ≤ quota
+    // Kuota magang per OPD — sumber tunggal dari prop `opds` (OpdResource →
+    // tabel opds), identik dengan dasbor OPD & Verifikator. Nama tag hanya ada
+    // di daftar statis, jadi kuota di-join berdasarkan nama OPD. Bila prop opds
+    // kosong (pratinjau tanpa backend), kuota tampil 0/0 (bukan angka palsu).
+    const quotaByName = new Map(opds.map((o) => [o.name, o]));
+    const opdWithQuota = daftarOPD.map((opd) => {
+        const real = quotaByName.get(opd.name);
 
-        return { ...opd, quota, quotaUsed };
+        return {
+            ...opd,
+            quota: real?.quota ?? 0,
+            quotaUsed: real?.quota_used ?? 0,
+        };
     });
 
     const filteredOPD = opdWithQuota.filter((opd) =>
@@ -1696,13 +1704,7 @@ export default function Welcome({
                                                                     : 'rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600'
                                                             }
                                                         >
-                                                            {penuh
-                                                                ? 'Penuh'
-                                                                : `${sisa} tersisa`}
-                                                            <span className="font-normal text-[#0a1628]/40">
-                                                                {' '}
-                                                                / {opd.quota}
-                                                            </span>
+                                                            {sisa} tersisa
                                                         </span>
                                                     </div>
                                                 );

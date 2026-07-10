@@ -18,6 +18,8 @@ Detailed framework conventions (PHP style, Inertia v3 patterns, Pint, Pest, Wayf
 - **composer lint** (Pint) / **npm run types:check** (tsc) / **npm run lint** (eslint --fix) — run individual gates while iterating.
 - **php artisan schedule:test --name="magang:transition-statuses"** — dry-run the daily 01:00 status-transition cron (routes/console.php → app/Console/Commands/TransitionApplicationStatuses.php). PostgreSQL is the DB; a `.env` DB connection must be reachable for artisan/test.
 
+**Package manager.** Both `package-lock.json` and `pnpm-lock.yaml` are committed (there's a `pnpm-workspace.yaml` + `.npmrc` with `ignore-scripts=true`). `composer dev`/`composer ci:check` invoke the **npm** scripts, so npm is what the documented flows use — but the pnpm workspace config exists too. Pick one when installing and don't let the other lockfile drift.
+
 #### Business Logic & Strict Constraints (CRUCIAL REVISION)
 When editing workflows, controllers, or UI, you MUST strictly adhere to the following business rules:
 
@@ -68,3 +70,9 @@ As of the backend awal commit, routes/web.php is **mostly wired to real controll
 **Domain service layer.** Business logic lives in app/Services/, not controllers — when the HTTP layer is written, controllers should be thin and delegate here. The lifecycle state machine is SubmissionService (submit, forwardToOpd, approve, reject): each transition runs inside a DB::transaction, calls guardStatus() to reject out-of-order moves (throws DomainException), writes an ApplicationStatusLog audit row, mutates side state (e.g. approve increments the OPD's quota_used), and dispatches a job. Match this shape for new transitions. Other services: CertificateService (upload to the **private** local disk, certificates start is_download_locked = true), OtpService, RateLimitService (anti-spam via FormRateLimit). Two services are bound by contract in app/Providers/AppServiceProvider.php (OtpServiceContract → OtpService, PengajuanServiceContract → SubmissionService) — type-hint the contract, not the class.
 
 **Async side effects: Jobs + Mail + PDF.** Services dispatch queued app/Jobs/* (all on the emails queue, tries = 3 with backoff) for everything user-facing: confirmation, rejection, acceptance letter, certificate notice, OTP. Each job sends an app/Mail/* mailable rendered from resources/views/mail/*.blade.php. PDFs use **barryvdh/laravel-dompdf** — GenerateJobAcceptanceLetter renders resources/views/pdf/acceptance_letter.blade.php, stores it on the private local disk, and records the path on the application. The queue worker runs as part of composer dev; without it, dispatched jobs won't process.
+
+#### Tests
+Pest v4. Unit tests for services live in tests/Unit/ (SubmissionServiceTest, CertificateServiceTest, OtpServiceTest, RateLimitServiceTest). Feature tests have a **doubly-nested** layout: newer role/flow coverage sits under tests/Feature/Feature/{Auth,Mahasiswa,Opd,Verifikator,Penyelesaian,Security}/ — put new controller/flow tests there to match. tests/Feature/Feature/Penyelesaian/EndToEndFlowTest.php walks the full lifecycle and is the best reference for wiring a new transition; Security/{SingleSessionTest,RecaptchaRateLimitTest} cover the anti-abuse guards.
+
+#### Sibling docs
+Two design/handoff docs live at the repo root (both in Indonesian): **BLUEPRINT-REDESIGN.md** — the brand-locked (#106feb / #0b4fb0 / #cddcef) UI redesign spec; consult it for layout/typography/interaction decisions. **HANDOFF-BACKEND.md** — the frontend→backend handoff, describing pages built as self-rendering Inertia components with mock-data prop defaults; the contract is to swap mocks for real data **without changing prop paths or names**. Preserve that contract when wiring props.
