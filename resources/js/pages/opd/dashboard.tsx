@@ -311,13 +311,14 @@ function StatCard({
 
 /* ---- Editor kuota OPD ------------------------------------------------ */
 // Admin OPD hanya boleh mengubah kuota OPD-nya sendiri (Verifikator: semua).
-// Preview memakai simulasi; backend nyata di PATCH /kuota/{opd}.
+// Tersambung ke backend nyata: PATCH /kuota/{opd}.
 function QuotaEditor({ opd }: { opd: Opd }) {
     const used = opd.quota_used ?? 0;
     const [total, setTotal] = useState(opd.quota ?? 0);
     const [editing, setEditing] = useState(false);
     const [value, setValue] = useState(String(opd.quota ?? 0));
     const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const parsed = Number(value);
     const valid = Number.isInteger(parsed) && parsed >= used && parsed <= 1000;
@@ -329,13 +330,22 @@ function QuotaEditor({ opd }: { opd: Opd }) {
             return;
         }
 
+        setError(null);
         setProcessing(true);
-        // TODO(backend): router.patch(`/kuota/${opd.id}`, { quota_total: parsed })
-        setTimeout(() => {
-            setTotal(parsed);
-            setProcessing(false);
-            setEditing(false);
-        }, 700);
+        router.patch(
+            `/kuota/${opd.id}`,
+            { quota_total: parsed },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setTotal(parsed);
+                    setEditing(false);
+                },
+                onError: (errs) =>
+                    setError(errs.quota_total ?? 'Gagal memperbarui kuota.'),
+                onFinish: () => setProcessing(false),
+            },
+        );
     }
 
     return (
@@ -394,6 +404,11 @@ function QuotaEditor({ opd }: { opd: Opd }) {
                             <p className="text-xs text-rose-500">
                                 Kuota minimal {used} (yang sudah terpakai) dan
                                 maksimal 1000.
+                            </p>
+                        )}
+                        {error && (
+                            <p className="text-xs font-medium text-rose-600">
+                                {error}
                             </p>
                         )}
                     </div>
