@@ -189,6 +189,13 @@ type FilterKey =
     | 'rejected'
     | 'all';
 
+// Label status khusus perspektif OPD: pengajuan yang diteruskan verifikator
+// tampil sebagai "Perlu Keputusan" (bukan "Diteruskan ke OPD"). Status lain
+// memakai label default dari STATUS_META.
+const OPD_STATUS_LABEL: Partial<Record<ApplicationStatus, string>> = {
+    forwarded_opd: 'Perlu Keputusan',
+};
+
 const FILTERS: { key: FilterKey; label: string }[] = [
     { key: 'forwarded_opd', label: 'Perlu Keputusan' },
     { key: 'approved', label: 'Disetujui' },
@@ -867,7 +874,10 @@ function DecisionDialog({
                                 <p className="mb-2 text-sm font-semibold text-[#12213e]">
                                     Status saat ini
                                 </p>
-                                <StatusBadge status={app.status} />
+                                <StatusBadge
+                                    status={app.status}
+                                    label={OPD_STATUS_LABEL[app.status]}
+                                />
                                 {app.status === 'rejected' &&
                                     app.rejection_reason && (
                                         <p className="mt-3 text-sm text-rose-600">
@@ -976,7 +986,7 @@ export default function OpdDashboard({
             <div className="space-y-6">
                 <div>
                     <h2 className="text-xl font-black text-[#12213e]">
-                        Selamat datang, {user.name.split(' ')[0]} 👋
+                        Selamat datang, {user.name.split(' ')[0]}
                     </h2>
                     <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
                         <Building2 className="size-4" /> {opd.name} ({opd.code})
@@ -1087,7 +1097,10 @@ export default function OpdDashboard({
                                             : '—'}
                                     </td>
                                     <td className="px-5 py-3.5">
-                                        <StatusBadge status={app.status} />
+                                        <StatusBadge
+                                            status={app.status}
+                                            label={OPD_STATUS_LABEL[app.status]}
+                                        />
                                     </td>
                                     <td className="px-5 py-3.5 text-right">
                                         <button
@@ -1119,7 +1132,10 @@ export default function OpdDashboard({
                                     <span className="font-mono text-xs font-semibold text-[#12213e]">
                                         {app.ticket_number}
                                     </span>
-                                    <StatusBadge status={app.status} />
+                                    <StatusBadge
+                                        status={app.status}
+                                        label={OPD_STATUS_LABEL[app.status]}
+                                    />
                                 </div>
                                 <p className="text-sm font-bold text-[#12213e]">
                                     {app.applicant_name ?? '—'}

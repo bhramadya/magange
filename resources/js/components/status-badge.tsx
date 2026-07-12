@@ -4,10 +4,18 @@ import type { ApplicationStatus } from '@/types/magang';
 interface StatusBadgeProps {
     status: ApplicationStatus;
     className?: string;
+    // Override teks label (mis. dasbor OPD menampilkan forwarded_opd sebagai
+    // "Perlu Keputusan"). Warna/tone tetap mengikuti status.
+    label?: string;
 }
 
-export function StatusBadge({ status, className = '' }: StatusBadgeProps) {
-    const { label, tone } = STATUS_META[status];
+export function StatusBadge({
+    status,
+    className = '',
+    label: labelOverride,
+}: StatusBadgeProps) {
+    const { label: defaultLabel, tone } = STATUS_META[status];
+    const label = labelOverride ?? defaultLabel;
 
     const toneClasses = {
         amber: 'bg-amber-50 text-amber-700 ring-amber-600/20',

@@ -115,7 +115,7 @@ export const STATUS_META: Record<
 > = {
     pending_verifikator: { label: 'Menunggu Verifikasi', tone: 'amber' },
     forwarded_opd: { label: 'Diteruskan ke OPD', tone: 'blue' },
-    approved: { label: 'Disetujui OPD', tone: 'emerald' },
+    approved: { label: 'Disetujui', tone: 'emerald' },
     rejected: { label: 'Ditolak', tone: 'rose' },
     ongoing: { label: 'Sedang Magang', tone: 'violet' },
     completion_submitted: { label: 'Penyelesaian Diajukan', tone: 'blue' },
