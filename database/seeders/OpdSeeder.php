@@ -53,7 +53,14 @@ class OpdSeeder extends Seeder
         foreach ($opds as [$name, $code, $description]) {
             Opd::updateOrCreate(
                 ['code' => $code],
-                ['name' => $name, 'description' => $description, 'is_active' => true],
+                [
+                    'name' => $name,
+                    'description' => $description,
+                    'is_active' => true,
+                    // Kuota awal default agar OPD bisa langsung menyetujui pengajuan
+                    // (tanpa ini quota_total=0 -> approve selalu "kuota penuh").
+                    'quota_total' => 10,
+                ],
             );
         }
     }
