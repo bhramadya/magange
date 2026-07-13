@@ -204,10 +204,11 @@ const MOCK_PARTICIPANTS: Participant[] = [
 ];
 
 /* ---- filter ---------------------------------------------------------- */
-type FilterKey = 'all' | 'ongoing' | 'completion' | 'completed';
+type FilterKey = 'all' | 'approved' | 'ongoing' | 'completion' | 'completed';
 
 const FILTERS: { key: FilterKey; label: string }[] = [
     { key: 'all', label: 'Semua' },
+    { key: 'approved', label: 'Disetujui' },
     { key: 'ongoing', label: 'Sedang Magang' },
     { key: 'completion', label: 'Penyelesaian' },
     { key: 'completed', label: 'Selesai' },
@@ -218,6 +219,10 @@ function matchFilter(p: Participant, filter: FilterKey): boolean {
 
     if (filter === 'all') {
         return true;
+    }
+
+    if (filter === 'approved') {
+        return s === 'approved';
     }
 
     if (filter === 'ongoing') {

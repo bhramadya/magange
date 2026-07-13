@@ -62,6 +62,11 @@ class StoreApplicationRequest extends FormRequest
             'major' => ['nullable', 'string', 'max:255'],
             'skills' => ['nullable', 'string', 'max:2000'],
             'photo' => ['nullable', 'image', 'mimes:jpeg,jpg,png', 'max:2048'],
+            // Berkas pendukung opsional ("jika ada"). Dokumen: PDF/Word; Portofolio
+            // juga menerima gambar/ZIP. Batas ukuran lebih longgar dari pas foto.
+            'surat_pengantar' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
+            'cv' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
+            'portfolio' => ['nullable', 'file', 'mimes:pdf,doc,docx,zip,jpeg,jpg,png', 'max:10240'],
             // Gerbang anti-bot (flowchart Fase 1): token reCAPTCHA v2 checkbox.
             'recaptcha_token' => [$captchaConfigured ? 'required' : 'nullable', new Recaptcha($this->ip())],
         ];
@@ -69,7 +74,8 @@ class StoreApplicationRequest extends FormRequest
 
     /**
      * Payload tervalidasi untuk PengajuanServiceContract::submit().
-     * Buang `recaptcha_token` & `photo` (ditangani terpisah oleh controller).
+     * Buang `recaptcha_token` & berkas (photo/surat_pengantar/cv/portfolio,
+     * ditangani terpisah oleh controller).
      *
      * @return array{
      *     name: string,
@@ -92,7 +98,7 @@ class StoreApplicationRequest extends FormRequest
     {
         /** @var array{name: string, nis?: string|null, email: string, whatsapp_number: string, tujuan_magang: string, duration_months: int, start_date: string, end_date: string, institution_name: string, address: string, campus_supervisor: string, guardian_name: string, major?: string|null, skills?: string|null} $validated */
         $validated = collect(parent::validated())
-            ->except(['recaptcha_token', 'photo'])
+            ->except(['recaptcha_token', 'photo', 'surat_pengantar', 'cv', 'portfolio'])
             ->all();
 
         return $validated;
@@ -124,6 +130,12 @@ class StoreApplicationRequest extends FormRequest
             'photo.image' => 'Pas foto harus berupa gambar.',
             'photo.mimes' => 'Pas foto harus berformat JPG atau PNG.',
             'photo.max' => 'Ukuran pas foto maksimal 2 MB.',
+            'surat_pengantar.mimes' => 'Surat Pengantar harus berformat PDF atau Word.',
+            'surat_pengantar.max' => 'Ukuran Surat Pengantar maksimal 5 MB.',
+            'cv.mimes' => 'CV harus berformat PDF atau Word.',
+            'cv.max' => 'Ukuran CV maksimal 5 MB.',
+            'portfolio.mimes' => 'Portofolio harus berformat PDF, Word, ZIP, atau gambar.',
+            'portfolio.max' => 'Ukuran Portofolio maksimal 10 MB.',
             'recaptcha_token.required' => 'Verifikasi captcha wajib diselesaikan.',
         ];
     }

@@ -58,6 +58,17 @@ class ApplicationController extends Controller
             $validated['photo_path'] = $request->file('photo')->store('applications/photos', 'local');
         }
 
+        // Berkas pendukung opsional ("jika ada") — disk privat, satu folder khusus.
+        foreach ([
+            'surat_pengantar' => 'surat_pengantar_path',
+            'cv' => 'cv_path',
+            'portfolio' => 'portfolio_path',
+        ] as $field => $column) {
+            if ($request->hasFile($field)) {
+                $validated[$column] = $request->file($field)->store('applications/documents', 'local');
+            }
+        }
+
         $application = $this->submissionService->submit($validated, $request->ip());
 
         // Alur Fase 1: OTP sudah dikirim otomatis oleh service. Arahkan ke
@@ -68,21 +79,59 @@ class ApplicationController extends Controller
             ->with('status', 'Pengajuan berhasil dikirim (tiket: '.$application->ticket_number.'). Kami telah mengirim kode OTP ke email Anda.');
     }
 
+    /**
+     * Lacak status publik (tanpa login) berdasarkan NOMOR TIKET (`?tiket=`).
+     * Kontrak props selaras HANDOFF-BACKEND.md: { application, ticket }.
+     */
     public function track(Request $request): Response
     {
-        $email = $request->query('email');
+        $ticket = trim((string) $request->query('tiket', ''));
 
-        $applications = $email !== null
-            ? InternshipApplication::query()
-                ->whereHas('user', fn ($q) => $q->where('email', $email))
-                ->with(['opd', 'user'])
-                ->latest()
-                ->get()
-            : collect();
+        $application = $ticket !== ''
+            ? $this->findPublicApplication($ticket)
+            : null;
 
         return Inertia::render('lacak', [
-            'applications' => $applications,
-            'email' => $email,
+            'application' => $application,
+            'ticket' => $ticket !== '' ? $ticket : null,
         ]);
+    }
+
+    /**
+     * Ambil pengajuan untuk pelacakan publik. Hanya field aman yang diekspos —
+     * status, penempatan, dan periode. TANPA data pribadi pemohon (nama, NIS,
+     * kontak, alamat), dokumen, atau pas foto.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function findPublicApplication(string $ticket): ?array
+    {
+        $application = InternshipApplication::query()
+            ->where('ticket_number', $ticket)
+            ->with('opd:id,name,code')
+            ->first();
+
+        if ($application === null) {
+            return null;
+        }
+
+        return [
+            'id' => $application->id,
+            'ticket_number' => $application->ticket_number,
+            'status' => $application->status->value,
+            'tujuan_magang' => $application->tujuan_magang,
+            'institution_name' => $application->institution_name,
+            'duration_months' => $application->duration_months,
+            'start_date' => $application->start_date?->toDateString(),
+            'end_date' => $application->end_date?->toDateString(),
+            'opd' => $application->opd !== null ? [
+                'id' => $application->opd->id,
+                'name' => $application->opd->name,
+                'code' => $application->opd->code,
+            ] : null,
+            'division' => $application->division,
+            'rejection_reason' => $application->rejection_reason,
+            'created_at' => $application->created_at?->toISOString(),
+        ];
     }
 }

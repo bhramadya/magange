@@ -5,8 +5,33 @@ use App\Models\InternshipApplication;
 use App\Models\Opd;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
+
+/**
+ * Payload minimal valid untuk POST /pengajuan.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function pengajuanFormPayload(array $overrides = []): array
+{
+    return array_merge([
+        'name' => 'Budi Santoso',
+        'email' => 'budi@example.com',
+        'whatsapp_number' => '08123456789',
+        'tujuan_magang' => 'Belajar web development',
+        'duration_months' => 3,
+        'start_date' => now()->addMonth()->toDateString(),
+        'end_date' => now()->addMonths(4)->toDateString(),
+        'institution_name' => 'Universitas Negeri Madiun',
+        'address' => 'Jl. Merdeka No. 1, Madiun',
+        'campus_supervisor' => 'Dr. Andi',
+        'guardian_name' => 'Slamet Santoso',
+    ], $overrides);
+}
 
 test('application form displays available opds', function () {
     Opd::create(['name' => 'Dinas Kominfo', 'code' => 'DKI', 'is_active' => true]);
@@ -93,19 +118,69 @@ test('application submission reuses existing user', function () {
     expect($application->user_id)->toBe($existingUser->id);
 });
 
-test('track page filters applications by email', function () {
-    $user = User::factory()->create(['email' => 'track@example.com']);
+test('lacak looks up an application by ticket number', function () {
+    $user = User::factory()->create();
+    $application = InternshipApplication::factory()->create([
+        'user_id' => $user->id,
+        'ticket_number' => 'MGG-2026-000123',
+    ]);
 
-    InternshipApplication::factory()->create(['user_id' => $user->id]);
-    InternshipApplication::factory()->create(); // Different user
-
-    $response = $this->get('/lacak?email=track@example.com');
+    $response = $this->get('/lacak?tiket=MGG-2026-000123');
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('lacak')
-        ->has('applications', 1)
-        ->where('email', 'track@example.com')
+        ->where('ticket', 'MGG-2026-000123')
+        ->where('application.ticket_number', 'MGG-2026-000123')
+        ->where('application.status', $application->status->value)
+    );
+});
+
+test('lacak returns null application for unknown ticket', function () {
+    $response = $this->get('/lacak?tiket=MGG-2026-999999');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('lacak')
+        ->where('application', null)
+        ->where('ticket', 'MGG-2026-999999')
+    );
+});
+
+test('lacak without a ticket renders an idle page', function () {
+    $response = $this->get('/lacak');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('lacak')
+        ->where('application', null)
+        ->where('ticket', null)
+    );
+});
+
+test('lacak does not expose applicant personal data publicly', function () {
+    $user = User::factory()->create([
+        'name' => 'Budi Rahasia',
+        'email' => 'rahasia@example.com',
+    ]);
+    InternshipApplication::factory()->create([
+        'user_id' => $user->id,
+        'ticket_number' => 'MGG-2026-000200',
+        'nis' => '123456',
+        'address' => 'Jl. Rahasia No. 9',
+        'campus_supervisor' => 'Dr. Rahasia',
+    ]);
+
+    $response = $this->get('/lacak?tiket=MGG-2026-000200');
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('application.ticket_number', 'MGG-2026-000200')
+        ->missing('application.applicant_name')
+        ->missing('application.applicant_email')
+        ->missing('application.nis')
+        ->missing('application.address')
+        ->missing('application.campus_supervisor')
+        ->missing('application.photo_url')
     );
 });
 
@@ -147,4 +222,80 @@ test('application requires valid dates', function () {
     ]);
 
     $response->assertSessionHasErrors('end_date');
+});
+
+test('registration stores optional supporting documents', function () {
+    Queue::fake();
+    Storage::fake('local');
+
+    $this->post('/pengajuan', pengajuanFormPayload([
+        'surat_pengantar' => UploadedFile::fake()->create('pengantar.pdf', 120, 'application/pdf'),
+        'cv' => UploadedFile::fake()->create('cv.pdf', 120, 'application/pdf'),
+        'portfolio' => UploadedFile::fake()->create('porto.pdf', 120, 'application/pdf'),
+    ]))->assertRedirect(route('login.otp'));
+
+    $application = InternshipApplication::first();
+
+    expect($application->surat_pengantar_path)->not->toBeNull();
+    expect($application->cv_path)->not->toBeNull();
+    expect($application->portfolio_path)->not->toBeNull();
+
+    Storage::disk('local')->assertExists($application->surat_pengantar_path);
+    Storage::disk('local')->assertExists($application->cv_path);
+    Storage::disk('local')->assertExists($application->portfolio_path);
+});
+
+test('supporting documents are optional', function () {
+    Queue::fake();
+    Storage::fake('local');
+
+    $this->post('/pengajuan', pengajuanFormPayload())->assertRedirect(route('login.otp'));
+
+    $application = InternshipApplication::first();
+    expect($application->surat_pengantar_path)->toBeNull();
+    expect($application->cv_path)->toBeNull();
+    expect($application->portfolio_path)->toBeNull();
+});
+
+test('registration rejects an oversized supporting document', function () {
+    Queue::fake();
+    Storage::fake('local');
+
+    $response = $this->post('/pengajuan', pengajuanFormPayload([
+        'cv' => UploadedFile::fake()->create('cv.pdf', 6000, 'application/pdf'), // >5MB
+    ]));
+
+    $response->assertSessionHasErrors('cv');
+});
+
+test('registration photo becomes the user avatar', function () {
+    Queue::fake();
+    Storage::fake('local');
+
+    $this->post('/pengajuan', pengajuanFormPayload([
+        'email' => 'foto@example.com',
+        'photo' => UploadedFile::fake()->create('foto.jpg', 200, 'image/jpeg'),
+    ]))->assertRedirect(route('login.otp'));
+
+    $application = InternshipApplication::first();
+    $user = $application->user;
+
+    expect($user->avatar_path)->not->toBeNull();
+    expect($user->avatar_path)->toBe($application->photo_path);
+    Storage::disk('local')->assertExists($user->avatar_path);
+});
+
+test('profile avatar route streams the current users avatar', function () {
+    Storage::fake('local');
+
+    $path = UploadedFile::fake()->create('a.jpg', 200, 'image/jpeg')->store('applications/photos', 'local');
+    $user = User::factory()->create(['avatar_path' => $path]);
+
+    $this->actingAs($user)->get(route('profile.avatar'))->assertOk();
+});
+
+test('profile avatar returns 404 when the user has none', function () {
+    $user = User::factory()->create(['avatar_path' => null]);
+
+    $this->actingAs($user)->get(route('profile.avatar'))->assertNotFound();
 });

@@ -46,6 +46,9 @@ class SubmissionService implements PengajuanServiceContract
      *     major?: string|null,
      *     skills?: string|null,
      *     photo_path?: string|null,
+     *     surat_pengantar_path?: string|null,
+     *     cv_path?: string|null,
+     *     portfolio_path?: string|null,
      * }  $validatedData
      */
     public function submit(array $validatedData, string $ipAddress): InternshipApplication
@@ -58,10 +61,18 @@ class SubmissionService implements PengajuanServiceContract
                 [
                     'name' => $validatedData['name'],
                     'whatsapp_number' => $validatedData['whatsapp_number'] ?? null,
+                    // Pas foto pendaftaran otomatis jadi foto profil (Task 4).
+                    'avatar_path' => $validatedData['photo_path'] ?? null,
                     'role' => UserRole::Mahasiswa,
                     'is_active' => true,
                 ],
             );
+
+            // Peserta lama yang mendaftar ulang & mengunggah pas foto, tapi belum
+            // punya foto profil: adopsi pas foto terbaru sebagai foto profil.
+            if (($validatedData['photo_path'] ?? null) !== null && $user->avatar_path === null) {
+                $user->update(['avatar_path' => $validatedData['photo_path']]);
+            }
 
             $application = InternshipApplication::create([
                 'ticket_number' => $this->generateTicketNumber(),
@@ -78,6 +89,9 @@ class SubmissionService implements PengajuanServiceContract
                 'major' => $validatedData['major'] ?? null,
                 'skills' => $validatedData['skills'] ?? null,
                 'photo_path' => $validatedData['photo_path'] ?? null,
+                'surat_pengantar_path' => $validatedData['surat_pengantar_path'] ?? null,
+                'cv_path' => $validatedData['cv_path'] ?? null,
+                'portfolio_path' => $validatedData['portfolio_path'] ?? null,
                 'status' => ApplicationStatus::PendingVerifikator,
             ]);
 
@@ -289,7 +303,7 @@ class SubmissionService implements PengajuanServiceContract
     }
 
     /**
-     * Nomor tiket unik berformat MGG-{tahun}-{urut 4 digit}.
+     * Nomor tiket unik berformat MGG-{tahun}-{urut 6 digit}, mis. MGG-2026-000042.
      */
     private function generateTicketNumber(): string
     {
@@ -299,6 +313,6 @@ class SubmissionService implements PengajuanServiceContract
             ->whereYear('created_at', $year)
             ->count() + 1;
 
-        return sprintf('MGG-%d-%04d', $year, $sequence);
+        return sprintf('MGG-%d-%06d', $year, $sequence);
     }
 }

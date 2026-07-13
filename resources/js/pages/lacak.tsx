@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     AlertTriangle,
     ArrowRight,
@@ -15,32 +15,46 @@ import {
     Ticket,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { StatusBadge } from '@/components/status-badge';
 import { cn } from '@/lib/utils';
-import type { ApplicationStatus, InternshipApplication } from '@/types/magang';
+import { lacak } from '@/routes';
+import type { ApplicationStatus, Opd } from '@/types/magang';
 
 /* =========================================================================
  *  LACAK STATUS PUBLIK — E-MAGANG (Pemkot Madiun)
- *  Halaman TANPA login: pemohon memasukkan NOMOR TIKET (dari form pengajuan)
- *  untuk melihat status & timeline permohonannya.
+ *  Halaman TANPA login: pemohon memasukkan NOMOR TIKET (format
+ *  MGG-YYYY-NNNNNN dari form pengajuan) untuk melihat status & timeline.
  *
- *  Bisa dibuka dengan query `?tiket=EMG-2026-123456` (ditaut dari layar
- *  sukses form pengajuan) — input terisi & pencarian berjalan otomatis.
- *
- *  FRONTEND ONLY. `runLookup` memakai data MOCK + simulasi setTimeout supaya
- *  halaman bisa dipratinjau tanpa backend. Dua pola wiring untuk rekan backend:
- *    a) Controller cari tiket → Inertia::render('lacak', { application, ticket })
- *       (application = null bila tidak ditemukan). Frontend cukup pakai props.
- *    b) Atau pencarian sisi-klien via router.get('/lacak', { tiket }, {...}).
+ *  Wiring backend (pola a, sesuai HANDOFF-BACKEND.md):
+ *    GET /lacak?tiket=... → Inertia::render('lacak', { application, ticket })
+ *    `application` = null bila tiket tidak ditemukan. Pencarian dilakukan
+ *    server-side lewat router.get('/lacak', { tiket }) — frontend hanya
+ *    menampilkan field aman yang dikirim controller (TANPA data pribadi).
  * ========================================================================= */
 
-type LookupState = 'idle' | 'loading' | 'found' | 'notfound';
+// Bentuk aman untuk pelacakan publik — subset InternshipApplication tanpa
+// data pribadi pemohon/dokumen. Dibentuk oleh ApplicationController::track.
+interface PublicApplication {
+    id: number;
+    ticket_number: string;
+    status: ApplicationStatus;
+    tujuan_magang: string;
+    institution_name: string;
+    duration_months: number;
+    start_date: string | null;
+    end_date: string | null;
+    opd: Pick<Opd, 'id' | 'name' | 'code'> | null;
+    division: string | null;
+    rejection_reason: string | null;
+    created_at: string | null;
+}
 
 interface LacakProps {
-    // Bila backend memakai pola (a): hasil pencarian dikirim sebagai props.
-    application?: InternshipApplication | null;
-    ticket?: string;
+    // Hasil pencarian dari controller. null bila tiket tidak ditemukan;
+    // undefined bila halaman dibuka tanpa `?tiket=`.
+    application?: PublicApplication | null;
+    ticket?: string | null;
 }
 
 /* ---- util tanggal & format ------------------------------------------- */
@@ -55,70 +69,6 @@ function formatDate(iso: string | null): string {
         year: 'numeric',
     }).format(new Date(iso));
 }
-
-function readTicketFromUrl(): string {
-    if (typeof window === 'undefined') {
-        return '';
-    }
-
-    return (
-        new URLSearchParams(window.location.search).get('tiket')?.trim() ?? ''
-    );
-}
-
-/* ---- mock untuk pratinjau frontend ----------------------------------- */
-function makeApp(over: Partial<InternshipApplication>): InternshipApplication {
-    return {
-        id: 1,
-        ticket_number: 'EMG-2026-000000',
-        tujuan_magang: 'Pengembangan aplikasi internal pemerintahan.',
-        duration_months: 3,
-        start_date: '2026-07-01',
-        end_date: '2026-09-30',
-        institution_name: 'Universitas Negeri Madiun',
-        campus_supervisor: 'Dr. Indah Permatasari, M.Kom.',
-        status: 'pending_verifikator',
-        opd: null,
-        division: null,
-        field_supervisor: null,
-        person_in_charge: null,
-        rejection_reason: null,
-        forwarded_at: null,
-        opd_decision_at: null,
-        created_at: '2026-06-24T08:15:00',
-        final_report: null,
-        survey_submitted: false,
-        certificate_available: false,
-        ...over,
-    };
-}
-
-const DISKOMINFO = {
-    id: 16,
-    name: 'DINAS KOMUNIKASI DAN INFORMATIKA',
-    code: 'DISKOMINFO',
-};
-
-// Beberapa tiket contoh untuk demo pencarian.
-const MOCK_DB: Record<string, InternshipApplication> = {
-    'EMG-2026-100200': makeApp({
-        ticket_number: 'EMG-2026-100200',
-        status: 'ongoing',
-        opd: DISKOMINFO,
-        division: 'Bidang Pengembangan Aplikasi',
-        field_supervisor: 'Bayu Pratama, S.Kom.',
-        person_in_charge: 'Bayu Pratama, S.Kom.',
-        forwarded_at: '2026-06-20T09:00:00',
-        opd_decision_at: '2026-06-23T14:30:00',
-    }),
-    'EMG-2026-100300': makeApp({
-        ticket_number: 'EMG-2026-100300',
-        status: 'rejected',
-        rejection_reason:
-            'Kuota magang pada periode yang dipilih telah penuh. Silakan ajukan ulang untuk periode berikutnya.',
-        institution_name: 'Politeknik Negeri Madiun',
-    }),
-};
 
 /* ---- timeline (selaras dasbor mahasiswa) ------------------------------ */
 const TIMELINE_STEPS = [
@@ -250,61 +200,50 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
     );
 }
 
+type LookupState = 'idle' | 'loading' | 'found' | 'notfound';
+
 export default function Lacak({ application, ticket }: LacakProps) {
-    const initialTicket = (ticket ?? readTicketFromUrl()).trim();
-    const [query, setQuery] = useState<string>(initialTicket);
-    const [state, setState] = useState<LookupState>(
-        application ? 'found' : initialTicket ? 'loading' : 'idle',
-    );
-    const [result, setResult] = useState<InternshipApplication | null>(
-        application ?? null,
-    );
+    const [query, setQuery] = useState<string>(ticket ?? '');
+    const [loading, setLoading] = useState(false);
 
-    // Resolusi pencarian (simulasi). TODO(backend): ganti dengan props `application`
-    // dari controller atau router.get('/lacak', { tiket }).
-    function resolve(tiket: string) {
-        const found =
-            MOCK_DB[tiket] ??
-            (/^EMG-\d{4}-\d{4,6}$/.test(tiket)
-                ? makeApp({ ticket_number: tiket })
-                : null);
+    // Sudah mencari bila controller menerima `?tiket=` (ticket ter-set),
+    // terlepas dari ketemu (application) atau tidak (application = null).
+    const searched = ticket != null && ticket !== '';
+    const result = application ?? null;
+    const state: LookupState = loading
+        ? 'loading'
+        : !searched
+          ? 'idle'
+          : result
+            ? 'found'
+            : 'notfound';
 
-        if (found) {
-            setResult(found);
-            setState('found');
-        } else {
-            setResult(null);
-            setState('notfound');
-        }
-    }
-
-    function runLookup(raw: string) {
+    // Pencarian dijalankan server-side: navigasi Inertia ke /lacak?tiket=...
+    // Controller mengembalikan props { application, ticket } yang aman.
+    function lookup(raw: string) {
         const tiket = raw.trim().toUpperCase();
 
         if (!tiket) {
             return;
         }
 
-        setState('loading');
-        setTimeout(() => resolve(tiket), 800);
+        setQuery(tiket);
+        setLoading(true);
+        router.get(
+            lacak.url(),
+            { tiket },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                onFinish: () => setLoading(false),
+            },
+        );
     }
 
     function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        runLookup(query);
+        lookup(query);
     }
-
-    // Pencarian otomatis bila dibuka dengan ?tiket= (dan belum ada props dari backend).
-    useEffect(() => {
-        if (!initialTicket || application) {
-            return;
-        }
-
-        const id = setTimeout(() => resolve(initialTicket.toUpperCase()), 800);
-
-        return () => clearTimeout(id);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
     return (
         <>
@@ -361,7 +300,7 @@ export default function Lacak({ application, ticket }: LacakProps) {
                                 <input
                                     type="text"
                                     autoFocus
-                                    placeholder="EMG-2026-123456"
+                                    placeholder="MGG-2026-123456"
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
                                     className="h-12 w-full rounded-xl border border-slate-200 bg-white pr-4 pl-11 text-sm font-medium tracking-wide uppercase transition outline-none placeholder:tracking-normal placeholder:normal-case focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
@@ -387,17 +326,10 @@ export default function Lacak({ application, ticket }: LacakProps) {
                         </form>
 
                         <p className="mt-3 text-xs text-slate-400">
-                            Contoh untuk pratinjau:{' '}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setQuery('EMG-2026-100200');
-                                    runLookup('EMG-2026-100200');
-                                }}
-                                className="font-mono font-semibold text-[#106feb] hover:underline"
-                            >
-                                EMG-2026-100200
-                            </button>
+                            Format nomor tiket:{' '}
+                            <span className="font-mono font-semibold text-slate-500">
+                                MGG-2026-123456
+                            </span>
                         </p>
                     </div>
 
@@ -423,7 +355,7 @@ export default function Lacak({ application, ticket }: LacakProps) {
                                         Periksa kembali nomor tiket Anda.
                                         Pastikan formatnya sesuai, mis.{' '}
                                         <span className="font-mono font-semibold text-[#12213e]">
-                                            EMG-2026-123456
+                                            MGG-2026-123456
                                         </span>
                                         .
                                     </p>

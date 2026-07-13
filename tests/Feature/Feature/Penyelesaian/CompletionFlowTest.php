@@ -147,6 +147,42 @@ test('sertifikat terkunci tidak bisa diunduh', function () {
         ->assertRedirect('/penyelesaian');
 });
 
+test('verifikator dapat membuka berkas laporan akhir peserta', function () {
+    Storage::fake('local');
+    $verifikator = User::factory()->verifikator()->create();
+    $app = ongoingApplicationFor(User::factory()->create());
+    Storage::disk('local')->put("reports/{$app->id}/laporan.pdf", 'PDF');
+    $report = FinalReport::create([
+        'application_id' => $app->id,
+        'file_name' => 'laporan.pdf',
+        'file_path' => "reports/{$app->id}/laporan.pdf",
+        'is_confirmed' => true,
+        'status' => ReportStatus::Pending,
+        'submitted_at' => now(),
+    ]);
+
+    $this->actingAs($verifikator)
+        ->get("/verifikator/laporan/{$report->id}/berkas")
+        ->assertOk();
+});
+
+test('mahasiswa dilarang membuka berkas laporan verifikator', function () {
+    $mahasiswa = User::factory()->create();
+    $app = ongoingApplicationFor($mahasiswa);
+    $report = FinalReport::create([
+        'application_id' => $app->id,
+        'file_name' => 'laporan.pdf',
+        'file_path' => "reports/{$app->id}/laporan.pdf",
+        'is_confirmed' => true,
+        'status' => ReportStatus::Pending,
+        'submitted_at' => now(),
+    ]);
+
+    $this->actingAs($mahasiswa)
+        ->get("/verifikator/laporan/{$report->id}/berkas")
+        ->assertForbidden();
+});
+
 test('halaman review laporan verifikator dapat diakses', function () {
     $verifikator = User::factory()->verifikator()->create();
 

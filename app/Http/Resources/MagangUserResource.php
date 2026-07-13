@@ -25,6 +25,8 @@ class MagangUserResource extends JsonResource
             'email' => $this->email,
             'whatsapp_number' => $this->whatsapp_number,
             'role' => $this->role->value,
+            // Foto profil (disk privat) → route terproteksi milik user sendiri.
+            'avatar_url' => $this->avatar_path !== null ? route('profile.avatar') : null,
         ];
     }
 }

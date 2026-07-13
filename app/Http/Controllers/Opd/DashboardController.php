@@ -60,7 +60,9 @@ class DashboardController extends Controller
     }
 
     /**
-     * Peserta Aktif: peserta yang sedang/selesai magang di OPD ini.
+     * Peserta Aktif: peserta yang sudah disetujui (approved) hingga selesai
+     * magang di OPD ini. Dimulai dari status Approved — begitu Admin OPD ACC,
+     * peserta langsung tampil (belum menunggu cron memindahkannya ke Ongoing).
      * Dibungkus bentuk Participant { student_name, application }.
      */
     public function peserta(Request $request): Response
@@ -71,6 +73,7 @@ class DashboardController extends Controller
             ->with(['user', 'opd', 'finalReport', 'survey', 'certificate'])
             ->where('opd_id', $user->opd_id)
             ->whereIn('status', [
+                ApplicationStatus::Approved,
                 ApplicationStatus::Ongoing,
                 ApplicationStatus::CompletionSubmitted,
                 ApplicationStatus::Completed,

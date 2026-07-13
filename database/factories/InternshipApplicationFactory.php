@@ -23,7 +23,7 @@ class InternshipApplicationFactory extends Factory
         $end = (clone $start)->modify('+3 months');
 
         return [
-            'ticket_number' => 'MGG-'.$this->faker->unique()->numberBetween(2026000, 2026999),
+            'ticket_number' => sprintf('MGG-2026-%06d', $this->faker->unique()->numberBetween(1, 999999)),
             'user_id' => User::factory(),
             'tujuan_magang' => $this->faker->sentence(),
             'duration_months' => 3,

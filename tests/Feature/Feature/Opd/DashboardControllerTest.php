@@ -89,6 +89,28 @@ test('opd peserta wraps active interns as participants', function () {
     );
 });
 
+test('opd peserta menampilkan peserta berstatus approved (disetujui) dan tetap ter-scope ke OPD sendiri', function () {
+    [$user, $opd] = opdAdmin();
+    $otherOpd = Opd::create(['name' => 'Dinas Lain', 'code' => 'LAIN', 'is_active' => true]);
+
+    $approved = User::factory()->create(['name' => 'Rina Disetujui']);
+    InternshipApplication::factory()->create(['opd_id' => $opd->id, 'user_id' => $approved->id, 'status' => ApplicationStatus::Approved]);
+    // Approved milik OPD lain → tidak boleh bocor ke daftar OPD ini.
+    InternshipApplication::factory()->create(['opd_id' => $otherOpd->id, 'status' => ApplicationStatus::Approved]);
+    // Masih di tahap keputusan → belum jadi peserta.
+    InternshipApplication::factory()->create(['opd_id' => $opd->id, 'status' => ApplicationStatus::ForwardedOpd]);
+
+    $response = $this->actingAs($user)->get('/opd/peserta');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('opd/peserta')
+        ->has('participants', 1)
+        ->where('participants.0.student_name', 'Rina Disetujui')
+        ->where('participants.0.application.status', 'approved')
+    );
+});
+
 test('non-opd is forbidden from opd pages', function () {
     $verifikator = User::factory()->verifikator()->create();
 

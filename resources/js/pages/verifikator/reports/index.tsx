@@ -378,9 +378,10 @@ export default function VerifikatorReports({
                                     </p>
                                     <a
                                         href={`/verifikator/laporan/${r.id}/berkas`}
-                                        onClick={(e) => e.preventDefault()}
-                                        className="inline-flex items-center gap-1.5 text-xs font-medium text-[#106feb]"
-                                        title="Berkas laporan"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1.5 text-xs font-medium text-[#106feb] hover:underline"
+                                        title="Buka berkas laporan akhir"
                                     >
                                         <FileText className="size-3.5" />{' '}
                                         {r.file_name}
