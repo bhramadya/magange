@@ -11,6 +11,7 @@ import {
     History,
     ClipboardCheck,
     Users,
+    Ticket,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -75,6 +76,12 @@ export const mahasiswaNav: MagangNavItem[] = [
         href: '/bantuan?role=mahasiswa',
         icon: HelpCircle,
     },
+    {
+        key: 'lacak-publik',
+        title: 'Lacak Status Publik',
+        href: '/lacak',
+        icon: Ticket,
+    },
 ];
 
 // Navigasi untuk role Admin Verifikator. Menu "Pengaturan" dihilangkan (lihat
@@ -122,6 +129,12 @@ export const verifikatorNav: MagangNavItem[] = [
         href: '/bantuan?role=admin_verifikator',
         icon: HelpCircle,
     },
+    {
+        key: 'lacak-publik',
+        title: 'Lacak Status Publik',
+        href: '/lacak',
+        icon: Ticket,
+    },
 ];
 
 // Navigasi untuk role Admin OPD. Tanpa "Pengaturan" (lihat catatan di atas).
@@ -144,6 +157,12 @@ export const opdNav: MagangNavItem[] = [
         title: 'Bantuan',
         href: '/bantuan?role=admin_opd',
         icon: HelpCircle,
+    },
+    {
+        key: 'lacak-publik',
+        title: 'Lacak Status Publik',
+        href: '/lacak',
+        icon: Ticket,
     },
 ];
 
@@ -307,8 +326,16 @@ export default function MagangLayout({
                         <div className="ml-auto flex items-center gap-1 sm:gap-2">
                             <DropdownMenu>
                                 <DropdownMenuTrigger className="flex items-center gap-2 rounded-full p-1 pr-3 transition-colors hover:bg-slate-100/80">
-                                    <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-[#106feb] to-[#0b4fb0] text-sm font-bold text-white shadow-sm">
-                                        {initials(user.name)}
+                                    <span className="flex size-9 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#106feb] to-[#0b4fb0] text-sm font-bold text-white shadow-sm">
+                                        {user.avatar_url ? (
+                                            <img
+                                                src={user.avatar_url}
+                                                alt={user.name}
+                                                className="size-full object-cover"
+                                            />
+                                        ) : (
+                                            initials(user.name)
+                                        )}
                                     </span>
                                     <span className="hidden text-left leading-tight sm:block">
                                         <span className="block text-sm font-semibold text-[#0a1628]">

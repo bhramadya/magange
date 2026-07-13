@@ -90,7 +90,7 @@ Semua handler frontend kini simulasi `setTimeout` + `toast`. Cari string `TODO(b
 - `POST /logout`
 
 **Pendaftaran publik** (`welcome.tsx` section `#daftar`)
-- `POST /pengajuan` `{ ...form }, { forceFormData: true }` (ada File) → buat application, kirim email tiket `EMG-{tahun}-{nnnnnn}`
+- `POST /pengajuan` `{ ...form }, { forceFormData: true }` (ada File) → buat application, kirim email tiket `MGG-{tahun}-{nnnn}`
 
 **Lacak** (`Pages/lacak.tsx`)
 - `GET /lacak?tiket=...` → `{ application, ticket }`

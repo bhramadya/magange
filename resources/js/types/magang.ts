@@ -25,6 +25,7 @@ export interface MagangUser {
     email: string;
     whatsapp_number: string | null;
     role: UserRole;
+    avatar_url?: string | null; // foto profil (mahasiswa: dari pas foto pendaftaran)
 }
 
 export interface Opd {

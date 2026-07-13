@@ -610,6 +610,9 @@ export default function Welcome({
         whatsapp_number: string;
         email: string;
         photo: File | null;
+        surat_pengantar: File | null;
+        cv: File | null;
+        portfolio: File | null;
         recaptcha_token: string;
     }>({
         name: '',
@@ -626,6 +629,9 @@ export default function Welcome({
         whatsapp_number: '',
         email: '',
         photo: null,
+        surat_pengantar: null,
+        cv: null,
+        portfolio: null,
         recaptcha_token: '',
     });
 
@@ -650,6 +656,22 @@ export default function Welcome({
             return URL.createObjectURL(file);
         });
     };
+
+    // Berkas pendukung opsional ("jika ada"): Surat Pengantar / CV / Portofolio.
+    const [suratPengantarNama, setSuratPengantarNama] = useState('');
+    const [cvNama, setCvNama] = useState('');
+    const [portfolioNama, setPortfolioNama] = useState('');
+
+    const handleBerkas =
+        (
+            field: 'surat_pengantar' | 'cv' | 'portfolio',
+            setNama: (value: string) => void,
+        ) =>
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            const file = e.target.files?.[0] ?? null;
+            setData(field, file);
+            setNama(file?.name ?? '');
+        };
     // State FAQ
     const [openFaq, setOpenFaq] = useState<number | null>(null);
 
@@ -767,6 +789,9 @@ export default function Welcome({
                 reset();
                 setPasFotoNama('');
                 setPasFotoPreview('');
+                setSuratPengantarNama('');
+                setCvNama('');
+                setPortfolioNama('');
                 setTanggalMulai('');
                 setTanggalSelesai('');
                 resetRecaptcha();
@@ -2416,6 +2441,72 @@ export default function Welcome({
                                             className="hidden"
                                         />
                                     </label>
+                                </div>
+
+                                {/* --- Berkas pendukung opsional ("jika ada") --- */}
+                                <div className="mt-6 flex flex-col gap-3">
+                                    <label className="text-[14px] font-semibold text-[#0a1628]">
+                                        Berkas Pendukung{' '}
+                                        <span className="font-normal text-[#0a1628]/50">
+                                            (opsional)
+                                        </span>
+                                    </label>
+
+                                    {[
+                                        {
+                                            field: 'surat_pengantar' as const,
+                                            label: 'Surat Pengantar',
+                                            nama: suratPengantarNama,
+                                            setNama: setSuratPengantarNama,
+                                            accept: '.pdf,.doc,.docx',
+                                            hint: 'PDF/Word, maks. 5MB',
+                                        },
+                                        {
+                                            field: 'cv' as const,
+                                            label: 'CV',
+                                            nama: cvNama,
+                                            setNama: setCvNama,
+                                            accept: '.pdf,.doc,.docx',
+                                            hint: 'PDF/Word, maks. 5MB',
+                                        },
+                                        {
+                                            field: 'portfolio' as const,
+                                            label: 'Portofolio',
+                                            nama: portfolioNama,
+                                            setNama: setPortfolioNama,
+                                            accept: '.pdf,.doc,.docx,.zip,.png,.jpg,.jpeg',
+                                            hint: 'PDF/Word/ZIP/gambar, maks. 10MB',
+                                        },
+                                    ].map((berkas) => (
+                                        <label
+                                            key={berkas.field}
+                                            className="group flex cursor-pointer items-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-[#f5faff] px-4 py-3.5 transition-colors hover:border-[#0b4fb0] hover:bg-[#e7f0fc]"
+                                        >
+                                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white">
+                                                <FileText className="h-5 w-5 text-[#0b4fb0] transition-transform duration-300 group-hover:scale-110" />
+                                            </span>
+                                            <span className="flex min-w-0 flex-col">
+                                                <span className="text-[14px] font-medium text-[#0a1628]">
+                                                    {berkas.label}{' '}
+                                                    <span className="font-normal text-[#0a1628]/50">
+                                                        (jika ada)
+                                                    </span>
+                                                </span>
+                                                <span className="truncate text-[12px] text-[#0a1628]/50">
+                                                    {berkas.nama || berkas.hint}
+                                                </span>
+                                            </span>
+                                            <input
+                                                type="file"
+                                                accept={berkas.accept}
+                                                onChange={handleBerkas(
+                                                    berkas.field,
+                                                    berkas.setNama,
+                                                )}
+                                                className="hidden"
+                                            />
+                                        </label>
+                                    ))}
                                 </div>
 
                                 {/* --- reCAPTCHA v2 (checkbox) — gerbang anti-bot Fase 1 --- */}
