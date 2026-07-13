@@ -36,6 +36,23 @@ TASK 6 — Fix Admin OPD "Peserta Aktif" (active participants) menu
 - Report whether this is a read-path bug (wrong/stale query) or a genuinely missing feature (never fully wired) before fixing.
 - Fix using the same single-source-of-truth service pattern used for the kuota sync fix in a previous session, rather than a new ad-hoc query. Include relevant fields (name, ticket number, status, date approved — confirm against HANDOFF-BACKEND.md prop shape if one exists).
 
+TASK 7 — Add "Lacak Tiket" link to navbar and footer on homepage
+- Add a nav link labeled "Lacak Tiket" in the homepage navbar, pointing to the public lacak-tiket page (from Task 1).
+- Add the same link in the homepage footer.
+- Match existing navbar/footer link styling — don't introduce a new visual pattern.
+
+TASK 8 — Make lacak-tiket page context-aware when opened from a logged-in dashboard
+- When the public lacak-tiket page is opened via the "Lacak Status Publik" dashboard menu (Task 2) by an already-logged-in user, hide any "Masuk Akun" / login CTA / guest-only UI elements that assume the visitor is not authenticated.
+- Instead, render it wrapped in the same dashboard layout/chrome as other dashboard menu pages (e.g. "Bantuan") — same header, same nav, same page shell — so it feels like a native dashboard page, not a public page awkwardly embedded.
+- When accessed directly from the homepage/navbar/footer (Task 7) by a guest, keep the current public-facing version unchanged (with login CTA if relevant).
+- Implementation approach: check auth()->check() (or Inertia shared auth prop) to conditionally render the guest-facing chrome vs dashboard-wrapped chrome, reusing the same underlying ticket-lookup component/logic either way — don't duplicate the lookup logic itself.
+
+TASK 9 — Remove redundant "jika ada" label on registration file uploads
+- On the homepage registration ("Daftar") section, remove the text "jika ada" next to Surat Pengantar / CV / Portofolio upload fields (from Task 3), since "Opsional" label already conveys this — having both is redundant.
+- Confirm the "Opsional" label/badge is still clearly visible after removing "jika ada" so optionality is still communicated to the user.
+
+Report status (done/blocked/needs decision) after each of these three, same as Tasks 1–6. Run pint --dirty and relevant tests after.
+
 ORDER OF EXECUTION: do these one task at a time, in the order listed above, and report status (done/blocked/needs my decision) after each before moving to the next. Task 1's ticket format decision affects Task 2. Task 3 and 4 touch the same registration form so implement together but verify separately. Task 6 follows the same architectural pattern as the earlier kuota fix — reuse that precedent.
 
 After each task: run relevant Pest tests (write minimal ones if none exist), `pint --dirty`, and confirm no regressions in the three dashboards' existing kuota/status/peserta features from previous sessions.

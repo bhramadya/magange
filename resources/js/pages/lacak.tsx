@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     ArrowRight,
@@ -17,9 +17,28 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import { StatusBadge } from '@/components/status-badge';
+import MagangLayout, {
+    mahasiswaNav,
+    verifikatorNav,
+    opdNav,
+} from '@/layouts/magang-layout';
+import type { MagangNavItem } from '@/layouts/magang-layout';
 import { cn } from '@/lib/utils';
 import { lacak } from '@/routes';
-import type { ApplicationStatus, Opd } from '@/types/magang';
+import { otp as otpLogin } from '@/routes/login';
+import type {
+    ApplicationStatus,
+    MagangUser,
+    Opd,
+    UserRole,
+} from '@/types/magang';
+
+// Navigasi sidebar mengikuti peran pengguna saat halaman dibuka dari dasbor.
+const NAV_BY_ROLE: Record<UserRole, MagangNavItem[]> = {
+    mahasiswa: mahasiswaNav,
+    admin_verifikator: verifikatorNav,
+    admin_opd: opdNav,
+};
 
 /* =========================================================================
  *  LACAK STATUS PUBLIK — E-MAGANG (Pemkot Madiun)
@@ -206,6 +225,15 @@ export default function Lacak({ application, ticket }: LacakProps) {
     const [query, setQuery] = useState<string>(ticket ?? '');
     const [loading, setLoading] = useState(false);
 
+    // Konteks autentikasi (shared prop Inertia). Bila pengguna sudah login —
+    // halaman dibuka via menu "Lacak Status Publik" di dasbor — kita sembunyikan
+    // chrome tamu (CTA "Masuk") dan bungkus dengan MagangLayout agar terasa
+    // sebagai halaman dasbor native (Task 8). Tamu (dari homepage) tetap versi publik.
+    const authUser =
+        usePage<{ auth: { user: MagangUser | null } }>().props.auth?.user ??
+        null;
+    const isAuthed = authUser !== null;
+
     // Sudah mencari bila controller menerima `?tiket=` (ticket ter-set),
     // terlepas dari ketemu (application) atau tidak (application = null).
     const searched = ticket != null && ticket !== '';
@@ -245,6 +273,233 @@ export default function Lacak({ application, ticket }: LacakProps) {
         lookup(query);
     }
 
+    // Konten inti (form pencarian + hasil) — dipakai ulang oleh versi tamu & dasbor.
+    const content = (
+        <>
+            {/* Judul + pencarian */}
+            <div className="mx-auto max-w-xl text-center">
+                <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl bg-[#cddcef]/50 text-[#106feb]">
+                    <Ticket className="size-7" />
+                </div>
+                <h1 className="text-2xl font-black text-[#12213e] sm:text-3xl">
+                    Lacak Status Permohonan
+                </h1>
+                <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
+                    Masukkan nomor tiket yang Anda terima saat mengajukan magang
+                    untuk melihat perkembangan terkini.
+                </p>
+
+                <form
+                    onSubmit={handleSubmit}
+                    className="mt-7 flex flex-col gap-3 sm:flex-row"
+                >
+                    <div className="relative flex-1">
+                        <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-slate-400" />
+                        <input
+                            type="text"
+                            autoFocus
+                            placeholder="MGG-2026-123456"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            className="h-12 w-full rounded-xl border border-slate-200 bg-white pr-4 pl-11 text-sm font-medium tracking-wide uppercase transition outline-none placeholder:tracking-normal placeholder:normal-case focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={!query.trim() || state === 'loading'}
+                        className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#106feb] px-6 text-sm font-bold text-white shadow-sm shadow-[#106feb]/30 transition hover:bg-[#0b5ed0] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {state === 'loading' ? (
+                            <>
+                                <Loader2 className="size-4 animate-spin" />
+                                Mencari…
+                            </>
+                        ) : (
+                            <>
+                                <Search className="size-4" />
+                                Lacak
+                            </>
+                        )}
+                    </button>
+                </form>
+
+                <p className="mt-3 text-xs text-slate-400">
+                    Format nomor tiket:{' '}
+                    <span className="font-mono font-semibold text-slate-500">
+                        MGG-2026-123456
+                    </span>
+                </p>
+            </div>
+
+            {/* Hasil */}
+            <div className="mt-10">
+                <AnimatePresence mode="wait">
+                    {state === 'notfound' && (
+                        <motion.div
+                            key="notfound"
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: 0.25 }}
+                            className="mx-auto max-w-md rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center"
+                        >
+                            <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-500">
+                                <SearchX className="size-7" />
+                            </div>
+                            <h2 className="mt-4 text-lg font-bold text-[#12213e]">
+                                Tiket tidak ditemukan
+                            </h2>
+                            <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">
+                                Periksa kembali nomor tiket Anda. Pastikan
+                                formatnya sesuai, mis.{' '}
+                                <span className="font-mono font-semibold text-[#12213e]">
+                                    MGG-2026-123456
+                                </span>
+                                .
+                            </p>
+                            <Link
+                                href="/#daftar"
+                                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#106feb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0b5ed0]"
+                            >
+                                Ajukan Magang Baru{' '}
+                                <ArrowRight className="size-4" />
+                            </Link>
+                        </motion.div>
+                    )}
+
+                    {state === 'found' && result && (
+                        <motion.div
+                            key="found"
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={{
+                                duration: 0.3,
+                                ease: 'circOut',
+                            }}
+                            className="space-y-6"
+                        >
+                            {/* Ringkasan tiket */}
+                            <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <p className="text-xs font-medium text-slate-500">
+                                            Nomor Tiket
+                                        </p>
+                                        <p className="font-mono text-lg font-black tracking-tight text-[#106feb]">
+                                            {result.ticket_number}
+                                        </p>
+                                    </div>
+                                    <StatusBadge status={result.status} />
+                                </div>
+                                <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
+                                    Diajukan pada{' '}
+                                    {formatDate(result.created_at)} ·{' '}
+                                    {result.institution_name}
+                                </p>
+                            </div>
+
+                            {/* Penolakan */}
+                            {result.status === 'rejected' && (
+                                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5">
+                                    <div className="flex items-center gap-2 text-rose-700">
+                                        <AlertTriangle className="size-5" />
+                                        <p className="text-sm font-bold">
+                                            Permohonan Ditolak
+                                        </p>
+                                    </div>
+                                    <p className="mt-2 text-sm text-rose-700/90">
+                                        {result.rejection_reason ??
+                                            'Mohon maaf, permohonan Anda belum dapat disetujui.'}
+                                    </p>
+                                </div>
+                            )}
+
+                            <div className="grid gap-6 lg:grid-cols-3">
+                                {/* Timeline */}
+                                <div className="lg:col-span-2">
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                                        <h3 className="text-base font-bold text-[#12213e]">
+                                            Perkembangan Permohonan
+                                        </h3>
+                                        <p className="mt-0.5 text-sm text-slate-500">
+                                            Status diperbarui otomatis di setiap
+                                            tahap.
+                                        </p>
+                                        <div className="mt-6">
+                                            <StatusTimeline
+                                                status={result.status}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Detail */}
+                                <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                                    <h3 className="text-base font-bold text-[#12213e]">
+                                        Detail
+                                    </h3>
+                                    <dl className="mt-4 grid grid-cols-1 gap-4">
+                                        <DetailRow
+                                            label="Bidang / Tujuan"
+                                            value={result.tujuan_magang}
+                                        />
+                                        <DetailRow
+                                            label="OPD Penempatan"
+                                            value={result.opd?.name ?? null}
+                                        />
+                                        <DetailRow
+                                            label="Bidang Penempatan"
+                                            value={result.division}
+                                        />
+                                        <DetailRow
+                                            label="Periode"
+                                            value={`${formatDate(result.start_date)} – ${formatDate(result.end_date)}`}
+                                        />
+                                    </dl>
+                                </div>
+                            </div>
+
+                            {!isAuthed && (
+                                <div className="rounded-2xl bg-[#cddcef]/30 p-5 text-center">
+                                    <p className="text-sm text-slate-600">
+                                        Sudah memiliki akun? Masuk untuk
+                                        mengelola permohonan dan mengunggah
+                                        laporan akhir.
+                                    </p>
+                                    <Link
+                                        href={otpLogin.url()}
+                                        className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-[#106feb] ring-1 ring-[#106feb]/20 transition hover:bg-[#106feb] hover:text-white"
+                                    >
+                                        <LogIn className="size-4" />
+                                        Masuk ke Akun
+                                    </Link>
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+        </>
+    );
+
+    // Versi dasbor: dibuka via menu "Lacak Status Publik" oleh pengguna login.
+    // Dibungkus MagangLayout (header + nav dasbor), tanpa chrome tamu.
+    if (isAuthed && authUser) {
+        return (
+            <MagangLayout
+                user={authUser}
+                title="Lacak Status Publik"
+                active="lacak-publik"
+                navItems={NAV_BY_ROLE[authUser.role] ?? mahasiswaNav}
+            >
+                <Head title="Lacak Status Publik" />
+                <div className="mx-auto max-w-3xl">{content}</div>
+            </MagangLayout>
+        );
+    }
+
+    // Versi publik (tamu, dari homepage/navbar/footer): shell mandiri + CTA masuk.
     return (
         <>
             <Head title="Lacak Status — E-Magang Kota Madiun" />
@@ -267,7 +522,7 @@ export default function Lacak({ application, ticket }: LacakProps) {
                             </div>
                         </Link>
                         <Link
-                            href="/login"
+                            href={otpLogin.url()}
                             className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#106feb] hover:underline"
                         >
                             <LogIn className="size-4" />
@@ -277,213 +532,7 @@ export default function Lacak({ application, ticket }: LacakProps) {
                 </header>
 
                 <main className="mx-auto max-w-3xl px-5 py-8 sm:px-6 sm:py-12">
-                    {/* Judul + pencarian */}
-                    <div className="mx-auto max-w-xl text-center">
-                        <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl bg-[#cddcef]/50 text-[#106feb]">
-                            <Ticket className="size-7" />
-                        </div>
-                        <h1 className="text-2xl font-black text-[#12213e] sm:text-3xl">
-                            Lacak Status Permohonan
-                        </h1>
-                        <p className="mx-auto mt-2 max-w-md text-sm text-slate-500">
-                            Masukkan nomor tiket yang Anda terima saat
-                            mengajukan magang untuk melihat perkembangan
-                            terkini.
-                        </p>
-
-                        <form
-                            onSubmit={handleSubmit}
-                            className="mt-7 flex flex-col gap-3 sm:flex-row"
-                        >
-                            <div className="relative flex-1">
-                                <Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-slate-400" />
-                                <input
-                                    type="text"
-                                    autoFocus
-                                    placeholder="MGG-2026-123456"
-                                    value={query}
-                                    onChange={(e) => setQuery(e.target.value)}
-                                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pr-4 pl-11 text-sm font-medium tracking-wide uppercase transition outline-none placeholder:tracking-normal placeholder:normal-case focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
-                                />
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={!query.trim() || state === 'loading'}
-                                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#106feb] px-6 text-sm font-bold text-white shadow-sm shadow-[#106feb]/30 transition hover:bg-[#0b5ed0] disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                {state === 'loading' ? (
-                                    <>
-                                        <Loader2 className="size-4 animate-spin" />
-                                        Mencari…
-                                    </>
-                                ) : (
-                                    <>
-                                        <Search className="size-4" />
-                                        Lacak
-                                    </>
-                                )}
-                            </button>
-                        </form>
-
-                        <p className="mt-3 text-xs text-slate-400">
-                            Format nomor tiket:{' '}
-                            <span className="font-mono font-semibold text-slate-500">
-                                MGG-2026-123456
-                            </span>
-                        </p>
-                    </div>
-
-                    {/* Hasil */}
-                    <div className="mt-10">
-                        <AnimatePresence mode="wait">
-                            {state === 'notfound' && (
-                                <motion.div
-                                    key="notfound"
-                                    initial={{ opacity: 0, y: 12 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -8 }}
-                                    transition={{ duration: 0.25 }}
-                                    className="mx-auto max-w-md rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center"
-                                >
-                                    <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-500">
-                                        <SearchX className="size-7" />
-                                    </div>
-                                    <h2 className="mt-4 text-lg font-bold text-[#12213e]">
-                                        Tiket tidak ditemukan
-                                    </h2>
-                                    <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">
-                                        Periksa kembali nomor tiket Anda.
-                                        Pastikan formatnya sesuai, mis.{' '}
-                                        <span className="font-mono font-semibold text-[#12213e]">
-                                            MGG-2026-123456
-                                        </span>
-                                        .
-                                    </p>
-                                    <Link
-                                        href="/#daftar"
-                                        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#106feb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#0b5ed0]"
-                                    >
-                                        Ajukan Magang Baru{' '}
-                                        <ArrowRight className="size-4" />
-                                    </Link>
-                                </motion.div>
-                            )}
-
-                            {state === 'found' && result && (
-                                <motion.div
-                                    key="found"
-                                    initial={{ opacity: 0, y: 12 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -8 }}
-                                    transition={{
-                                        duration: 0.3,
-                                        ease: 'circOut',
-                                    }}
-                                    className="space-y-6"
-                                >
-                                    {/* Ringkasan tiket */}
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-6">
-                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                            <div>
-                                                <p className="text-xs font-medium text-slate-500">
-                                                    Nomor Tiket
-                                                </p>
-                                                <p className="font-mono text-lg font-black tracking-tight text-[#106feb]">
-                                                    {result.ticket_number}
-                                                </p>
-                                            </div>
-                                            <StatusBadge
-                                                status={result.status}
-                                            />
-                                        </div>
-                                        <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                                            Diajukan pada{' '}
-                                            {formatDate(result.created_at)} ·{' '}
-                                            {result.institution_name}
-                                        </p>
-                                    </div>
-
-                                    {/* Penolakan */}
-                                    {result.status === 'rejected' && (
-                                        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5">
-                                            <div className="flex items-center gap-2 text-rose-700">
-                                                <AlertTriangle className="size-5" />
-                                                <p className="text-sm font-bold">
-                                                    Permohonan Ditolak
-                                                </p>
-                                            </div>
-                                            <p className="mt-2 text-sm text-rose-700/90">
-                                                {result.rejection_reason ??
-                                                    'Mohon maaf, permohonan Anda belum dapat disetujui.'}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    <div className="grid gap-6 lg:grid-cols-3">
-                                        {/* Timeline */}
-                                        <div className="lg:col-span-2">
-                                            <div className="rounded-2xl border border-slate-200 bg-white p-6">
-                                                <h3 className="text-base font-bold text-[#12213e]">
-                                                    Perkembangan Permohonan
-                                                </h3>
-                                                <p className="mt-0.5 text-sm text-slate-500">
-                                                    Status diperbarui otomatis
-                                                    di setiap tahap.
-                                                </p>
-                                                <div className="mt-6">
-                                                    <StatusTimeline
-                                                        status={result.status}
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Detail */}
-                                        <div className="rounded-2xl border border-slate-200 bg-white p-6">
-                                            <h3 className="text-base font-bold text-[#12213e]">
-                                                Detail
-                                            </h3>
-                                            <dl className="mt-4 grid grid-cols-1 gap-4">
-                                                <DetailRow
-                                                    label="Bidang / Tujuan"
-                                                    value={result.tujuan_magang}
-                                                />
-                                                <DetailRow
-                                                    label="OPD Penempatan"
-                                                    value={
-                                                        result.opd?.name ?? null
-                                                    }
-                                                />
-                                                <DetailRow
-                                                    label="Bidang Penempatan"
-                                                    value={result.division}
-                                                />
-                                                <DetailRow
-                                                    label="Periode"
-                                                    value={`${formatDate(result.start_date)} – ${formatDate(result.end_date)}`}
-                                                />
-                                            </dl>
-                                        </div>
-                                    </div>
-
-                                    <div className="rounded-2xl bg-[#cddcef]/30 p-5 text-center">
-                                        <p className="text-sm text-slate-600">
-                                            Sudah memiliki akun? Masuk untuk
-                                            mengelola permohonan dan mengunggah
-                                            laporan akhir.
-                                        </p>
-                                        <Link
-                                            href="/login"
-                                            className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-[#106feb] ring-1 ring-[#106feb]/20 transition hover:bg-[#106feb] hover:text-white"
-                                        >
-                                            <LogIn className="size-4" />
-                                            Masuk ke Akun
-                                        </Link>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
+                    {content}
                 </main>
             </div>
         </>

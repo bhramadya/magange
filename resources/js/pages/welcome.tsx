@@ -934,6 +934,8 @@ export default function Welcome({
             ? [{ href: '#testimonial', label: 'Testimoni' }]
             : []),
         { href: '#faq', label: 'FAQ' },
+        // Tautan ke halaman pelacakan publik (route Inertia, bukan anchor).
+        { href: '/lacak', label: 'Lacak Tiket' },
         { href: '#daftar', label: 'Kontak' },
     ];
 
@@ -1124,19 +1126,27 @@ export default function Welcome({
                         {/* Tautan Navigasi Inline (tengah) — hanya desktop (lg+).
                             Underline tumbuh dari tengah + warna beralih ke biru saat hover. */}
                         <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 lg:flex">
-                            {navLinks.map((link) => (
-                                <a
-                                    key={link.href}
-                                    href={link.href}
-                                    className="group relative rounded-full px-4 py-2 text-sm font-medium text-[#0a1628]/70 transition-colors duration-300 hover:text-[#106feb] focus-visible:ring-2 focus-visible:ring-[#0b4fb0]/50 focus-visible:outline-none"
-                                >
-                                    {link.label}
-                                    <span
-                                        aria-hidden
-                                        className="absolute inset-x-4 bottom-1 h-0.5 origin-center scale-x-0 rounded-full bg-[#106feb] transition-transform duration-300 ease-out group-hover:scale-x-100"
-                                    />
-                                </a>
-                            ))}
+                            {navLinks.map((link) => {
+                                // Route Inertia untuk href absolut (mis. /lacak),
+                                // anchor <a> untuk tautan seksi (#...).
+                                const NavEl = link.href.startsWith('/')
+                                    ? Link
+                                    : 'a';
+
+                                return (
+                                    <NavEl
+                                        key={link.href}
+                                        href={link.href}
+                                        className="group relative rounded-full px-4 py-2 text-sm font-medium text-[#0a1628]/70 transition-colors duration-300 hover:text-[#106feb] focus-visible:ring-2 focus-visible:ring-[#0b4fb0]/50 focus-visible:outline-none"
+                                    >
+                                        {link.label}
+                                        <span
+                                            aria-hidden
+                                            className="absolute inset-x-4 bottom-1 h-0.5 origin-center scale-x-0 rounded-full bg-[#106feb] transition-transform duration-300 ease-out group-hover:scale-x-100"
+                                        />
+                                    </NavEl>
+                                );
+                            })}
                         </nav>
 
                         {/* Aksi Kanan: Masuk (desktop) + CTA Sliding + Hamburger (mobile) */}
@@ -1184,18 +1194,24 @@ export default function Welcome({
                                 className="mt-3 overflow-hidden rounded-3xl border border-white/30 bg-white/80 shadow-[0_20px_50px_rgba(8,71,156,0.12)] backdrop-blur-md"
                             >
                                 <div className="flex flex-col gap-1 px-4 py-4">
-                                    {navLinks.map((link) => (
-                                        <a
-                                            key={link.href}
-                                            href={link.href}
-                                            onClick={() =>
-                                                setMobileMenuOpen(false)
-                                            }
-                                            className="rounded-xl px-3 py-2.5 text-[15px] font-medium text-[#0a1628]/70 transition-colors hover:bg-[#106feb]/5 hover:text-[#106feb] focus-visible:bg-[#106feb]/5 focus-visible:text-[#106feb] focus-visible:outline-none"
-                                        >
-                                            {link.label}
-                                        </a>
-                                    ))}
+                                    {navLinks.map((link) => {
+                                        const NavEl = link.href.startsWith('/')
+                                            ? Link
+                                            : 'a';
+
+                                        return (
+                                            <NavEl
+                                                key={link.href}
+                                                href={link.href}
+                                                onClick={() =>
+                                                    setMobileMenuOpen(false)
+                                                }
+                                                className="rounded-xl px-3 py-2.5 text-[15px] font-medium text-[#0a1628]/70 transition-colors hover:bg-[#106feb]/5 hover:text-[#106feb] focus-visible:bg-[#106feb]/5 focus-visible:text-[#106feb] focus-visible:outline-none"
+                                            >
+                                                {link.label}
+                                            </NavEl>
+                                        );
+                                    })}
                                     <Link
                                         href="/login-otp"
                                         onClick={() => setMobileMenuOpen(false)}
@@ -2487,10 +2503,7 @@ export default function Welcome({
                                             </span>
                                             <span className="flex min-w-0 flex-col">
                                                 <span className="text-[14px] font-medium text-[#0a1628]">
-                                                    {berkas.label}{' '}
-                                                    <span className="font-normal text-[#0a1628]/50">
-                                                        (jika ada)
-                                                    </span>
+                                                    {berkas.label}
                                                 </span>
                                                 <span className="truncate text-[12px] text-[#0a1628]/50">
                                                     {berkas.nama || berkas.hint}
@@ -2697,22 +2710,28 @@ export default function Welcome({
                                     Navigasi
                                 </h4>
                                 <ul className="flex flex-col gap-3.5">
-                                    {navLinks.map((link) => (
-                                        <li key={link.href}>
-                                            <a
-                                                href={link.href}
-                                                className="group relative inline-flex items-center text-[15px] text-white/60 transition-colors hover:text-white"
-                                            >
-                                                <ArrowRight
-                                                    aria-hidden
-                                                    className="absolute left-0 h-3.5 w-3.5 -translate-x-1 text-[#106feb] opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
-                                                />
-                                                <span className="transition-transform duration-300 group-hover:translate-x-5">
-                                                    {link.label}
-                                                </span>
-                                            </a>
-                                        </li>
-                                    ))}
+                                    {navLinks.map((link) => {
+                                        const NavEl = link.href.startsWith('/')
+                                            ? Link
+                                            : 'a';
+
+                                        return (
+                                            <li key={link.href}>
+                                                <NavEl
+                                                    href={link.href}
+                                                    className="group relative inline-flex items-center text-[15px] text-white/60 transition-colors hover:text-white"
+                                                >
+                                                    <ArrowRight
+                                                        aria-hidden
+                                                        className="absolute left-0 h-3.5 w-3.5 -translate-x-1 text-[#106feb] opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
+                                                    />
+                                                    <span className="transition-transform duration-300 group-hover:translate-x-5">
+                                                        {link.label}
+                                                    </span>
+                                                </NavEl>
+                                            </li>
+                                        );
+                                    })}
                                 </ul>
                             </div>
 
