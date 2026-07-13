@@ -54,7 +54,7 @@ export default function FaqEdit({ user = MOCK_USER, faq }: FaqEditProps) {
                     <ArrowLeft className="size-4" /> Kembali ke daftar
                 </Link>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                     <h2 className="text-lg font-black text-[#12213e]">
                         Edit FAQ
                     </h2>

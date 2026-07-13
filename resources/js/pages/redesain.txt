@@ -221,13 +221,38 @@ BAGIAN B — DASHBOARD & HALAMAN ROLE (poles ulang tampilan)
        tidak disentuh. tsc+eslint OK. CATATAN: keputusan.tsx & peserta.tsx belum
        disapu di item ini.
 
-[ ] B5. HALAMAN PENDUKUNG (bantuan.tsx, pengaturan.tsx, lacak.tsx, auth/**)
+[x] B5. HALAMAN PENDUKUNG (bantuan.tsx, pengaturan.tsx, lacak.tsx, auth/**)
     - Selaraskan tipografi, kartu, tombol, dan animasi masuk dengan
       bahasa visual baru.
+    >> sudah dikerjakan oleh claude pada tanggal (13/07/2026, pukul 08:32)
+       Audit: otp-login.tsx & lacak.tsx SUDAH beranimasi (motion+AnimatePresence);
+       bantuan.tsx & pengaturan.tsx pakai MagangLayout -> dapat animasi masuk
+       dari B1. Yang tertinggal: admin-login.tsx (tanpa motion sama sekali).
+       Perbaikan: (1) admin-login.tsx diberi animasi MASUK fade+naik (motion.div
+       membungkus kartu) + input hover border #cddcef -> setara halaman lain.
+       (2) 3 kartu konten lacak.tsx (ringkasan tiket, timeline, detail) diberi
+       shadow-sm utk kedalaman konsisten dgn dasbor. tsc+eslint OK, isi tetap.
 
-[ ] B6. SAPU AKHIR DASHBOARD
+[x] B6. SAPU AKHIR DASHBOARD
     - Konsistensi lintas dashboard: spacing, radius, shadow, hover,
       animasi masuk halaman. Pastikan build/lint/types lolos.
+    >> sudah dikerjakan oleh claude pada tanggal (13/07/2026, pukul 08:40)
+       Ringkasan: kedalaman kartu diseragamkan — 7 kartu konten flat sisa di
+       sub-halaman (mahasiswa/pengajuan 4, mahasiswa/penyelesaian 1,
+       verifikator/faq/create 1, verifikator/faq/edit 1) diberi shadow-sm
+       agar konsisten dgn dasbor utama & lacak. Animasi masuk halaman sudah
+       lewat MagangLayout (B1). GATE FINAL LOLOS SEMUA:
+         - tsc --noEmit (types)        : OK (exit 0)
+         - eslint resources/js         : OK (exit 0)
+         - prettier --check (semua)    : OK
+         - npm run build (vite)        : OK (built in ~60s, exit 0)
+       Isi/konten & aturan bisnis tidak diubah di seluruh Bagian B.
+
+    ===================================================================
+    SELURUH ROADMAP SELESAI — BAGIAN A (A1-A11) & BAGIAN B (B1-B6) + 2
+    revisi permintaan user (card form mobile, rombak layout section kontak).
+    Build/lint/types hijau. 13/07/2026.
+    ===================================================================
 
 ========================================================================
   RIWAYAT PENGERJAAN
