@@ -206,12 +206,12 @@ function StatCard({
     accent?: boolean;
 }) {
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-[#cddcef] hover:shadow-md">
             <div
-                className={`flex size-10 items-center justify-center rounded-xl ${
+                className={`flex size-10 items-center justify-center rounded-xl transition-colors duration-300 ${
                     accent
                         ? 'bg-[#106feb] text-white'
-                        : 'bg-[#cddcef]/40 text-[#106feb]'
+                        : 'bg-[#cddcef]/40 text-[#106feb] group-hover:bg-[#106feb] group-hover:text-white'
                 }`}
             >
                 <Icon className="size-5" />
@@ -366,7 +366,7 @@ export default function MahasiswaDashboard({
                         Selamat datang kembali,
                     </p>
                     <h2 className="text-2xl font-black text-[#12213e]">
-                        {user.name} 👋
+                        {user.name}
                     </h2>
                 </div>
                 {application && (
@@ -425,7 +425,7 @@ export default function MahasiswaDashboard({
                     <div className="mt-6 grid gap-6 lg:grid-cols-3">
                         {/* Timeline */}
                         <div className="lg:col-span-2">
-                            <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                                 <h3 className="text-base font-bold text-[#12213e]">
                                     Lacak Status Pengajuan
                                 </h3>
@@ -445,7 +445,7 @@ export default function MahasiswaDashboard({
                         <div className="flex flex-col gap-6">
                             <ActionPanel application={application} />
 
-                            <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                                 <h3 className="text-base font-bold text-[#12213e]">
                                     Detail Pengajuan
                                 </h3>

@@ -13,6 +13,7 @@ import {
     Users,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { motion } from 'motion/react';
 import { useState } from 'react';
 import {
     DropdownMenu,
@@ -205,7 +206,7 @@ function NavList({
                     >
                         <Icon
                             className={cn(
-                                'size-[18px]',
+                                'size-[18px] transition-transform duration-200 group-hover:scale-110',
                                 isActive
                                     ? 'text-white'
                                     : 'text-slate-400 group-hover:text-[#106feb]',
@@ -354,7 +355,15 @@ export default function MagangLayout({
                 </header>
 
                 <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:py-8">
-                    {children}
+                    {/* Animasi masuk halaman — fade + naik lembut tiap kali
+                        dasbor dimuat, selaras dgn reveal di landing. */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, ease: 'easeOut' }}
+                    >
+                        {children}
+                    </motion.div>
                 </main>
             </div>
         </div>

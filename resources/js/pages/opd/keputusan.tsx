@@ -592,7 +592,7 @@ export default function OpdKeputusan({
                                 <ClipboardCheck className="size-10 text-slate-300" />
                                 <p className="text-sm font-semibold text-[#12213e]">
                                     {queue.length === 0
-                                        ? 'Tidak ada antrian 🎉'
+                                        ? 'Tidak ada antrian'
                                         : 'Tidak ada hasil pencarian'}
                                 </p>
                                 <p className="text-sm text-slate-500">

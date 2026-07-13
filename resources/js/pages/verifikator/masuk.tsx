@@ -539,7 +539,7 @@ export default function VerifikatorMasuk({
                                 <Inbox className="size-10 text-slate-300" />
                                 <p className="text-sm font-semibold text-[#12213e]">
                                     {queue.length === 0
-                                        ? 'Kotak masuk kosong 🎉'
+                                        ? 'Kotak masuk kosong'
                                         : 'Tidak ada hasil pencarian'}
                                 </p>
                                 <p className="text-sm text-slate-500">

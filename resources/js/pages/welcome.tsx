@@ -29,6 +29,7 @@ import {
     Users,
     Star,
     Quote,
+    X,
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView, animate } from 'motion/react';
 import { useState, useEffect, useRef } from 'react';
@@ -194,7 +195,7 @@ function AnimatedButton({
         </>
     );
 
-    const shared = `group relative inline-flex items-center justify-between gap-3 overflow-hidden rounded-full py-1 pl-6 pr-1 text-sm ${baseBg} shadow-lg shadow-[#106feb]/25 transition-shadow duration-300 hover:shadow-xl hover:shadow-[#106feb]/35 ${disabled ? 'pointer-events-none opacity-50' : ''} ${className}`;
+    const shared = `group relative inline-flex items-center justify-between gap-3 overflow-hidden rounded-full py-1 pl-6 pr-1 text-sm ${baseBg} shadow-lg shadow-[#106feb]/25 transition-shadow duration-300 hover:shadow-xl hover:shadow-[#106feb]/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b4fb0] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f5faff] ${disabled ? 'pointer-events-none opacity-50' : ''} ${className}`;
 
     if (as === 'link' && href) {
         return (
@@ -1085,27 +1086,53 @@ export default function Welcome({
                     className="fixed top-5 left-1/2 z-[1000] w-[90%] max-w-[1200px] -translate-x-1/2"
                 >
                     <div
-                        className={`flex items-center justify-between rounded-full border border-white/20 bg-white/70 p-2 backdrop-blur-md transition-shadow duration-300 xl:p-3 ${scrolled ? 'shadow-[0_12px_40px_rgba(8,71,156,0.14)]' : 'shadow-lg shadow-[#106feb]/5'}`}
+                        className={`relative flex items-center justify-between rounded-full border border-white/20 bg-white/70 backdrop-blur-md transition-all duration-300 ${scrolled ? 'p-1.5 shadow-[0_12px_40px_rgba(8,71,156,0.14)] xl:p-2' : 'p-2 shadow-lg shadow-[#106feb]/5 xl:p-3'}`}
                     >
                         {/* Logo (kiri) */}
                         <Link
                             href="/"
-                            className="bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text pl-4 text-xl tracking-tight text-transparent"
+                            className="bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text pl-4 text-xl tracking-tight text-transparent transition-opacity duration-300 hover:opacity-80"
                         >
                             E-Magang
                         </Link>
 
-                        {/* Aksi Kanan: CTA Sliding + Hamburger */}
+                        {/* Tautan Navigasi Inline (tengah) — hanya desktop (lg+).
+                            Underline tumbuh dari tengah + warna beralih ke biru saat hover. */}
+                        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-1 lg:flex">
+                            {navLinks.map((link) => (
+                                <a
+                                    key={link.href}
+                                    href={link.href}
+                                    className="group relative rounded-full px-4 py-2 text-sm font-medium text-[#0a1628]/70 transition-colors duration-300 hover:text-[#106feb] focus-visible:ring-2 focus-visible:ring-[#0b4fb0]/50 focus-visible:outline-none"
+                                >
+                                    {link.label}
+                                    <span
+                                        aria-hidden
+                                        className="absolute inset-x-4 bottom-1 h-0.5 origin-center scale-x-0 rounded-full bg-[#106feb] transition-transform duration-300 ease-out group-hover:scale-x-100"
+                                    />
+                                </a>
+                            ))}
+                        </nav>
+
+                        {/* Aksi Kanan: Masuk (desktop) + CTA Sliding + Hamburger (mobile) */}
                         <div className="flex items-center gap-2 xl:gap-3">
+                            {/* Tautan Masuk Akun — hanya desktop (lg+) */}
+                            <Link
+                                href="/login-otp"
+                                className="hidden rounded-full px-4 py-2 text-sm font-medium text-[#0a1628]/70 transition-colors duration-300 hover:text-[#106feb] focus-visible:ring-2 focus-visible:ring-[#0b4fb0]/50 focus-visible:outline-none lg:inline-flex"
+                            >
+                                Masuk
+                            </Link>
+
                             {/* Tombol CTA dengan animasi sliding overlay */}
                             <AnimatedButton as="a" href="#daftar">
                                 Daftar
                             </AnimatedButton>
 
-                            {/* Tombol Hamburger — background biru #106feb, ikon putih */}
+                            {/* Tombol Hamburger — hanya mobile/tablet (< lg) */}
                             <button
                                 onClick={() => setMobileMenuOpen((v) => !v)}
-                                className="relative flex size-10 cursor-pointer items-center justify-center rounded-full bg-[#106feb] text-white shadow-md shadow-[#106feb]/30 transition-all hover:brightness-110"
+                                className="relative flex size-10 cursor-pointer items-center justify-center rounded-full bg-[#106feb] text-white shadow-md shadow-[#106feb]/30 transition-all hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[#0b4fb0] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f5faff] focus-visible:outline-none lg:hidden"
                                 aria-label="Buka menu navigasi"
                                 aria-expanded={mobileMenuOpen}
                             >
@@ -1139,7 +1166,7 @@ export default function Welcome({
                                             onClick={() =>
                                                 setMobileMenuOpen(false)
                                             }
-                                            className="rounded-xl px-3 py-2.5 text-[15px] font-medium text-[#0a1628]/70 transition-colors hover:bg-[#106feb]/5 hover:text-[#106feb]"
+                                            className="rounded-xl px-3 py-2.5 text-[15px] font-medium text-[#0a1628]/70 transition-colors hover:bg-[#106feb]/5 hover:text-[#106feb] focus-visible:bg-[#106feb]/5 focus-visible:text-[#106feb] focus-visible:outline-none"
                                         >
                                             {link.label}
                                         </a>
@@ -1147,7 +1174,7 @@ export default function Welcome({
                                     <Link
                                         href="/login-otp"
                                         onClick={() => setMobileMenuOpen(false)}
-                                        className="mt-1 rounded-xl px-3 py-2.5 text-left text-[15px] font-medium text-[#0a1628]/70 transition-colors hover:bg-[#106feb]/5 hover:text-[#106feb]"
+                                        className="mt-1 rounded-xl px-3 py-2.5 text-left text-[15px] font-medium text-[#0a1628]/70 transition-colors hover:bg-[#106feb]/5 hover:text-[#106feb] focus-visible:bg-[#106feb]/5 focus-visible:text-[#106feb] focus-visible:outline-none"
                                     >
                                         Masuk Akun
                                     </Link>
@@ -1248,7 +1275,7 @@ export default function Welcome({
                             {/* Badge Pengumuman (Pill) */}
                             <motion.div
                                 variants={heroItem}
-                                className="mb-8 inline-flex items-center gap-2 rounded-full border border-slate-100 bg-white/60 px-4 py-1.5 text-[13px] font-medium text-[#0a1628]/70 shadow-sm backdrop-blur-md transition-all hover:border-[#cddcef] hover:bg-white"
+                                className="mb-8 inline-flex items-center gap-2 rounded-full border border-slate-100 bg-white/60 px-4 py-2 text-[13px] font-medium text-[#0a1628]/70 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-[#cddcef] hover:bg-white"
                             >
                                 <span className="flex h-2 w-2 animate-pulse rounded-full bg-[#106feb]"></span>
                                 Portal Resmi Kota Madiun
@@ -1257,7 +1284,7 @@ export default function Welcome({
                             {/* Headline Utama — Inter Bold, gradien #0a1628 → #0b4fb0 */}
                             <motion.h1
                                 variants={heroItem}
-                                className="mb-6 max-w-4xl bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text text-[42px] leading-[1.05] font-bold tracking-tight text-transparent md:text-[68px]"
+                                className="mb-6 max-w-4xl bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text text-[44px] leading-[1.05] font-bold tracking-tight text-transparent md:text-[72px] lg:text-[80px]"
                             >
                                 Pusat Kendali Karir{' '}
                                 <br className="hidden md:block" />
@@ -1265,6 +1292,18 @@ export default function Welcome({
                                     <span className="relative z-10 bg-gradient-to-r from-[#106feb] via-[#0b4fb0] to-[#106feb] bg-clip-text pb-[0.15em] text-transparent">
                                         Digital Anda
                                     </span>
+                                    {/* Garis bawah tumbuh dari kiri saat hero muncul */}
+                                    <motion.span
+                                        aria-hidden
+                                        initial={{ scaleX: 0 }}
+                                        animate={{ scaleX: 1 }}
+                                        transition={{
+                                            duration: 0.7,
+                                            delay: 0.9,
+                                            ease: 'circOut',
+                                        }}
+                                        className="absolute bottom-0 left-0 h-[6px] w-full origin-left rounded-full bg-gradient-to-r from-[#106feb] to-[#0b4fb0]"
+                                    />
                                 </span>
                             </motion.h1>
 
@@ -1301,28 +1340,20 @@ export default function Welcome({
                                 </AnimatedButton>
                             </motion.div>
 
-                            {/* Baris penanda kepercayaan — memperkuat keyakinan calon pendaftar */}
+                            {/* Baris penanda kepercayaan — chip pill konsisten dgn badge, hover naik */}
                             <motion.div
                                 variants={heroItem}
-                                className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-[13px] font-medium text-[#0a1628]/55"
+                                className="mt-10 flex flex-wrap items-center justify-center gap-3 text-[13px] font-medium text-[#0a1628]/70"
                             >
-                                <span className="inline-flex items-center gap-2">
+                                <span className="inline-flex items-center gap-2 rounded-full border border-slate-100 bg-white/60 px-4 py-2 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-[#cddcef] hover:bg-white">
                                     <CheckCircle2 className="h-4 w-4 text-[#106feb]" />
                                     100% Gratis Tanpa Biaya
                                 </span>
-                                <span
-                                    aria-hidden
-                                    className="hidden h-1 w-1 rounded-full bg-[#0a1628]/20 sm:inline-block"
-                                />
-                                <span className="inline-flex items-center gap-2">
+                                <span className="inline-flex items-center gap-2 rounded-full border border-slate-100 bg-white/60 px-4 py-2 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-[#cddcef] hover:bg-white">
                                     <ShieldCheck className="h-4 w-4 text-[#106feb]" />
                                     Data Terlindungi
                                 </span>
-                                <span
-                                    aria-hidden
-                                    className="hidden h-1 w-1 rounded-full bg-[#0a1628]/20 sm:inline-block"
-                                />
-                                <span className="inline-flex items-center gap-2">
+                                <span className="inline-flex items-center gap-2 rounded-full border border-slate-100 bg-white/60 px-4 py-2 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-[#cddcef] hover:bg-white">
                                     <Building2 className="h-4 w-4 text-[#106feb]" />
                                     35 Instansi Resmi
                                 </span>
@@ -1334,7 +1365,7 @@ export default function Welcome({
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 40 }}
                         whileInView={{ opacity: 1, scale: 1, y: 0 }}
-                        viewport={{ once: true, margin: '80px' }}
+                        viewport={{ once: true, margin: '-80px' }}
                         transition={{ duration: 0.9, ease: 'circOut' }}
                         className="group relative mt-24 w-full max-w-md md:max-w-2xl lg:max-w-4xl"
                     >
@@ -1375,16 +1406,16 @@ export default function Welcome({
                         variants={staggerContainer}
                         initial="hidden"
                         whileInView="show"
-                        viewport={{ once: true, margin: '-60px' }}
+                        viewport={{ once: true, margin: '-80px' }}
                         className="mt-20 grid w-full max-w-4xl grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4"
                     >
                         {statistik.map((s) => (
                             <motion.div
                                 key={s.label}
                                 variants={staggerItem}
-                                className="group flex flex-col items-center gap-2 rounded-3xl border border-slate-100 bg-white/70 p-6 text-center shadow-sm backdrop-blur-sm transition-shadow duration-300 hover:shadow-lg"
+                                className="group flex flex-col items-center gap-2 rounded-3xl border border-slate-100 bg-white/70 p-6 text-center shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#cddcef] hover:shadow-lg"
                             >
-                                <span className="flex size-11 items-center justify-center rounded-2xl bg-[#cddcef]/50 text-[#106feb] transition-colors duration-300 group-hover:bg-[#106feb] group-hover:text-white">
+                                <span className="flex size-11 items-center justify-center rounded-2xl bg-[#cddcef]/50 text-[#106feb] transition-all duration-300 group-hover:-rotate-3 group-hover:bg-[#106feb] group-hover:text-white group-hover:shadow-lg group-hover:shadow-[#106feb]/30">
                                     <s.icon className="size-5" />
                                 </span>
                                 <span className="mt-1 text-3xl font-bold tracking-tight text-[#0a1628]">
@@ -1403,8 +1434,8 @@ export default function Welcome({
                     {/* Track bergerak terus-menerus (infinite loop seamless) */}
                     <div className="relative">
                         {/* Fade tepi kiri & kanan */}
-                        <div className="pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-24 bg-gradient-to-r from-[#f5faff] to-transparent"></div>
-                        <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-24 bg-gradient-to-l from-[#f5faff] to-transparent"></div>
+                        <div className="pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-32 bg-gradient-to-r from-[#f5faff] to-transparent"></div>
+                        <div className="pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-32 bg-gradient-to-l from-[#f5faff] to-transparent"></div>
 
                         <motion.div
                             className="flex w-max gap-4"
@@ -1420,12 +1451,12 @@ export default function Welcome({
                                 (logo, idx) => (
                                     <div
                                         key={idx}
-                                        className="flex shrink-0 items-center gap-3 rounded-full border border-slate-100 bg-white px-6 py-3 shadow-[0_4px_20px_rgba(8,71,156,0.04)]"
+                                        className="group flex shrink-0 items-center gap-3 rounded-full border border-slate-100 bg-white px-6 py-3 shadow-[0_4px_20px_rgba(8,71,156,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#cddcef] hover:shadow-md"
                                     >
-                                        <div className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#cddcef]/40 bg-[#f5faff]">
-                                            <Building2 className="h-4 w-4 text-[#106feb]" />
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[#cddcef]/40 bg-[#f5faff] transition-colors duration-300 group-hover:border-transparent group-hover:bg-[#106feb]">
+                                            <Building2 className="h-4 w-4 text-[#106feb] transition-colors duration-300 group-hover:text-white" />
                                         </div>
-                                        <span className="text-[15px] font-medium whitespace-nowrap text-[#0a1628]/70">
+                                        <span className="text-[15px] font-medium whitespace-nowrap text-[#0a1628]/70 transition-colors duration-300 group-hover:text-[#0a1628]">
                                             {logo}
                                         </span>
                                     </div>
@@ -1474,10 +1505,10 @@ export default function Welcome({
                                     stiffness: 300,
                                     damping: 22,
                                 }}
-                                className="group flex h-full flex-col gap-4 rounded-3xl border border-slate-100 bg-white p-8 shadow-sm transition-shadow duration-300 hover:shadow-2xl md:p-10"
+                                className="group flex h-full flex-col gap-4 rounded-3xl border border-slate-100 bg-white p-8 shadow-sm transition-all duration-300 hover:border-[#cddcef] hover:shadow-2xl md:p-10"
                             >
-                                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#0b4fb0]/15 bg-[#0b4fb0]/8 transition-colors duration-300 group-hover:bg-[#0b4fb0]/12">
-                                    <Clock className="h-7 w-7 text-[#0b4fb0]" />
+                                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#0b4fb0]/15 bg-[#0b4fb0]/8 transition-all duration-300 group-hover:-rotate-3 group-hover:border-transparent group-hover:bg-[#106feb] group-hover:shadow-lg group-hover:shadow-[#106feb]/30">
+                                    <Clock className="h-7 w-7 text-[#0b4fb0] transition-colors duration-300 group-hover:text-white" />
                                 </div>
                                 <h3 className="text-[22px] leading-snug font-bold text-[#0a1628]">
                                     Validasi Real-time
@@ -1499,10 +1530,10 @@ export default function Welcome({
                                     stiffness: 300,
                                     damping: 22,
                                 }}
-                                className="group flex h-full flex-col gap-4 rounded-3xl border border-slate-100 bg-white p-8 shadow-sm transition-shadow duration-300 hover:shadow-2xl md:p-10"
+                                className="group flex h-full flex-col gap-4 rounded-3xl border border-slate-100 bg-white p-8 shadow-sm transition-all duration-300 hover:border-[#cddcef] hover:shadow-2xl md:p-10"
                             >
-                                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#0b4fb0]/15 bg-[#0b4fb0]/8 transition-colors duration-300 group-hover:bg-[#0b4fb0]/12">
-                                    <Shield className="h-7 w-7 text-[#0b4fb0]" />
+                                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#0b4fb0]/15 bg-[#0b4fb0]/8 transition-all duration-300 group-hover:-rotate-3 group-hover:border-transparent group-hover:bg-[#106feb] group-hover:shadow-lg group-hover:shadow-[#106feb]/30">
+                                    <Shield className="h-7 w-7 text-[#0b4fb0] transition-colors duration-300 group-hover:text-white" />
                                 </div>
                                 <h3 className="text-[22px] leading-snug font-bold text-[#0a1628]">
                                     Akses Dasbor Aman (Tanpa Sandi)
@@ -1525,12 +1556,12 @@ export default function Welcome({
                                 stiffness: 300,
                                 damping: 22,
                             }}
-                            className="group relative flex flex-col gap-8 overflow-hidden rounded-3xl border border-slate-100 bg-white p-8 shadow-sm transition-shadow duration-300 hover:shadow-2xl md:flex-row md:items-center md:gap-10 md:p-12"
+                            className="group relative flex flex-col gap-8 overflow-hidden rounded-3xl border border-slate-100 bg-white p-8 shadow-sm transition-all duration-300 hover:border-[#cddcef] hover:shadow-2xl md:flex-row md:items-center md:gap-10 md:p-12"
                         >
                             {/* Konten teks */}
                             <div className="flex flex-col gap-4 md:flex-1">
-                                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#0b4fb0]/15 bg-[#0b4fb0]/8 transition-colors duration-300 group-hover:bg-[#0b4fb0]/12">
-                                    <Award className="h-7 w-7 text-[#0b4fb0]" />
+                                <div className="mb-2 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#0b4fb0]/15 bg-[#0b4fb0]/8 transition-all duration-300 group-hover:-rotate-3 group-hover:border-transparent group-hover:bg-[#106feb] group-hover:shadow-lg group-hover:shadow-[#106feb]/30">
+                                    <Award className="h-7 w-7 text-[#0b4fb0] transition-colors duration-300 group-hover:text-white" />
                                 </div>
                                 <h3 className="text-[24px] leading-snug font-bold text-[#0a1628] md:text-[28px]">
                                     E-Sertifikat Resmi Ber-TTE
@@ -1615,11 +1646,28 @@ export default function Welcome({
                                     type="text"
                                     value={searchOpd}
                                     placeholder="Cari dinas, badan, atau bidang kompetensi..."
-                                    className="w-full rounded-full border border-slate-200 bg-white py-4 pr-6 pl-14 text-[15px] text-[#0a1628] shadow-sm transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                    className="w-full rounded-full border border-slate-200 bg-white py-4 pr-14 pl-14 text-[15px] text-[#0a1628] shadow-sm transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
                                     onChange={(e) =>
                                         setSearchOpd(e.target.value)
                                     }
                                 />
+                                {/* Tombol bersihkan — muncul lembut saat kolom terisi */}
+                                <AnimatePresence>
+                                    {searchOpd && (
+                                        <motion.button
+                                            type="button"
+                                            initial={{ opacity: 0, scale: 0.6 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.6 }}
+                                            transition={{ duration: 0.15 }}
+                                            onClick={() => setSearchOpd('')}
+                                            aria-label="Bersihkan pencarian"
+                                            className="absolute top-1/2 right-4 flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-[#f5faff] text-[#0a1628]/50 transition-colors hover:bg-[#106feb] hover:text-white focus-visible:bg-[#106feb] focus-visible:text-white focus-visible:outline-none"
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </motion.button>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
 
@@ -1631,7 +1679,7 @@ export default function Welcome({
                                 variants={staggerContainer}
                                 initial="hidden"
                                 whileInView="show"
-                                viewport={{ once: true, margin: '-40px' }}
+                                viewport={{ once: true, margin: '-80px' }}
                                 className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8 lg:grid-cols-3"
                             >
                                 <AnimatePresence mode="popLayout">
@@ -1864,15 +1912,15 @@ export default function Welcome({
                                             stiffness: 300,
                                             damping: 22,
                                         }}
-                                        className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white p-8 shadow-sm"
+                                        className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-100 bg-white p-8 shadow-sm transition-[border-color,box-shadow] duration-300 hover:border-[#cddcef] hover:shadow-xl"
                                     >
                                         {/* Angka besar latar belakang (Inter Bold, biru muda transparan) */}
-                                        <span className="pointer-events-none absolute -top-2 right-5 text-[88px] leading-none font-extrabold tracking-tighter text-[#0b4fb0]/10 select-none">
+                                        <span className="pointer-events-none absolute -top-2 right-5 text-[88px] leading-none font-extrabold tracking-tighter text-[#0b4fb0]/10 transition-colors duration-300 select-none group-hover:text-[#0b4fb0]/15">
                                             {step.num}
                                         </span>
 
-                                        {/* Ikon Langkah — abu-abu, berubah biru cerah saat hover */}
-                                        <div className="relative mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-[#f5faff] text-[#0a1628]/40 transition-colors duration-300 group-hover:border-[#0b4fb0]/20 group-hover:text-[#0b4fb0]">
+                                        {/* Ikon Langkah — fill biru brand + putih saat hover (motif seragam) */}
+                                        <div className="relative mb-6 flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-100 bg-[#f5faff] text-[#0a1628]/40 transition-all duration-300 group-hover:-rotate-3 group-hover:border-transparent group-hover:bg-[#106feb] group-hover:text-white group-hover:shadow-lg group-hover:shadow-[#106feb]/30">
                                             <step.icon className="h-7 w-7" />
                                         </div>
 
@@ -1893,7 +1941,7 @@ export default function Welcome({
                             <a
                                 href="#"
                                 download
-                                className="group relative inline-flex items-center justify-between gap-3 overflow-hidden rounded-full bg-[#106feb] py-2 pr-2 pl-7 shadow-lg shadow-[#106feb]/25 transition-shadow duration-300 hover:shadow-xl hover:shadow-[#106feb]/35"
+                                className="group relative inline-flex items-center justify-between gap-3 overflow-hidden rounded-full bg-[#106feb] py-2 pr-2 pl-7 shadow-lg shadow-[#106feb]/25 transition-shadow duration-300 hover:shadow-xl hover:shadow-[#106feb]/35 focus-visible:ring-2 focus-visible:ring-[#0b4fb0] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f5faff] focus-visible:outline-none"
                             >
                                 {/* LAPIS — overlay putih geser dari kanan → kiri */}
                                 <span
@@ -1927,7 +1975,7 @@ export default function Welcome({
                         <div className="mx-auto flex max-w-3xl flex-col gap-4">
                             {faqList.map((item, index) => (
                                 <Reveal key={index} delay={index * 0.06}>
-                                    <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_8px_30px_rgba(8,71,156,0.05)] transition-colors duration-300 hover:border-[#cddcef]">
+                                    <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_8px_30px_rgba(8,71,156,0.05)] transition-all duration-300 hover:border-[#cddcef] hover:shadow-[0_16px_40px_rgba(8,71,156,0.08)]">
                                         <button
                                             onClick={() =>
                                                 setOpenFaq(
@@ -1936,14 +1984,18 @@ export default function Welcome({
                                                         : index,
                                                 )
                                             }
-                                            className="flex w-full items-center justify-between p-6 text-left focus:outline-none"
+                                            className="group flex w-full items-center justify-between gap-4 p-6 text-left transition-colors duration-300 hover:bg-[#f5faff]/70 focus-visible:ring-2 focus-visible:ring-[#0b4fb0] focus-visible:outline-none focus-visible:ring-inset"
                                         >
-                                            <span className="text-[16px] font-bold text-[#0a1628]">
+                                            <span
+                                                className={`text-[16px] font-bold transition-colors duration-300 ${openFaq === index ? 'text-[#106feb]' : 'text-[#0a1628] group-hover:text-[#0b4fb0]'}`}
+                                            >
                                                 {item.q}
                                             </span>
-                                            <ChevronDown
-                                                className={`h-5 w-5 shrink-0 text-[#106feb] transition-transform duration-300 ${openFaq === index ? 'rotate-180' : ''}`}
-                                            />
+                                            <span
+                                                className={`flex size-9 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${openFaq === index ? 'rotate-180 bg-[#106feb] text-white shadow-md shadow-[#106feb]/30' : 'bg-[#106feb]/10 text-[#106feb] group-hover:bg-[#106feb]/20'}`}
+                                            >
+                                                <ChevronDown className="h-5 w-5" />
+                                            </span>
                                         </button>
                                         {/* Micro-interaction: AnimatePresence untuk transisi halus accordion */}
                                         <AnimatePresence initial={false}>
@@ -2004,7 +2056,7 @@ export default function Welcome({
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                                 {testimonials.map((t, index) => (
                                     <Reveal key={t.id} delay={index * 0.06}>
-                                        <figure className="flex h-full flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgba(8,71,156,0.05)] transition-colors duration-300 hover:border-[#cddcef]">
+                                        <figure className="group flex h-full flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgba(8,71,156,0.05)] transition-all duration-300 hover:-translate-y-1 hover:border-[#cddcef] hover:shadow-[0_20px_50px_-12px_rgba(20,99,208,0.18)]">
                                             <div className="flex items-center justify-between">
                                                 <div
                                                     className="flex gap-0.5"
@@ -2019,13 +2071,13 @@ export default function Welcome({
                                                         />
                                                     ))}
                                                 </div>
-                                                <Quote className="h-6 w-6 text-[#cddcef]" />
+                                                <Quote className="h-6 w-6 text-[#cddcef] transition-colors duration-300 group-hover:text-[#106feb]/40" />
                                             </div>
                                             <blockquote className="flex-1 text-[15px] leading-relaxed text-[#0a1628]/70">
                                                 “{t.comment}”
                                             </blockquote>
                                             <figcaption className="flex items-center gap-3 border-t border-slate-100 pt-2">
-                                                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#106feb]/10 text-sm font-bold text-[#106feb]">
+                                                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#106feb]/10 text-sm font-bold text-[#106feb] transition-colors duration-300 group-hover:bg-[#106feb] group-hover:text-white">
                                                     {t.name
                                                         .charAt(0)
                                                         .toUpperCase()}
@@ -2052,540 +2104,457 @@ export default function Welcome({
                 {/* 6. KONTAK & FORM PENDAFTARAN */}
                 <section
                     id="daftar"
-                    className="border-t border-slate-100 bg-white px-6 py-24 md:py-32"
+                    className="border-t border-slate-100 bg-[#f5faff] px-6 py-24 md:py-32"
                 >
-                    {/* Banner penutup — sudut sangat membulat, background biru muda fresh,
-                        padding lega, fade-in saat masuk viewport. */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 40 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, margin: '-80px' }}
-                        transition={{ duration: 0.8, ease: 'circOut' }}
-                        className="mx-auto max-w-[1200px] rounded-[3rem] border border-slate-100 bg-gradient-to-br from-[#f5faff] via-[#f5faff] to-[#e7f0fc] px-6 py-16 shadow-sm md:px-12 md:py-20 md:shadow-[0_30px_80px_rgba(8,71,156,0.06)]"
-                    >
-                        <div className="grid items-start gap-12 lg:grid-cols-12">
-                            {/* --- SISI KIRI: INFORMASI KONTAK --- */}
-                            <Reveal className="flex flex-col gap-8 lg:col-span-5">
-                                <div>
-                                    <div className="mb-4 w-fit rounded-full border border-slate-100 bg-white px-3 py-1 text-[14px] text-[#0a1628]/70 shadow-sm">
-                                        <p>Mulai Sekarang</p>
+                    {/* Header terpusat */}
+                    <Reveal className="mx-auto mb-10 flex max-w-2xl flex-col items-center gap-3 text-center md:mb-12">
+                        <div className="w-fit rounded-full border border-slate-100 bg-white px-3 py-1 text-[14px] text-[#0a1628]/70 shadow-sm">
+                            <p>Mulai Sekarang</p>
+                        </div>
+                        <h2 className="bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text text-[32px] leading-[1.15] font-extrabold tracking-tight text-balance text-transparent md:text-[42px]">
+                            Siap Mendaftar?
+                        </h2>
+                        <p className="text-[16px] leading-relaxed text-balance text-[#0a1628]/60 md:text-[18px]">
+                            Lengkapi formulir di bawah ini. Sistem terintegrasi
+                            kami akan membuatkan akun dan mengirimkan berkas
+                            Anda ke meja verifikasi.
+                        </p>
+                    </Reveal>
+
+                    {/* Kartu Formulir — satu-satunya kartu, terpusat */}
+                    <Reveal delay={0.1} className="mx-auto max-w-3xl">
+                        <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_24px_rgba(8,71,156,0.06)] md:p-10 md:shadow-[0_20px_60px_rgba(8,71,156,0.08)]">
+                            {/* Efek Cahaya Halus di Pojok Kanan Form */}
+                            <div className="pointer-events-none absolute -top-24 -right-24 h-[300px] w-[300px] rounded-full bg-[#cddcef]/20 blur-[80px]"></div>
+
+                            <form
+                                onSubmit={handleSubmitPengajuan}
+                                className="relative z-10 flex flex-col gap-6"
+                            >
+                                <div className="grid gap-6 sm:grid-cols-2">
+                                    {/* Input: NIS / NIM */}
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[14px] font-semibold text-[#0a1628]">
+                                            NIS / NIM
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={data.nis}
+                                            onChange={(e) =>
+                                                setData('nis', e.target.value)
+                                            }
+                                            placeholder="Nomor Induk Siswa/Mahasiswa"
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                        />
                                     </div>
-                                    <h2 className="mb-4 bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text text-[32px] leading-[1.15] font-extrabold tracking-tight text-balance text-transparent md:text-[42px]">
-                                        Siap Mendaftar?
-                                    </h2>
-                                    <p className="text-[16px] leading-relaxed text-balance text-[#0a1628]/60 md:text-[18px]">
-                                        Lengkapi formulir di samping. Sistem
-                                        terintegrasi kami akan membuatkan akun
-                                        dan mengirimkan berkas Anda ke meja
-                                        verifikasi.
+                                    {/* Input: Nama Lengkap */}
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[14px] font-semibold text-[#0a1628]">
+                                            Nama Lengkap
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={data.name}
+                                            onChange={(e) =>
+                                                setData('name', e.target.value)
+                                            }
+                                            placeholder="Nama lengkap sesuai KTP/Kartu Pelajar"
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-6 sm:grid-cols-2">
+                                    {/* Input: Instansi Asal */}
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[14px] font-semibold text-[#0a1628]">
+                                            Asal Sekolah / Kampus
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={data.institution_name}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'institution_name',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder="Contoh: Universitas Brawijaya"
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                        />
+                                    </div>
+                                    {/* Input: Tujuan Bidang */}
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[14px] font-semibold text-[#0a1628]">
+                                            Tujuan Bidang OPD
+                                        </label>
+                                        <select
+                                            value={data.tujuan_magang}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'tujuan_magang',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            className="w-full cursor-pointer appearance-none rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                        >
+                                            <option value="">
+                                                -- Pilih Instansi / Bidang --
+                                            </option>
+                                            {/* OPD dari DB bila tersedia; fallback daftar statis. */}
+                                            {(opds.length > 0
+                                                ? opds.map((o) => o.name)
+                                                : daftarOPD.map((o) => o.name)
+                                            ).map((name, idx) => (
+                                                <option key={idx} value={name}>
+                                                    {name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Input: Jurusan (opsional) */}
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[14px] font-semibold text-[#0a1628]">
+                                        Jurusan{' '}
+                                        <span className="font-normal text-[#0a1628]/40">
+                                            (opsional)
+                                        </span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={data.major}
+                                        onChange={(e) =>
+                                            setData('major', e.target.value)
+                                        }
+                                        placeholder="Contoh: Teknik Informatika / Multimedia"
+                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                    />
+                                </div>
+
+                                {/* Input: Keahlian / Keterampilan */}
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[14px] font-semibold text-[#0a1628]">
+                                        Keahlian / Keterampilan
+                                    </label>
+                                    <textarea
+                                        rows={3}
+                                        value={data.skills}
+                                        onChange={(e) =>
+                                            setData('skills', e.target.value)
+                                        }
+                                        placeholder="Sebutkan keahlian atau keterampilan yang dikuasai, mis. desain grafis, pemrograman web, analisis data…"
+                                        className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                    />
+                                    <p className="text-[12px] text-[#0a1628]/45">
+                                        Membantu admin menempatkanmu di bidang
+                                        yang sesuai.
                                     </p>
                                 </div>
 
-                                <div className="flex flex-col gap-4">
-                                    <motion.div
-                                        whileHover={{
-                                            y: -6,
-                                            transition: { duration: 0.3 },
-                                        }}
-                                        className="flex items-start gap-4 rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgba(8,71,156,0.05)] transition-shadow hover:shadow-[0_16px_40px_rgba(37,99,235,0.1)]"
-                                    >
-                                        <MapPin className="mt-0.5 h-6 w-6 shrink-0 text-[#106feb]" />
-                                        <div>
-                                            <h4 className="mb-1 text-[16px] font-bold text-[#0a1628]">
-                                                Alamat Kantor
-                                            </h4>
-                                            <p className="text-[15px] leading-relaxed text-[#0a1628]/60">
-                                                Jl. Perintis Kemerdekaan No.32,
-                                                Kota Madiun, Jawa Timur 63117
-                                            </p>
-                                        </div>
-                                    </motion.div>
-                                    <motion.div
-                                        whileHover={{
-                                            y: -6,
-                                            transition: { duration: 0.3 },
-                                        }}
-                                        className="flex items-center gap-4 rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgba(8,71,156,0.05)] transition-shadow hover:shadow-[0_16px_40px_rgba(37,99,235,0.1)]"
-                                    >
-                                        <Mail className="h-6 w-6 shrink-0 text-[#106feb]" />
-                                        <div>
-                                            <h4 className="mb-1 text-[16px] font-bold text-[#0a1628]">
-                                                Email Layanan
-                                            </h4>
-                                            <p className="text-[15px] text-[#0a1628]/60">
-                                                kominfo@madiunkota.go.id
-                                            </p>
-                                        </div>
-                                    </motion.div>
-                                    <motion.div
-                                        whileHover={{
-                                            y: -6,
-                                            transition: { duration: 0.3 },
-                                        }}
-                                        className="flex items-center gap-4 rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_8px_30px_rgba(8,71,156,0.05)] transition-shadow hover:shadow-[0_16px_40px_rgba(37,99,235,0.1)]"
-                                    >
-                                        <Phone className="h-6 w-6 shrink-0 text-[#106feb]" />
-                                        <div>
-                                            <h4 className="mb-1 text-[16px] font-bold text-[#0a1628]">
-                                                Telepon
-                                            </h4>
-                                            <p className="text-[15px] text-[#0a1628]/60">
-                                                (0351) 467327
-                                            </p>
-                                        </div>
-                                    </motion.div>
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[14px] font-semibold text-[#0a1628]">
+                                        Alamat Lengkap
+                                    </label>
+                                    <textarea
+                                        rows={3}
+                                        value={data.address}
+                                        onChange={(e) =>
+                                            setData('address', e.target.value)
+                                        }
+                                        placeholder="Alamat domisili lengkap beserta RT/RW, kelurahan, dan kecamatan"
+                                        className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                    />
                                 </div>
-                            </Reveal>
 
-                            {/* --- SISI KANAN: FORMULIR PENGAJUAN --- */}
-                            <Reveal delay={0.1} className="lg:col-span-7">
-                                <div className="relative overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_20px_60px_rgba(8,71,156,0.08)] md:p-10">
-                                    {/* Efek Cahaya Halus di Pojok Kanan Form */}
-                                    <div className="pointer-events-none absolute -top-20 -right-20 h-[300px] w-[300px] rounded-full bg-[#cddcef]/20 blur-[80px]"></div>
+                                <div className="grid gap-6 sm:grid-cols-2">
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[14px] font-semibold text-[#0a1628]">
+                                            Tanggal Mulai
+                                        </label>
+                                        <DatePicker
+                                            value={tanggalMulai}
+                                            min={toISODate(new Date())}
+                                            placeholder="Pilih tanggal mulai"
+                                            onChange={(iso) => {
+                                                setTanggalMulai(iso);
+                                                setData('start_date', iso);
 
-                                    <form
-                                        onSubmit={handleSubmitPengajuan}
-                                        className="relative z-10 flex flex-col gap-6"
-                                    >
-                                        <div className="grid gap-6 sm:grid-cols-2">
-                                            {/* Input: NIS / NIM */}
-                                            <div className="flex flex-col gap-2">
-                                                <label className="text-[14px] font-semibold text-[#0a1628]">
-                                                    NIS / NIM
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={data.nis}
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            'nis',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder="Nomor Induk Siswa/Mahasiswa"
-                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
-                                                />
-                                            </div>
-                                            {/* Input: Nama Lengkap */}
-                                            <div className="flex flex-col gap-2">
-                                                <label className="text-[14px] font-semibold text-[#0a1628]">
-                                                    Nama Lengkap
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={data.name}
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            'name',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder="Nama lengkap sesuai KTP/Kartu Pelajar"
-                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="grid gap-6 sm:grid-cols-2">
-                                            {/* Input: Instansi Asal */}
-                                            <div className="flex flex-col gap-2">
-                                                <label className="text-[14px] font-semibold text-[#0a1628]">
-                                                    Asal Sekolah / Kampus
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={
-                                                        data.institution_name
-                                                    }
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            'institution_name',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder="Contoh: Universitas Brawijaya"
-                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
-                                                />
-                                            </div>
-                                            {/* Input: Tujuan Bidang */}
-                                            <div className="flex flex-col gap-2">
-                                                <label className="text-[14px] font-semibold text-[#0a1628]">
-                                                    Tujuan Bidang OPD
-                                                </label>
-                                                <select
-                                                    value={data.tujuan_magang}
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            'tujuan_magang',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    className="w-full cursor-pointer appearance-none rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
-                                                >
-                                                    <option value="">
-                                                        -- Pilih Instansi /
-                                                        Bidang --
-                                                    </option>
-                                                    {/* OPD dari DB bila tersedia; fallback daftar statis. */}
-                                                    {(opds.length > 0
-                                                        ? opds.map(
-                                                              (o) => o.name,
-                                                          )
-                                                        : daftarOPD.map(
-                                                              (o) => o.name,
-                                                          )
-                                                    ).map((name, idx) => (
-                                                        <option
-                                                            key={idx}
-                                                            value={name}
-                                                        >
-                                                            {name}
-                                                        </option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        {/* Input: Jurusan (opsional) */}
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-[14px] font-semibold text-[#0a1628]">
-                                                Jurusan{' '}
-                                                <span className="font-normal text-[#0a1628]/40">
-                                                    (opsional)
-                                                </span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={data.major}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'major',
-                                                        e.target.value,
-                                                    )
+                                                // Reset tanggal selesai bila jadi lebih awal dari tanggal mulai baru.
+                                                if (
+                                                    tanggalSelesai &&
+                                                    tanggalSelesai < iso
+                                                ) {
+                                                    setTanggalSelesai('');
+                                                    setData('end_date', '');
                                                 }
-                                                placeholder="Contoh: Teknik Informatika / Multimedia"
-                                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
-                                            />
-                                        </div>
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[14px] font-semibold text-[#0a1628]">
+                                            Tanggal Selesai
+                                        </label>
+                                        <DatePicker
+                                            value={tanggalSelesai}
+                                            min={
+                                                tanggalMulai ||
+                                                toISODate(new Date())
+                                            }
+                                            placeholder="Pilih tanggal selesai"
+                                            onChange={(iso) => {
+                                                setTanggalSelesai(iso);
+                                                setData('end_date', iso);
+                                            }}
+                                        />
+                                    </div>
+                                </div>
 
-                                        {/* Input: Keahlian / Keterampilan */}
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-[14px] font-semibold text-[#0a1628]">
-                                                Keahlian / Keterampilan
-                                            </label>
-                                            <textarea
-                                                rows={3}
-                                                value={data.skills}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'skills',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                placeholder="Sebutkan keahlian atau keterampilan yang dikuasai, mis. desain grafis, pemrograman web, analisis data…"
-                                                className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
-                                            />
-                                            <p className="text-[12px] text-[#0a1628]/45">
-                                                Membantu admin menempatkanmu di
-                                                bidang yang sesuai.
-                                            </p>
-                                        </div>
+                                <div className="grid gap-6 sm:grid-cols-2">
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[14px] font-semibold text-[#0a1628]">
+                                            Nama Dosen / Guru Pembimbing
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={data.campus_supervisor}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'campus_supervisor',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder="Nama lengkap pembimbing berserta gelar"
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[14px] font-semibold text-[#0a1628]">
+                                            Nama Penanggung Jawab
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={data.guardian_name}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'guardian_name',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder="Nama orang tua / wali yang dapat dihubungi"
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
 
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-[14px] font-semibold text-[#0a1628]">
-                                                Alamat Lengkap
-                                            </label>
-                                            <textarea
-                                                rows={3}
-                                                value={data.address}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'address',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                placeholder="Alamat domisili lengkap beserta RT/RW, kelurahan, dan kecamatan"
-                                                className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
-                                            />
-                                        </div>
+                                <div className="grid gap-6 sm:grid-cols-2">
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[14px] font-semibold text-[#0a1628]">
+                                            Nomor WhatsApp
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            value={data.whatsapp_number}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'whatsapp_number',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder="Contoh: 081234567890"
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[14px] font-semibold text-[#0a1628]">
+                                            Email Aktif
+                                        </label>
+                                        <input
+                                            type="email"
+                                            value={data.email}
+                                            onChange={(e) =>
+                                                setData('email', e.target.value)
+                                            }
+                                            placeholder="Gunakan email utama Anda"
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
 
-                                        <div className="grid gap-6 sm:grid-cols-2">
-                                            <div className="flex flex-col gap-2">
-                                                <label className="text-[14px] font-semibold text-[#0a1628]">
-                                                    Tanggal Mulai
-                                                </label>
-                                                <DatePicker
-                                                    value={tanggalMulai}
-                                                    min={toISODate(new Date())}
-                                                    placeholder="Pilih tanggal mulai"
-                                                    onChange={(iso) => {
-                                                        setTanggalMulai(iso);
-                                                        setData(
-                                                            'start_date',
-                                                            iso,
-                                                        );
-
-                                                        // Reset tanggal selesai bila jadi lebih awal dari tanggal mulai baru.
-                                                        if (
-                                                            tanggalSelesai &&
-                                                            tanggalSelesai < iso
-                                                        ) {
-                                                            setTanggalSelesai(
-                                                                '',
-                                                            );
-                                                            setData(
-                                                                'end_date',
-                                                                '',
-                                                            );
-                                                        }
-                                                    }}
-                                                />
-                                            </div>
-                                            <div className="flex flex-col gap-2">
-                                                <label className="text-[14px] font-semibold text-[#0a1628]">
-                                                    Tanggal Selesai
-                                                </label>
-                                                <DatePicker
-                                                    value={tanggalSelesai}
-                                                    min={
-                                                        tanggalMulai ||
-                                                        toISODate(new Date())
-                                                    }
-                                                    placeholder="Pilih tanggal selesai"
-                                                    onChange={(iso) => {
-                                                        setTanggalSelesai(iso);
-                                                        setData(
-                                                            'end_date',
-                                                            iso,
-                                                        );
-                                                    }}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="grid gap-6 sm:grid-cols-2">
-                                            <div className="flex flex-col gap-2">
-                                                <label className="text-[14px] font-semibold text-[#0a1628]">
-                                                    Nama Dosen / Guru Pembimbing
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={
-                                                        data.campus_supervisor
-                                                    }
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            'campus_supervisor',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder="Nama lengkap pembimbing berserta gelar"
-                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
-                                                />
-                                            </div>
-                                            <div className="flex flex-col gap-2">
-                                                <label className="text-[14px] font-semibold text-[#0a1628]">
-                                                    Nama Penanggung Jawab
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value={data.guardian_name}
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            'guardian_name',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder="Nama orang tua / wali yang dapat dihubungi"
-                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="grid gap-6 sm:grid-cols-2">
-                                            <div className="flex flex-col gap-2">
-                                                <label className="text-[14px] font-semibold text-[#0a1628]">
-                                                    Nomor WhatsApp
-                                                </label>
-                                                <input
-                                                    type="tel"
-                                                    value={data.whatsapp_number}
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            'whatsapp_number',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder="Contoh: 081234567890"
-                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
-                                                />
-                                            </div>
-                                            <div className="flex flex-col gap-2">
-                                                <label className="text-[14px] font-semibold text-[#0a1628]">
-                                                    Email Aktif
-                                                </label>
-                                                <input
-                                                    type="email"
-                                                    value={data.email}
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            'email',
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder="Gunakan email utama Anda"
-                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Input: Pas Foto — dropzone dengan pratinjau thumbnail */}
-                                        <div className="flex flex-col gap-2">
-                                            <label className="text-[14px] font-semibold text-[#0a1628]">
-                                                Pas Foto
-                                            </label>
-                                            <label className="group flex cursor-pointer items-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-[#f5faff] px-4 py-4 transition-colors hover:border-[#0b4fb0] hover:bg-[#e7f0fc]">
-                                                <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">
-                                                    {pasFotoPreview ? (
-                                                        <img
-                                                            src={pasFotoPreview}
-                                                            alt="Pratinjau pas foto"
-                                                            className="h-full w-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <ImagePlus className="h-6 w-6 text-[#0b4fb0] transition-transform duration-300 group-hover:scale-110" />
-                                                    )}
-                                                </span>
-                                                <span className="flex flex-col">
-                                                    <span className="text-[14px] font-medium text-[#0a1628]">
-                                                        {pasFotoNama ||
-                                                            'Unggah Pas Foto Anda'}
-                                                    </span>
-                                                    <span className="text-[12px] text-[#0a1628]/50">
-                                                        Format JPG/PNG, latar
-                                                        polos, maks. 2MB.
-                                                    </span>
-                                                </span>
-                                                <input
-                                                    type="file"
-                                                    accept="image/png,image/jpeg"
-                                                    onChange={handlePasFoto}
-                                                    className="hidden"
-                                                />
-                                            </label>
-                                        </div>
-
-                                        {/* --- reCAPTCHA v2 (checkbox) — gerbang anti-bot Fase 1 --- */}
-                                        <div className="mt-6 border-t border-[#e5e7eb] pt-8">
-                                            <label className="mb-3 block text-[14px] font-semibold text-[#0a1628]">
-                                                Validasi Anti-Spam
-                                            </label>
-
-                                            {recaptchaSiteKey ? (
-                                                <div
-                                                    ref={recaptchaRef}
-                                                    className="min-h-[78px]"
+                                {/* Input: Pas Foto — dropzone dengan pratinjau thumbnail */}
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[14px] font-semibold text-[#0a1628]">
+                                        Pas Foto
+                                    </label>
+                                    <label className="group flex cursor-pointer items-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-[#f5faff] px-4 py-4 transition-colors hover:border-[#0b4fb0] hover:bg-[#e7f0fc]">
+                                        <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white">
+                                            {pasFotoPreview ? (
+                                                <img
+                                                    src={pasFotoPreview}
+                                                    alt="Pratinjau pas foto"
+                                                    className="h-full w-full object-cover"
                                                 />
                                             ) : (
-                                                <p className="text-[13px] text-amber-600">
-                                                    Kunci reCAPTCHA belum
-                                                    dikonfigurasi. Hubungi
-                                                    administrator.
-                                                </p>
+                                                <ImagePlus className="h-6 w-6 text-[#0b4fb0] transition-transform duration-300 group-hover:scale-110" />
                                             )}
-
-                                            {errors.recaptcha_token && (
-                                                <p className="mt-2 text-[13px] text-rose-600">
-                                                    {errors.recaptcha_token}
-                                                </p>
-                                            )}
-                                        </div>
-
-                                        {/* Ringkasan galat validasi lain (mis. email/durasi/tanggal). */}
-                                        {Object.keys(errors).filter(
-                                            (k) => k !== 'recaptcha_token',
-                                        ).length > 0 && (
-                                            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
-                                                <p className="text-[13px] font-semibold text-rose-700">
-                                                    Periksa kembali isian
-                                                    berikut:
-                                                </p>
-                                                <ul className="mt-1 list-disc pl-5 text-[13px] text-rose-600">
-                                                    {Object.entries(errors)
-                                                        .filter(
-                                                            ([k]) =>
-                                                                k !==
-                                                                'recaptcha_token',
-                                                        )
-                                                        .map(([k, msg]) => (
-                                                            <li key={k}>
-                                                                {msg}
-                                                            </li>
-                                                        ))}
-                                                </ul>
-                                            </div>
-                                        )}
-
-                                        {/* Informasi Penting — nomor WhatsApp aktif untuk akun & OTP */}
-                                        <div className="mt-6 flex items-start gap-3 rounded-2xl border border-slate-200 bg-[#f5faff] px-4 py-3.5">
-                                            <Info className="mt-0.5 h-5 w-5 shrink-0 text-[#0b4fb0]" />
-                                            <p className="text-[13px] leading-relaxed text-[#0a1628]/60">
-                                                Pastikan alamat E-Mail yang Anda
-                                                masukkan adalah E-Mail aktif,
-                                                karena akun dasbor dan link OTP
-                                                akan dikirimkan ke alamat
-                                                tersebut.
-                                            </p>
-                                        </div>
-
-                                        {/* Tombol Submit — Sliding Animation (overlay #cddcef geser
-                                        dari kiri menutupi background biru #106feb). */}
-                                        <motion.button
-                                            type="submit"
-                                            disabled={
-                                                !data.recaptcha_token ||
-                                                processing
-                                            }
-                                            whileTap={
-                                                data.recaptcha_token &&
-                                                !processing
-                                                    ? { scale: 0.98 }
-                                                    : undefined
-                                            }
-                                            className={`group relative mt-2 flex w-full items-center justify-between gap-3 overflow-hidden rounded-full py-1.5 pr-1.5 pl-7 transition-shadow duration-300 ${
-                                                data.recaptcha_token &&
-                                                !processing
-                                                    ? 'cursor-pointer bg-[#106feb] shadow-lg shadow-[#106feb]/30 hover:shadow-xl hover:shadow-[#106feb]/40'
-                                                    : 'cursor-not-allowed bg-[#e5e7eb]'
-                                            }`}
-                                        >
-                                            {/* Overlay #cddcef geser dari kiri (hanya saat captcha terverifikasi) */}
-                                            {data.recaptcha_token &&
-                                                !processing && (
-                                                    <span
-                                                        aria-hidden
-                                                        className="absolute inset-0 z-0 -translate-x-[101%] bg-[#cddcef] transition-transform duration-500 ease-out group-hover:translate-x-0"
-                                                    />
-                                                )}
-                                            <span
-                                                className={`relative z-10 text-[16px] font-semibold transition-colors duration-500 ease-out ${data.recaptcha_token && !processing ? 'text-white group-hover:text-[#0a1628]' : 'text-[#0a1628]/40'}`}
-                                            >
-                                                {processing
-                                                    ? 'Mengirim…'
-                                                    : 'Kirim Berkas Pengajuan Magang'}
+                                        </span>
+                                        <span className="flex flex-col">
+                                            <span className="text-[14px] font-medium text-[#0a1628]">
+                                                {pasFotoNama ||
+                                                    'Unggah Pas Foto Anda'}
                                             </span>
-                                            {/* Lingkaran ikon — membalik kontras saat overlay menutupi */}
-                                            <span
-                                                className={`relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-500 ease-out ${data.recaptcha_token && !processing ? 'bg-[#cddcef] text-[#106feb] group-hover:bg-[#106feb] group-hover:text-white' : 'bg-white/60 text-[#0a1628]/30'}`}
-                                            >
-                                                <Send className="size-5 transition-transform duration-500 ease-out group-hover:translate-x-0.5" />
+                                            <span className="text-[12px] text-[#0a1628]/50">
+                                                Format JPG/PNG, latar polos,
+                                                maks. 2MB.
                                             </span>
-                                        </motion.button>
-                                    </form>
+                                        </span>
+                                        <input
+                                            type="file"
+                                            accept="image/png,image/jpeg"
+                                            onChange={handlePasFoto}
+                                            className="hidden"
+                                        />
+                                    </label>
                                 </div>
-                            </Reveal>
+
+                                {/* --- reCAPTCHA v2 (checkbox) — gerbang anti-bot Fase 1 --- */}
+                                <div className="mt-6 border-t border-[#e5e7eb] pt-8">
+                                    <label className="mb-3 block text-[14px] font-semibold text-[#0a1628]">
+                                        Validasi Anti-Spam
+                                    </label>
+
+                                    {recaptchaSiteKey ? (
+                                        <div
+                                            ref={recaptchaRef}
+                                            className="min-h-[78px] max-w-full overflow-x-auto"
+                                        />
+                                    ) : (
+                                        <p className="text-[13px] text-amber-600">
+                                            Kunci reCAPTCHA belum dikonfigurasi.
+                                            Hubungi administrator.
+                                        </p>
+                                    )}
+
+                                    {errors.recaptcha_token && (
+                                        <p className="mt-2 text-[13px] text-rose-600">
+                                            {errors.recaptcha_token}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Ringkasan galat validasi lain (mis. email/durasi/tanggal). */}
+                                {Object.keys(errors).filter(
+                                    (k) => k !== 'recaptcha_token',
+                                ).length > 0 && (
+                                    <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
+                                        <p className="text-[13px] font-semibold text-rose-700">
+                                            Periksa kembali isian berikut:
+                                        </p>
+                                        <ul className="mt-1 list-disc pl-5 text-[13px] text-rose-600">
+                                            {Object.entries(errors)
+                                                .filter(
+                                                    ([k]) =>
+                                                        k !== 'recaptcha_token',
+                                                )
+                                                .map(([k, msg]) => (
+                                                    <li key={k}>{msg}</li>
+                                                ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                {/* Informasi Penting — nomor WhatsApp aktif untuk akun & OTP */}
+                                <div className="mt-6 flex items-start gap-3 rounded-2xl border border-slate-200 bg-[#f5faff] px-4 py-3.5">
+                                    <Info className="mt-0.5 h-5 w-5 shrink-0 text-[#0b4fb0]" />
+                                    <p className="text-[13px] leading-relaxed text-[#0a1628]/60">
+                                        Pastikan alamat E-Mail yang Anda
+                                        masukkan adalah E-Mail aktif, karena
+                                        akun dasbor dan link OTP akan dikirimkan
+                                        ke alamat tersebut.
+                                    </p>
+                                </div>
+
+                                {/* Tombol Submit — Sliding Animation (overlay #cddcef geser
+                                        dari kiri menutupi background biru #106feb). */}
+                                <motion.button
+                                    type="submit"
+                                    disabled={
+                                        !data.recaptcha_token || processing
+                                    }
+                                    whileTap={
+                                        data.recaptcha_token && !processing
+                                            ? { scale: 0.98 }
+                                            : undefined
+                                    }
+                                    className={`group relative mt-2 flex w-full items-center justify-between gap-3 overflow-hidden rounded-full py-1.5 pr-1.5 pl-7 transition-shadow duration-300 ${
+                                        data.recaptcha_token && !processing
+                                            ? 'cursor-pointer bg-[#106feb] shadow-lg shadow-[#106feb]/30 hover:shadow-xl hover:shadow-[#106feb]/40'
+                                            : 'cursor-not-allowed bg-[#e5e7eb]'
+                                    }`}
+                                >
+                                    {/* Overlay #cddcef geser dari kiri (hanya saat captcha terverifikasi) */}
+                                    {data.recaptcha_token && !processing && (
+                                        <span
+                                            aria-hidden
+                                            className="absolute inset-0 z-0 -translate-x-[101%] bg-[#cddcef] transition-transform duration-500 ease-out group-hover:translate-x-0"
+                                        />
+                                    )}
+                                    <span
+                                        className={`relative z-10 text-[16px] font-semibold transition-colors duration-500 ease-out ${data.recaptcha_token && !processing ? 'text-white group-hover:text-[#0a1628]' : 'text-[#0a1628]/40'}`}
+                                    >
+                                        {processing
+                                            ? 'Mengirim…'
+                                            : 'Kirim Berkas Pengajuan Magang'}
+                                    </span>
+                                    {/* Lingkaran ikon — membalik kontras saat overlay menutupi */}
+                                    <span
+                                        className={`relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-500 ease-out ${data.recaptcha_token && !processing ? 'bg-[#cddcef] text-[#106feb] group-hover:bg-[#106feb] group-hover:text-white' : 'bg-white/60 text-[#0a1628]/30'}`}
+                                    >
+                                        <Send className="size-5 transition-transform duration-500 ease-out group-hover:translate-x-0.5" />
+                                    </span>
+                                </motion.button>
+                            </form>
                         </div>
-                    </motion.div>
+                    </Reveal>
+
+                    {/* Info Kontak — strip ringan terpusat di bawah formulir */}
+                    <Reveal className="mx-auto mt-8 grid max-w-3xl gap-4 sm:grid-cols-3">
+                        <div className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#cddcef] hover:shadow-md">
+                            <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-[#106feb]" />
+                            <div className="min-w-0">
+                                <h4 className="mb-1 text-[14px] font-bold text-[#0a1628]">
+                                    Alamat Kantor
+                                </h4>
+                                <p className="text-[13px] leading-relaxed text-[#0a1628]/60">
+                                    Jl. Perintis Kemerdekaan No.32, Kota Madiun,
+                                    Jawa Timur 63117
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#cddcef] hover:shadow-md">
+                            <Mail className="mt-0.5 h-5 w-5 shrink-0 text-[#106feb]" />
+                            <div className="min-w-0">
+                                <h4 className="mb-1 text-[14px] font-bold text-[#0a1628]">
+                                    Email Layanan
+                                </h4>
+                                <p className="text-[13px] break-words text-[#0a1628]/60">
+                                    kominfo@madiunkota.go.id
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#cddcef] hover:shadow-md">
+                            <Phone className="mt-0.5 h-5 w-5 shrink-0 text-[#106feb]" />
+                            <div className="min-w-0">
+                                <h4 className="mb-1 text-[14px] font-bold text-[#0a1628]">
+                                    Telepon
+                                </h4>
+                                <p className="text-[13px] text-[#0a1628]/60">
+                                    (0351) 467327
+                                </p>
+                            </div>
+                        </div>
+                    </Reveal>
                 </section>
 
                 {/* 7. FOOTER */}

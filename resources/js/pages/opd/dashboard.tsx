@@ -296,7 +296,7 @@ function StatCard({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay, ease: 'circOut' }}
             className={cn(
-                'rounded-2xl border bg-white p-5 text-left transition',
+                'group rounded-2xl border bg-white p-5 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md',
                 active
                     ? 'border-[#106feb] ring-2 ring-[#106feb]/20'
                     : 'border-slate-200 hover:border-[#106feb]/40',
@@ -304,7 +304,7 @@ function StatCard({
         >
             <div
                 className={cn(
-                    'mb-3 flex size-10 items-center justify-center rounded-xl',
+                    'mb-3 flex size-10 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110',
                     tone,
                 )}
             >
@@ -357,7 +357,7 @@ function QuotaEditor({ opd }: { opd: Opd }) {
     }
 
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <p className="flex items-center gap-1.5 text-sm font-bold text-[#12213e]">
@@ -1045,7 +1045,7 @@ export default function OpdDashboard({
                 </div>
 
                 {/* Tabel */}
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                     {/* Desktop */}
                     <table className="hidden w-full text-left text-sm md:table">
                         <thead className="border-b border-slate-200 bg-slate-50 text-xs tracking-wide text-slate-500 uppercase">
