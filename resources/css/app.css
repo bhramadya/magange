@@ -105,6 +105,40 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* =========================================================================
+ *  SCROLLBAR — bertema brand Pemkot Madiun (biru #106feb) agar serasi.
+ *  Firefox: scrollbar-color; WebKit/Chromium: pseudo-element ::-webkit-*.
+ * ========================================================================= */
+@layer base {
+    html {
+        scrollbar-width: thin;
+        scrollbar-color: #4a94f5 #eaf2fe;
+    }
+
+    ::-webkit-scrollbar {
+        width: 12px;
+        height: 12px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #eaf2fe;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        border-radius: 9999px;
+        border: 3px solid #eaf2fe;
+        background: linear-gradient(180deg, #106feb, #0b4fb0);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, #0b4fb0, #083a86);
+    }
+
+    ::-webkit-scrollbar-corner {
+        background: #eaf2fe;
+    }
+}
+
 /* Animasi Melayang (Floating) khas Web3/SafePal */
 @keyframes float {
     0% {

@@ -1225,12 +1225,15 @@ export default function Welcome({
                             animate="show"
                             className="relative z-10 flex flex-col items-center"
                         >
-                            {/* Badge Pengumuman (Pill) */}
+                            {/* Badge Pengumuman (Pill) — dot gradien + cincin ping */}
                             <motion.div
                                 variants={heroItem}
-                                className="mb-8 inline-flex items-center gap-2 rounded-full border border-slate-100 bg-white/60 px-4 py-2 text-[13px] font-medium text-[#0a1628]/70 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-[#cddcef] hover:bg-white"
+                                className="mb-8 inline-flex items-center gap-2.5 rounded-full border border-[#106feb]/15 bg-white/70 px-4 py-2 text-[13px] font-semibold tracking-wide text-[#0a1628]/70 shadow-[0_4px_20px_rgba(16,111,235,0.08)] backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-[#106feb]/30 hover:bg-white"
                             >
-                                <span className="flex h-2 w-2 animate-pulse rounded-full bg-[#106feb]"></span>
+                                <span className="relative flex size-2">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#106feb] opacity-60" />
+                                    <span className="relative inline-flex size-2 rounded-full bg-gradient-to-br from-[#106feb] to-[#0b4fb0]" />
+                                </span>
                                 Portal Resmi Kota Madiun
                             </motion.div>
 
@@ -1507,7 +1510,7 @@ export default function Welcome({
                                 <p className="text-[16px] leading-relaxed text-[#0a1628]/60">
                                     Lupakan rutinitas mereset kata sandi.
                                     Gunakan sistem OTP (One Time Password) via
-                                    Email/WA untuk login yang instan dan
+                                    Email untuk login yang instan dan
                                     terenkripsi.
                                 </p>
                             </motion.div>
@@ -1846,7 +1849,7 @@ export default function Welcome({
                                                 <strong className="font-bold text-[#0b4fb0]">
                                                     OTP
                                                 </strong>{' '}
-                                                via Email/WA tanpa kata sandi
+                                                via Email tanpa kata sandi
                                                 untuk mengunduh surat
                                                 persetujuan.
                                             </>

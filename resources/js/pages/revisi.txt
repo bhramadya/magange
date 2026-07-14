@@ -27,3 +27,41 @@
       build+tsc+eslint OK.
 
 === SEMUA REVISI (1-4) SELESAI. build/tsc/eslint hijau. 14/07/2026 ===
+
+5. ubah total desain halaman lacak agar serasi dengan tema website
+   >> SELESAI (claude, 14/07/2026 14:11): rombak tampilan lacak.tsx ke SATU
+      bahasa visual dgn landing — latar #f5faff + glow blobs, header wordmark
+      gradien + badge ikon GraduationCap, judul teks-gradien, badge ikon tiket
+      gradien, input hover #cddcef, tombol gradien biru (hover terangkat),
+      kartu hasil rounded-3xl + shadow (ringkasan tiket dgn glow pojok),
+      panel CTA & empty-state diselaraskan, chip "Tanpa Login / Status
+      Real-time", font Inter. DUA mode render tetap: versi dasbor (ter-wrap
+      MagangLayout) & versi publik tamu. SEMUA logika (state machine idle/
+      loading/found/notfound, lookup via router.get, StatusTimeline,
+      DetailRow, auth-context) dipertahankan utuh — dibuktikan via git diff
+      bagian logika (hanya perubahan kosmetik warna/ikon/komentar).
+      build+tsc+eslint OK.
+
+6. ubah desain badge "Portal Resmi Kota Madiun" (hero) + scroll bar
+   >> SELESAI (claude, 14/07/2026 14:22):
+      a) Badge hero: dot polos (animate-pulse) diganti dot GRADIEN biru +
+         cincin "ping" hidup; border/shadow bernuansa biru (#106feb/15),
+         teks jadi font-semibold tracking-wide, hover border biru. Teks
+         "Portal Resmi Kota Madiun" TIDAK diubah.
+      b) Scroll bar: ditambah gaya global bertema brand di app.css (@layer
+         base) — Firefox (scrollbar-color) + WebKit (::-webkit-scrollbar):
+         track biru-muda #eaf2fe, thumb gradien biru #106feb->#0b4fb0
+      build+tsc+eslint OK.
+
+FIX (lapor user): pop-up & dropdown tak bisa di-scroll (yang tergeser dasbor)
+   >> SELESAI (claude, 14/07/2026 14:50): AKAR MASALAH = Lenis (revisi #1),
+      bukan CSS scrollbar. Lenis menangkap event wheel di window, sehingga
+      scroll di dalam pop-up malah menggeser halaman di belakang. Solusi:
+      tambah atribut bawaan Lenis `data-lenis-prevent` pada konten primitif
+      shadcn agar area itu dikecualikan dari smooth-scroll & pakai scroll
+      native: dialog.tsx (DialogContent + DialogOverlay), select.tsx
+      (SelectContent), dropdown-menu.tsx (DropdownMenuContent), sheet.tsx
+      (SheetContent). Dialog sudah punya max-h-[90vh] overflow-y-auto, jadi
+      scroll internal langsung jalan. Berlaku utk SEMUA dialog/select/
+      dropdown/sheet se-app (mis. Detail Pengajuan OPD, Tinjau Pengajuan
+      Verifikator, pilih OPD tujuan). build+tsc OK.

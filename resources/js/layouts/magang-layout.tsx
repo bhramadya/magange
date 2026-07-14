@@ -350,11 +350,11 @@ export default function MagangLayout({
                                 <DropdownMenuContent
                                     align="end"
                                     sideOffset={10}
-                                    className="w-64 rounded-2xl border-slate-200/70 p-2 shadow-[0_20px_50px_-12px_rgba(8,71,156,0.28)]"
+                                    className="w-64 rounded-2xl border-[#0b4fb0] !bg-[#106feb] p-2 text-white shadow-[0_20px_50px_-12px_rgba(8,71,156,0.45)]"
                                 >
-                                    {/* Kartu profil mini — branded biru muda */}
-                                    <div className="mb-1 flex items-center gap-3 rounded-xl bg-gradient-to-br from-[#e8f2fe] to-white p-3">
-                                        <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#106feb] to-[#0b4fb0] text-sm font-bold text-white shadow-sm">
+                                    {/* Kartu profil mini — kaca putih transparan di atas biru */}
+                                    <div className="mb-1 flex items-center gap-3 rounded-xl bg-white/10 p-3">
+                                        <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-sm font-bold text-[#106feb] shadow-sm">
                                             {user.avatar_url ? (
                                                 <img
                                                     src={user.avatar_url}
@@ -366,29 +366,28 @@ export default function MagangLayout({
                                             )}
                                         </span>
                                         <div className="min-w-0">
-                                            <p className="truncate text-sm font-bold text-[#0a1628]">
+                                            <p className="truncate text-sm font-bold text-white">
                                                 {user.name}
                                             </p>
-                                            <p className="truncate text-xs text-slate-500">
+                                            <p className="truncate text-xs text-white/70">
                                                 {user.email}
                                             </p>
                                         </div>
                                     </div>
 
-                                    {/* Badge peran */}
+                                    {/* Badge peran — ikon & teks putih di atas biru */}
                                     <div className="mb-1.5 px-1">
-                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#106feb]/10 px-2.5 py-1 text-[11px] font-semibold text-[#106feb]">
-                                            <ShieldCheck className="size-3" />
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white">
+                                            <ShieldCheck className="size-3 text-white" />
                                             {ROLE_LABEL[user.role]}
                                         </span>
                                     </div>
 
-                                    <DropdownMenuSeparator className="bg-slate-100" />
+                                    <DropdownMenuSeparator className="bg-white/20" />
                                     {/* Menu "Pengaturan" dihilangkan sepenuhnya (revisi mentor) untuk semua role. */}
                                     <DropdownMenuItem
                                         asChild
-                                        variant="destructive"
-                                        className="cursor-pointer rounded-xl"
+                                        className="cursor-pointer rounded-xl text-white focus:bg-white/15 focus:text-white"
                                     >
                                         <Link
                                             href="/logout"
@@ -396,7 +395,7 @@ export default function MagangLayout({
                                             as="button"
                                             className="w-full cursor-pointer"
                                         >
-                                            <LogOut className="size-4" />
+                                            <LogOut className="size-4 text-white" />
                                             Keluar
                                         </Link>
                                     </DropdownMenuItem>
