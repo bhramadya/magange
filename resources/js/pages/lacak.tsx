@@ -367,37 +367,39 @@ export default function Lacak({ application, ticket }: LacakProps) {
                         </motion.div>
                     )}
 
-                    {state === 'found' && result && (
-                        <motion.div
-                            key="found"
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -8 }}
-                            transition={{
-                                duration: 0.3,
-                                ease: 'circOut',
-                            }}
-                            className="space-y-6"
-                        >
-                            {/* Ringkasan tiket */}
-                            <div className="rounded-2xl border border-slate-200 bg-white p-6">
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                    <div>
-                                        <p className="text-xs font-medium text-slate-500">
-                                            Nomor Tiket
-                                        </p>
-                                        <p className="font-mono text-lg font-black tracking-tight text-[#106feb]">
-                                            {result.ticket_number}
+                            {state === 'found' && result && (
+                                <motion.div
+                                    key="found"
+                                    initial={{ opacity: 0, y: 12 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -8 }}
+                                    transition={{
+                                        duration: 0.3,
+                                        ease: 'circOut',
+                                    }}
+                                    className="space-y-6"
+                                >
+                                    {/* Ringkasan tiket */}
+                                    <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <p className="text-xs font-medium text-slate-500">
+                                                    Nomor Tiket
+                                                </p>
+                                                <p className="font-mono text-lg font-black tracking-tight text-[#106feb]">
+                                                    {result.ticket_number}
+                                                </p>
+                                            </div>
+                                            <StatusBadge
+                                                status={result.status}
+                                            />
+                                        </div>
+                                        <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
+                                            Diajukan pada{' '}
+                                            {formatDate(result.created_at)} ·{' '}
+                                            {result.institution_name}
                                         </p>
                                     </div>
-                                    <StatusBadge status={result.status} />
-                                </div>
-                                <p className="mt-3 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                                    Diajukan pada{' '}
-                                    {formatDate(result.created_at)} ·{' '}
-                                    {result.institution_name}
-                                </p>
-                            </div>
 
                             {/* Penolakan */}
                             {result.status === 'rejected' && (
@@ -415,50 +417,52 @@ export default function Lacak({ application, ticket }: LacakProps) {
                                 </div>
                             )}
 
-                            <div className="grid gap-6 lg:grid-cols-3">
-                                {/* Timeline */}
-                                <div className="lg:col-span-2">
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-6">
-                                        <h3 className="text-base font-bold text-[#12213e]">
-                                            Perkembangan Permohonan
-                                        </h3>
-                                        <p className="mt-0.5 text-sm text-slate-500">
-                                            Status diperbarui otomatis di setiap
-                                            tahap.
-                                        </p>
-                                        <div className="mt-6">
-                                            <StatusTimeline
-                                                status={result.status}
-                                            />
+                                    <div className="grid gap-6 lg:grid-cols-3">
+                                        {/* Timeline */}
+                                        <div className="lg:col-span-2">
+                                            <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                                                <h3 className="text-base font-bold text-[#12213e]">
+                                                    Perkembangan Permohonan
+                                                </h3>
+                                                <p className="mt-0.5 text-sm text-slate-500">
+                                                    Status diperbarui otomatis
+                                                    di setiap tahap.
+                                                </p>
+                                                <div className="mt-6">
+                                                    <StatusTimeline
+                                                        status={result.status}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Detail */}
+                                        <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                                            <h3 className="text-base font-bold text-[#12213e]">
+                                                Detail
+                                            </h3>
+                                            <dl className="mt-4 grid grid-cols-1 gap-4">
+                                                <DetailRow
+                                                    label="Bidang / Tujuan"
+                                                    value={result.tujuan_magang}
+                                                />
+                                                <DetailRow
+                                                    label="OPD Penempatan"
+                                                    value={
+                                                        result.opd?.name ?? null
+                                                    }
+                                                />
+                                                <DetailRow
+                                                    label="Bidang Penempatan"
+                                                    value={result.division}
+                                                />
+                                                <DetailRow
+                                                    label="Periode"
+                                                    value={`${formatDate(result.start_date)} – ${formatDate(result.end_date)}`}
+                                                />
+                                            </dl>
                                         </div>
                                     </div>
-                                </div>
-
-                                {/* Detail */}
-                                <div className="rounded-2xl border border-slate-200 bg-white p-6">
-                                    <h3 className="text-base font-bold text-[#12213e]">
-                                        Detail
-                                    </h3>
-                                    <dl className="mt-4 grid grid-cols-1 gap-4">
-                                        <DetailRow
-                                            label="Bidang / Tujuan"
-                                            value={result.tujuan_magang}
-                                        />
-                                        <DetailRow
-                                            label="OPD Penempatan"
-                                            value={result.opd?.name ?? null}
-                                        />
-                                        <DetailRow
-                                            label="Bidang Penempatan"
-                                            value={result.division}
-                                        />
-                                        <DetailRow
-                                            label="Periode"
-                                            value={`${formatDate(result.start_date)} – ${formatDate(result.end_date)}`}
-                                        />
-                                    </dl>
-                                </div>
-                            </div>
 
                             {!isAuthed && (
                                 <div className="rounded-2xl bg-[#cddcef]/30 p-5 text-center">

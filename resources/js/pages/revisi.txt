@@ -1,0 +1,29 @@
+1. tambahkan scroll lenis di setiap halaman
+   >> SELESAI (claude, 14/07/2026 09:05): install `lenis`, buat komponen
+      resources/js/components/smooth-scroll.tsx (ReactLenis root, anchors:true,
+      hormati prefers-reduced-motion), dipasang global di app.tsx (withApp) ->
+      berlaku di SETIAP halaman. CSS lenis di-import di app.css. Build OK.
+2. hapus animasi loading screen pada welcome.tsx
+   >> SELESAI (claude, 14/07/2026 09:12): dihapus total — state isLoading,
+      2 useEffect (timer 2200ms + kunci body overflow), dan blok JSX
+      AnimatePresence loading-screen. Hero langsung tampil (stagger tetap).
+      tsc+eslint OK.
+3. ubah total desain halaman login-otp
+   >> SELESAI (claude, 14/07/2026 09:25): rombak total dari split-screen gelap
+      menjadi KARTU TERPUSAT di atas latar biru muda (#f5faff) + glow blobs,
+      wordmark gradien + badge ikon GraduationCap, tombol gradien biru, input
+      berikon Mail, kotak OTP border-2 (state terisi biru), chip "Tanpa
+      Password / Data Terlindungi", font Inter — SATU bahasa visual dgn
+      landing. SEMUA logika (2 langkah OTP, resend timer, paste, error, props)
+      dipertahankan utuh. tsc+eslint OK.
+4. ubah desain menu side down pada tiap dasbor agar serasi dengan tema tampilan website saat ini
+   >> SELESAI (claude, 14/07/2026 09:59): dropdown user (slide-down) di topbar
+      MagangLayout (dipakai SEMUA dasbor) didesain ulang serasi tema: konten
+      rounded-2xl + shadow biru; header kartu profil mini (avatar gradien +
+      nama + email) berlatar biru muda gradien; badge peran pill biru
+      (bg-[#106feb]/10) berikon ShieldCheck; item "Keluar" rounded-xl; chevron
+      trigger berputar 180 saat terbuka; trigger hover biru + focus-ring.
+      (DropdownMenuLabel diganti header kustom -> importnya dihapus.)
+      build+tsc+eslint OK.
+
+=== SEMUA REVISI (1-4) SELESAI. build/tsc/eslint hijau. 14/07/2026 ===

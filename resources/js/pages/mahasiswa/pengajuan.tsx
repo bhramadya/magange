@@ -542,7 +542,7 @@ export default function Pengajuan({
                     transition={{ duration: 0.5, ease: 'circOut' }}
                     className="flex flex-col gap-6 lg:col-span-2"
                 >
-                    <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                         <h3 className="text-base font-bold text-[#12213e]">
                             Riwayat Aktivitas
                         </h3>
@@ -555,7 +555,7 @@ export default function Pengajuan({
                         </div>
                     </div>
 
-                    <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                         <h3 className="text-base font-bold text-[#12213e]">
                             Dokumen Pengajuan
                         </h3>
@@ -580,7 +580,7 @@ export default function Pengajuan({
                 <div className="flex flex-col gap-6">
                     <ActionPanel application={application} />
 
-                    <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                         <h3 className="text-base font-bold text-[#12213e]">
                             Detail Pemohon
                         </h3>
@@ -608,7 +608,7 @@ export default function Pengajuan({
                         </dl>
                     </div>
 
-                    <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                         <h3 className="text-base font-bold text-[#12213e]">
                             Penempatan
                         </h3>

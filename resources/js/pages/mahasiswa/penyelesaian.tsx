@@ -792,7 +792,7 @@ export default function Penyelesaian({
             </div>
 
             {/* Ringkasan magang (konteks) */}
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h3 className="text-base font-bold text-[#12213e]">
                     Ringkasan Magang
                 </h3>

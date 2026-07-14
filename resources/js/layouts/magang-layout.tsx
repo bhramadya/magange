@@ -12,6 +12,7 @@ import {
     ClipboardCheck,
     Users,
     Ticket,
+    ShieldCheck,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -20,7 +21,6 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -325,7 +325,7 @@ export default function MagangLayout({
 
                         <div className="ml-auto flex items-center gap-1 sm:gap-2">
                             <DropdownMenu>
-                                <DropdownMenuTrigger className="flex items-center gap-2 rounded-full p-1 pr-3 transition-colors hover:bg-slate-100/80">
+                                <DropdownMenuTrigger className="group flex items-center gap-2 rounded-full p-1 pr-3 transition-colors hover:bg-[#106feb]/8 focus-visible:ring-2 focus-visible:ring-[#0b4fb0]/40 focus-visible:outline-none">
                                     <span className="flex size-9 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#106feb] to-[#0b4fb0] text-sm font-bold text-white shadow-sm">
                                         {user.avatar_url ? (
                                             <img
@@ -345,25 +345,50 @@ export default function MagangLayout({
                                             {ROLE_LABEL[user.role]}
                                         </span>
                                     </span>
-                                    <ChevronDown className="hidden size-4 text-slate-400 sm:block" />
+                                    <ChevronDown className="hidden size-4 text-slate-400 transition-transform duration-200 group-data-[state=open]:rotate-180 sm:block" />
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent
                                     align="end"
-                                    className="w-56"
+                                    sideOffset={10}
+                                    className="w-64 rounded-2xl border-slate-200/70 p-2 shadow-[0_20px_50px_-12px_rgba(8,71,156,0.28)]"
                                 >
-                                    <DropdownMenuLabel>
-                                        <p className="text-sm font-semibold text-[#0a1628]">
-                                            {user.name}
-                                        </p>
-                                        <p className="text-xs font-normal text-slate-500">
-                                            {user.email}
-                                        </p>
-                                    </DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
+                                    {/* Kartu profil mini — branded biru muda */}
+                                    <div className="mb-1 flex items-center gap-3 rounded-xl bg-gradient-to-br from-[#e8f2fe] to-white p-3">
+                                        <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#106feb] to-[#0b4fb0] text-sm font-bold text-white shadow-sm">
+                                            {user.avatar_url ? (
+                                                <img
+                                                    src={user.avatar_url}
+                                                    alt={user.name}
+                                                    className="size-full object-cover"
+                                                />
+                                            ) : (
+                                                initials(user.name)
+                                            )}
+                                        </span>
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-bold text-[#0a1628]">
+                                                {user.name}
+                                            </p>
+                                            <p className="truncate text-xs text-slate-500">
+                                                {user.email}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Badge peran */}
+                                    <div className="mb-1.5 px-1">
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#106feb]/10 px-2.5 py-1 text-[11px] font-semibold text-[#106feb]">
+                                            <ShieldCheck className="size-3" />
+                                            {ROLE_LABEL[user.role]}
+                                        </span>
+                                    </div>
+
+                                    <DropdownMenuSeparator className="bg-slate-100" />
                                     {/* Menu "Pengaturan" dihilangkan sepenuhnya (revisi mentor) untuk semua role. */}
                                     <DropdownMenuItem
                                         asChild
                                         variant="destructive"
+                                        className="cursor-pointer rounded-xl"
                                     >
                                         <Link
                                             href="/logout"

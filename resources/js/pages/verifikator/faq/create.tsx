@@ -53,7 +53,7 @@ export default function FaqCreate({ user = MOCK_USER }: FaqCreateProps) {
                     <ArrowLeft className="size-4" /> Kembali ke daftar
                 </Link>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-6">
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                     <h2 className="text-lg font-black text-[#12213e]">
                         Tambah FAQ
                     </h2>

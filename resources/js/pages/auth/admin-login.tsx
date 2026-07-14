@@ -1,5 +1,6 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import { ArrowLeft, Lock, ShieldCheck, User2, Loader2 } from 'lucide-react';
+import { motion } from 'motion/react';
 import type { FormEvent } from 'react';
 
 /* =========================================================================
@@ -27,7 +28,12 @@ export default function AdminLogin() {
         <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10 text-[#0a1628]">
             <Head title="Login Admin" />
 
-            <div className="w-full max-w-md">
+            <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: 'circOut' }}
+                className="w-full max-w-md"
+            >
                 <Link
                     href="/"
                     className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition-colors hover:text-[#106feb]"
@@ -70,7 +76,7 @@ export default function AdminLogin() {
                                         setData('username', e.target.value)
                                     }
                                     placeholder="cth. verifikator"
-                                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pr-4 pl-10 text-sm transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pr-4 pl-10 text-sm transition outline-none hover:border-[#cddcef] focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                                 />
                             </div>
                             {errors.username && (
@@ -99,7 +105,7 @@ export default function AdminLogin() {
                                         setData('password', e.target.value)
                                     }
                                     placeholder="••••••••"
-                                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pr-4 pl-10 text-sm transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                                    className="h-12 w-full rounded-xl border border-slate-200 bg-white pr-4 pl-10 text-sm transition outline-none hover:border-[#cddcef] focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                                 />
                             </div>
                             {errors.password && (
@@ -133,7 +139,7 @@ export default function AdminLogin() {
                         </Link>
                     </p>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 }
