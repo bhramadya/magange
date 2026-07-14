@@ -254,6 +254,36 @@ BAGIAN B — DASHBOARD & HALAMAN ROLE (poles ulang tampilan)
     Build/lint/types hijau. 13/07/2026.
     ===================================================================
 
+[x] REVISI (permintaan user) — navbar sesak karena menu "Lacak Tiket"
+    >> sudah dikerjakan oleh claude pada tanggal (14/07/2026, pukul 08:00)
+       Masalah: navLinks jadi 7 item (tambahan "Lacak Tiket" = rute /lacak),
+       nav tengah desktop (absolute-center) berdesakan di laptop kecil.
+       Solusi (dipilih user): "Lacak Tiket" DIKELUARKAN dari navLinks -> nav
+       tengah kembali 6 anchor seksi (Fitur, Instansi OPD, Alur Pendaftaran,
+       [Testimoni], FAQ, Kontak), breakpoint tetap lg. "Lacak Tiket" jadi
+       AKSI TERSENDIRI:
+         - Desktop (lg+): pill ber-ikon <Ticket> di kanan navbar, tepat
+           sebelum tautan "Masuk" (outline, hover naik + biru).
+         - Mobile: item "Lacak Tiket" ber-ikon di dropdown, dipisah divider
+           (border-t) dari anchor seksi, sebelum "Masuk Akun".
+       Ikon Ticket ditambah ke import lucide. tsc+eslint+prettier OK.
+
+[x] REVISI LANJUTAN (permintaan user) — pindahkan "Lacak Tiket" keluar navbar
+    >> sudah dikerjakan oleh claude pada tanggal (14/07/2026, pukul 08:45)
+       User menilai tombol Lacak Tiket kurang cocok di navbar. Pill di navbar
+       DIHAPUS; navbar kanan kembali bersih (Masuk + Daftar + hamburger).
+       "Lacak Tiket" kini ditempatkan di 3 lokasi yang lebih pas & kontekstual:
+         (1) HERO — tautan tersier "Sudah mengajukan? Lacak status tiket"
+             (ikon Ticket + panah geser) tepat di bawah grup tombol CTA
+             utama; menyapa pendaftar lama tanpa bersaing dgn CTA primer.
+         (2) FOOTER kolom "Navigasi" — item "Lacak Tiket" (gaya panah geser
+             sama spt tautan footer lain), sbagai lokasi utilitas konvensional.
+         (3) MENU MOBILE (dropdown) — item ber-ikon, dipisah divider border-t
+             dari anchor seksi, sebelum "Masuk Akun".
+       navLinks tetap 6 anchor. Rasional: /lacak adalah alur utilitas untuk
+       pendaftar yg SUDAH mengajukan — paling relevan sbg CTA tersier di hero
+       + tautan footer, bukan menu utama. tsc+eslint+prettier OK.
+
 ========================================================================
   RIWAYAT PENGERJAAN
 ------------------------------------------------------------------------

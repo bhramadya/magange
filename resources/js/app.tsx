@@ -1,4 +1,5 @@
 import { createInertiaApp } from '@inertiajs/react';
+import SmoothScroll from '@/components/smooth-scroll';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-appearance';
@@ -45,10 +46,12 @@ createInertiaApp({
     strictMode: true,
     withApp(app) {
         return (
-            <TooltipProvider delayDuration={0}>
-                {app}
-                <Toaster />
-            </TooltipProvider>
+            <SmoothScroll>
+                <TooltipProvider delayDuration={0}>
+                    {app}
+                    <Toaster />
+                </TooltipProvider>
+            </SmoothScroll>
         );
     },
     progress: {

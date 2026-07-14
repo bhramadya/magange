@@ -30,6 +30,7 @@ import {
     Star,
     Quote,
     X,
+    Ticket,
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView, animate } from 'motion/react';
 import { useState, useEffect, useRef } from 'react';
@@ -583,8 +584,6 @@ export default function Welcome({
     testimonials = [],
 }: WelcomeProps) {
     const [scrolled, setScrolled] = useState(false);
-    // Loading screen — tampil saat halaman pertama dimuat, lalu menyingkap hero.
-    const [isLoading, setIsLoading] = useState(true);
     // State tanggal magang — disimpan ISO (yyyy-mm-dd), ditampilkan format Indonesia.
     const [tanggalMulai, setTanggalMulai] = useState('');
     const [tanggalSelesai, setTanggalSelesai] = useState('');
@@ -927,17 +926,18 @@ export default function Welcome({
     // Tautan navigasi (dipakai ulang oleh navbar desktop & menu mobile)
     const navLinks = [
         { href: '#fitur', label: 'Fitur' },
-        { href: '#instansi', label: 'Instansi OPD' },
+        { href: '#instansi', label: 'OPD' },
         { href: '#alur', label: 'Alur Pendaftaran' },
         // Tautan testimoni hanya muncul bila ada testimonial (section kondisional).
         ...(testimonials.length > 0
             ? [{ href: '#testimonial', label: 'Testimoni' }]
             : []),
         { href: '#faq', label: 'FAQ' },
-        // Tautan ke halaman pelacakan publik (route Inertia, bukan anchor).
-        { href: '/lacak', label: 'Lacak Tiket' },
         { href: '#daftar', label: 'Kontak' },
     ];
+    // "Lacak Tiket" sengaja TIDAK dimasukkan ke navLinks: ia rute (/lacak),
+    // bukan anchor seksi. Diakses lewat: tautan tersier di hero, tautan di
+    // footer, dan item khusus di menu mobile — agar nav tengah tetap 6 anchor.
 
     // Logo instansi untuk Infinite Logo Slider (abbreviasi dari daftar OPD resmi)
     const instansiLogos = [
@@ -985,21 +985,6 @@ export default function Welcome({
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Sembunyikan loading screen setelah animasi singkat & kunci scroll selama tampil.
-    useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 2200);
-
-        return () => clearTimeout(timer);
-    }, []);
-
-    useEffect(() => {
-        document.body.style.overflow = isLoading ? 'hidden' : '';
-
-        return () => {
-            document.body.style.overflow = '';
-        };
-    }, [isLoading]);
-
     return (
         <>
             <Head title="E-Magang - Dinas Kominfo Kota Madiun">
@@ -1014,88 +999,6 @@ export default function Welcome({
                     rel="stylesheet"
                 />
             </Head>
-
-            {/* 0. LOADING SCREEN — menyingkap ke atas saat selesai (curtain reveal) */}
-            <AnimatePresence>
-                {isLoading && (
-                    <motion.div
-                        key="loading-screen"
-                        initial={{ opacity: 1 }}
-                        exit={{ y: '-100%' }}
-                        transition={{ duration: 0.8, ease: [0.76, 0, 0.24, 1] }}
-                        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#f5faff] px-6"
-                        style={{ fontFamily: "'Inter', sans-serif" }}
-                    >
-                        {/* Glow halus di belakang konten */}
-                        <div
-                            aria-hidden
-                            className="pointer-events-none absolute top-1/2 left-1/2 h-[420px] w-[420px] max-w-[80vw] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0b4fb0]/15 blur-[120px]"
-                        />
-
-                        {/* Mark ikon brand + ring berputar */}
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.6, ease: 'circOut' }}
-                            className="relative mb-8 flex items-center justify-center"
-                        >
-                            <motion.span
-                                aria-hidden
-                                animate={{ rotate: 360 }}
-                                transition={{
-                                    duration: 1.1,
-                                    ease: 'linear',
-                                    repeat: Infinity,
-                                }}
-                                className="absolute h-[88px] w-[88px] rounded-full border-[3px] border-[#0b4fb0]/15 border-t-[#106feb] md:h-[104px] md:w-[104px]"
-                            />
-                            <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#106feb] to-[#0b4fb0] shadow-[0_12px_30px_-6px_rgba(20,99,208,0.6)] md:h-20 md:w-20">
-                                <Building2 className="h-8 w-8 text-white md:h-9 md:w-9" />
-                            </span>
-                        </motion.div>
-
-                        {/* Wordmark */}
-                        <motion.h2
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{
-                                duration: 0.6,
-                                delay: 0.15,
-                                ease: 'circOut',
-                            }}
-                            className="bg-gradient-to-r from-[#0a1628] to-[#0b4fb0] bg-clip-text text-[28px] font-bold tracking-tight text-transparent md:text-[34px]"
-                        >
-                            E-Magang
-                        </motion.h2>
-                        <motion.p
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{
-                                duration: 0.6,
-                                delay: 0.25,
-                                ease: 'circOut',
-                            }}
-                            className="mt-1 text-center text-[13px] font-medium text-[#0a1628]/50 md:text-[14px]"
-                        >
-                            Portal Magang Pemerintah Kota Madiun
-                        </motion.p>
-
-                        {/* Progress bar — mengisi kiri → kanan */}
-                        <div className="mt-8 h-[5px] w-[180px] overflow-hidden rounded-full bg-[#0b4fb0]/10 md:w-[220px]">
-                            <motion.div
-                                initial={{ x: '-100%' }}
-                                animate={{ x: '0%' }}
-                                transition={{
-                                    duration: 1.7,
-                                    delay: 0.3,
-                                    ease: 'easeInOut',
-                                }}
-                                className="h-full w-full rounded-full bg-gradient-to-r from-[#106feb] to-[#0b4fb0]"
-                            />
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
             {/* Latar Belakang Utama Webild (Light Blue-ish White) */}
             <div
@@ -1212,10 +1115,19 @@ export default function Welcome({
                                             </NavEl>
                                         );
                                     })}
+                                    {/* Lacak Tiket — rute /lacak, dipisah divider dari anchor seksi */}
+                                    <Link
+                                        href="/lacak"
+                                        onClick={() => setMobileMenuOpen(false)}
+                                        className="mt-1 flex items-center gap-2 rounded-xl border-t border-slate-100 px-3 pt-3.5 pb-2.5 text-[15px] font-medium text-[#0a1628]/70 transition-colors hover:bg-[#106feb]/5 hover:text-[#106feb] focus-visible:bg-[#106feb]/5 focus-visible:text-[#106feb] focus-visible:outline-none"
+                                    >
+                                        <Ticket className="size-4" /> Lacak
+                                        Tiket
+                                    </Link>
                                     <Link
                                         href="/login-otp"
                                         onClick={() => setMobileMenuOpen(false)}
-                                        className="mt-1 rounded-xl px-3 py-2.5 text-left text-[15px] font-medium text-[#0a1628]/70 transition-colors hover:bg-[#106feb]/5 hover:text-[#106feb] focus-visible:bg-[#106feb]/5 focus-visible:text-[#106feb] focus-visible:outline-none"
+                                        className="rounded-xl px-3 py-2.5 text-left text-[15px] font-medium text-[#0a1628]/70 transition-colors hover:bg-[#106feb]/5 hover:text-[#106feb] focus-visible:bg-[#106feb]/5 focus-visible:text-[#106feb] focus-visible:outline-none"
                                     >
                                         Masuk Akun
                                     </Link>
@@ -1381,6 +1293,19 @@ export default function Welcome({
                                 </AnimatedButton>
                             </motion.div>
 
+                            {/* Tautan tersier — pintasan lacak status bagi pendaftar
+                                yang sudah punya tiket (rute /lacak, bukan tombol besar). */}
+                            <motion.div variants={heroItem} className="mt-5">
+                                <Link
+                                    href="/lacak"
+                                    className="group inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium text-[#0a1628]/60 transition-colors duration-300 hover:text-[#106feb] focus-visible:ring-2 focus-visible:ring-[#0b4fb0]/50 focus-visible:outline-none"
+                                >
+                                    <Ticket className="h-4 w-4 text-[#106feb]" />
+                                    Sudah mengajukan? Lacak status tiket
+                                    <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                                </Link>
+                            </motion.div>
+
                             {/* Baris penanda kepercayaan — chip pill konsisten dgn badge, hover naik */}
                             <motion.div
                                 variants={heroItem}
@@ -1415,7 +1340,7 @@ export default function Welcome({
 
                         <div className="relative overflow-hidden rounded-3xl border border-white/40 bg-white shadow-[0_20px_40px_-12px_rgba(8,71,156,0.25),0_40px_80px_-20px_rgba(20,99,208,0.3)] transition-transform duration-700 hover:-translate-y-2">
                             <img
-                                src="/images/gedung-pemerintahan.png"
+                                src="/images/dasbor.png"
                                 alt="Gedung Pemerintah Kota Madiun"
                                 loading="lazy"
                                 onError={(e) => {
@@ -2732,6 +2657,21 @@ export default function Welcome({
                                             </li>
                                         );
                                     })}
+                                    {/* Lacak Tiket — rute /lacak (bukan anchor seksi) */}
+                                    <li>
+                                        <Link
+                                            href="/lacak"
+                                            className="group relative inline-flex items-center text-[15px] text-white/60 transition-colors hover:text-white"
+                                        >
+                                            <ArrowRight
+                                                aria-hidden
+                                                className="absolute left-0 h-3.5 w-3.5 -translate-x-1 text-[#106feb] opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
+                                            />
+                                            <span className="transition-transform duration-300 group-hover:translate-x-5">
+                                                Lacak Tiket
+                                            </span>
+                                        </Link>
+                                    </li>
                                 </ul>
                             </div>
 

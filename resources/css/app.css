@@ -2,6 +2,9 @@
 
 @import 'tw-animate-css';
 
+/* Lenis smooth-scroll — gaya dasar wajib agar mode root bekerja benar. */
+@import 'lenis/dist/lenis.css';
+
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 
