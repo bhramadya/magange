@@ -35,6 +35,28 @@ test('opd dashboard is scoped to the admin own opd and unwraps props', function 
     );
 });
 
+test('opd admin dapat mengubah kuota OPD-nya sendiri dan tersimpan ke DB', function () {
+    [$user, $opd] = opdAdmin();
+
+    $this->actingAs($user)
+        ->patch("/kuota/{$opd->id}", ['quota_total' => 15])
+        ->assertRedirect();
+
+    // Tersimpan → landing page & dasbor Verifikator (baca DB) ikut terbarui.
+    $this->assertDatabaseHas('opds', ['id' => $opd->id, 'quota_total' => 15]);
+});
+
+test('opd admin tidak dapat mengubah kuota OPD lain (403)', function () {
+    [$user] = opdAdmin();
+    $otherOpd = Opd::create(['name' => 'Dinas Lain', 'code' => 'LAIN', 'is_active' => true, 'quota_total' => 3]);
+
+    $this->actingAs($user)
+        ->patch("/kuota/{$otherOpd->id}", ['quota_total' => 99])
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('opds', ['id' => $otherOpd->id, 'quota_total' => 3]);
+});
+
 test('opd keputusan lists only forwarded applications for this opd', function () {
     [$user, $opd] = opdAdmin();
     InternshipApplication::factory()->create(['opd_id' => $opd->id, 'status' => ApplicationStatus::ForwardedOpd]);

@@ -766,7 +766,7 @@ export default function Penyelesaian({
                                     </span>
                                     <div>
                                         <p className="text-sm font-bold">
-                                            Selamat, magang Anda selesai! 🎉
+                                            Selamat, magang Anda selesai!
                                         </p>
                                         <p className="text-xs text-white/80">
                                             e-Sertifikat resmi Anda telah terbit

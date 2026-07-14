@@ -1,0 +1,236 @@
+========================================================================
+  REDESAIN VISUAL E-MAGANG KOTA MADIUN
+  Acuan: live_referensi.mp4 + referensi.png (landing "Flashly" — SaaS biru/putih)
+  Tujuan: menyamakan VISUAL & ANIMASI (navbar, hero, section reveal, hover
+          tombol/menu/card, ukuran font & ikon, tipografi) TANPA mengubah
+          ISI KONTEN. Lanjut memoles setiap dashboard.
+------------------------------------------------------------------------
+  CATATAN TEKNIS:
+  - ffmpeg tidak tersedia di environment, jadi frame video tidak bisa
+    diekstrak. Acuan visual diambil dari referensi.png (tangkapan halaman
+    penuh) + deskripsi animasi dari pengguna + pola animasi modern standar.
+  - Stack animasi yang sudah ada: motion/react (Framer Motion). Sudah ada
+    helper: Reveal, staggerContainer/Item, heroContainer/Item, bentoItem,
+    CountUp, AnimatedButton (hover sliding), OrbitImage, loading screen.
+  - Aturan penandaan selesai:
+      >> sudah dikerjakan oleh claude pada tanggal (dd/mm/yyyy, pukul HH:MM)
+  - Kerjakan SATU per SATU. Berhenti & tunggu perintah untuk item berikutnya.
+========================================================================
+
+
+BAGIAN A — HALAMAN UTAMA (resources/js/pages/welcome.tsx)
+------------------------------------------------------------------------
+
+[x] A1. NAVBAR — samakan dengan referensi
+    - Tampilkan tautan navigasi inline di tengah pada desktop (saat ini
+      SEMUA link disembunyikan di balik hamburger, bahkan di desktop).
+    - Hover link: efek underline/pill halus + transisi warna ke #106feb.
+    - Hamburger hanya untuk mobile/tablet (< lg). CTA "Daftar" + tombol
+      ikon tetap di kanan.
+    - Perhalus perubahan saat scroll (shrink padding + shadow/blur).
+    - Animasi masuk navbar (slide-down) dipertahankan.
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 15:54)
+       Ringkasan: nav links inline di tengah (lg+) dgn underline tumbuh dari
+       tengah saat hover; tautan "Masuk" ditambahkan di kanan (desktop);
+       hamburger di-set lg:hidden (mobile saja); padding navbar mengecil
+       saat scroll (transition-all); slide-down entrance tetap. tsc+eslint OK.
+
+[x] A2. HERO — tipografi, ukuran font & ikon, badge
+    - Selaraskan skala heading, sub-heading, dan badge "pill" dengan
+      proporsi referensi (heading besar-tebal, tracking rapat).
+    - Tambah/rapikan baris "trust" (avatar/ikon kecil) sesuai referensi.
+    - Pastikan ukuran ikon di badge, tombol, dan trust-row konsisten.
+    - Pertahankan animasi stagger judul -> sub -> tombol + orbit images.
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 15:59)
+       Ringkasan: heading diperbesar ke skala display (md:72px, lg:80px);
+       garis-bawah gradien tumbuh dari kiri di bawah "Digital Anda" saat
+       hero muncul; trust-row diubah jadi chip pill konsisten dgn badge
+       (border+blur+shadow, hover naik -translate-y-0.5); badge & chip
+       disamakan padding (py-2) & ikon konsisten h-4 w-4. Stagger + orbit
+       tetap. tsc+eslint OK, isi teks tidak diubah.
+
+[x] A3. ANIMASI SECTION SAAT DIMUAT (scroll reveal) — konsistensi
+    - Seragamkan easing/durasi/margin Reveal di semua section agar setiap
+      section "naik + fade" mulus saat masuk viewport, seperti referensi.
+    - Tambahkan reveal pada elemen yang belum punya (heading section, dsb).
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 16:03)
+       Ringkasan: titik pemicu scroll-reveal (viewport.margin) diseragamkan
+       ke '-80px' di SELURUH section (sebelumnya campur +80/-40/-60/-80),
+       jadi setiap section muncul pada offset scroll yang sama & konsisten
+       dgn helper Reveal + CountUp. Easing tetap circOut. Empty-state
+       pencarian OPD sengaja tetap pakai `animate` (bukan scroll). tsc OK.
+
+[x] A4. SECTION FITUR / BENTO — kartu
+    - Entrance stagger + hover lift/scale + border/shadow halus meniru
+      kartu fitur referensi (bg lembut, rounded besar, ikon berwarna).
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 16:08)
+       Ringkasan: entrance stagger + spring hover-lift sudah ada; ditambah
+       ikon fitur kini "fill" biru brand #106feb + ikon jadi putih + sedikit
+       -rotate-3 + shadow saat hover (motif konsisten dgn strip statistik &
+       section alur), plus border kartu beralih ke #cddcef saat hover
+       (transition-all). 3 kartu (2 atas + 1 lebar) diperlakukan sama.
+       tsc+eslint OK, isi teks tidak diubah.
+
+[x] A5. STRIP STATISTIK & LOGO SLIDER
+    - Rapikan kartu statistik (count-up sudah ada) + gaya hover.
+    - Poles infinite logo slider (kecepatan/gradient mask tepi).
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 16:10)
+       Ringkasan: kartu statistik kini hover naik (-translate-y-1) + border
+       #cddcef + kotak ikon fill biru & sedikit -rotate-3 (transition-all).
+       Tiap chip logo instansi jadi interaktif: hover naik, border #cddcef,
+       kotak ikon fill biru + ikon putih + label menggelap. Gradient mask
+       tepi marquee dilebarkan w-24 -> w-32. tsc+eslint OK, isi tetap.
+
+[x] A6. SECTION INSTANSI / OPD
+    - Gaya kartu + hover + input pencarian sesuai bahasa visual referensi.
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 16:14)
+       Ringkasan: kartu OPD sudah paling matang (aura glow, garis aksen atas,
+       watermark, ikon fill hover, spring lift, layout animation) — dibiarkan.
+       Kolom pencarian ditambah: border beralih #cddcef saat hover + tombol
+       "bersihkan" (X) yang muncul lembut (AnimatePresence) saat kolom terisi,
+       hover jadi biru. Ikon X ditambahkan ke import lucide. tsc+eslint OK.
+
+[x] A7. SECTION ALUR PENDAFTARAN
+    - Animasi langkah (timeline/step) muncul berurutan + ikon konsisten.
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 16:18)
+       Ringkasan: garis penghubung "draw line" + stagger kiri->kanan + angka
+       latar sudah ada. Ikon langkah diselaraskan ke motif fill: hover jadi
+       biru #106feb + ikon putih + -rotate-3 + shadow (sebelumnya hanya ganti
+       warna teks). Kartu langkah kini hover border #cddcef + shadow-xl, dan
+       angka latar sedikit menguat saat hover. tsc+eslint OK, isi tetap.
+
+[x] A8. SECTION TESTIMONI (kondisional)
+    - Kartu testimoni + hover, tipografi kutipan sesuai referensi.
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 16:20)
+       Ringkasan: kartu testimoni (sebelumnya hanya ganti border saat hover)
+       kini hover naik (-translate-y-1) + shadow biru lembih dalam
+       (transition-all). Avatar inisial fill biru penuh + huruf putih saat
+       hover; tanda kutip (Quote) menguat ke biru. Bintang rating & Reveal
+       stagger tetap. Section tetap kondisional (hanya bila ada data).
+       tsc+eslint OK, isi tetap.
+
+[x] A9. SECTION FAQ
+    - Accordion: animasi buka/tutup mulus, tombol lingkaran +/- berputar,
+      hover baris, layout 2 kolom bila sesuai referensi.
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 16:24)
+       Ringkasan: animasi buka/tutup (AnimatePresence height) dipertahankan.
+       Chevron polos diganti tombol LINGKARAN: saat terbuka fill biru penuh
+       + ikon putih + rotate-180 + shadow; saat hover tint membesar. Baris
+       pertanyaan kini punya hover bg (#f5faff) + teks judul biru saat aktif
+       / menggelap saat hover. Kartu item hover border #cddcef + shadow lebih
+       kuat. (Layout tetap 1 kolom terpusat max-w-3xl — sesuai isi ringkas &
+       lebih terbaca; tidak dipaksa 2 kolom.) tsc+eslint OK, isi tetap.
+
+[x] A10. SECTION KONTAK / FORM PENGAJUAN + FOOTER
+    - Poles kartu form, fokus/hover field, dan footer (bg gelap/biru,
+      hover tautan) — tanpa mengubah field/isi form.
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 16:28)
+       Ringkasan: SEMUA field form (input, select, textarea) kini punya
+       umpan-balik hover border #cddcef (sebelumnya hanya state fokus ring).
+       3 kartu info kontak (kiri) diberi hover border #cddcef + transition-all.
+       Footer sudah sangat matang (garis gradien atas, glow, watermark,
+       tautan nav dgn panah geser saat hover, hover tautan kontak/legal) —
+       dibiarkan. Tidak ada field/isi form yang diubah. tsc+eslint OK.
+
+[x] A11. MIKRO-INTERAKSI GLOBAL
+    - Sapu akhir: konsistensi hover tombol/menu/card, cursor, transisi
+      warna, dan focus-ring aksesibel di seluruh welcome.tsx.
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 16:45)
+       Ringkasan: fokus keyboard (focus-visible ring #0b4fb0) ditambahkan ke
+       kontrol utama yg sebelumnya `focus:outline-none` tanpa pengganti atau
+       tanpa ring: AnimatedButton (semua CTA), tautan nav desktop + "Masuk",
+       hamburger, tombol toggle FAQ (ring inset), tautan menu mobile, tombol
+       bersihkan pencarian, dan CTA "Unduh Panduan". Motif hover fill biru +
+       border #cddcef kini konsisten lintas section. tsc+eslint OK, isi tetap.
+
+    === BAGIAN A (welcome.tsx) SELESAI SEMUA (A1-A11) ===
+
+[x] REVISI (permintaan user) — card form section kontak di mobile
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 18:33)
+       Keluhan: di mobile shadow card form terlalu tebal & form terlihat
+       condong ke kanan. Perbaikan: (1) shadow card form dibuat ringan di
+       mobile (shadow-[0_8px_24px...]) dan tebal hanya mulai md+ (md:shadow-
+       [0_20px_60px...]). (2) Kontainer reCAPTCHA (iframe fixed 302px) diberi
+       max-w-full + overflow-x-auto agar tidak mendorong lebar/terpotong di
+       layar sempit. tsc+eslint OK, field/isi form tidak diubah.
+
+[x] REVISI (permintaan user) — rombak total layout section kontak
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 18:49)
+       Keluhan: section kontak dibungkus card (banner) lalu di dalamnya ada
+       card lagi utk form (card-in-card), + form condong ke kanan (col-span-7).
+       Rombakan: banner luar DIHAPUS. Layout jadi 1 kolom TERPUSAT:
+         (1) Header terpusat (badge "Mulai Sekarang" + h2 "Siap Mendaftar?"
+             + deskripsi), max-w-2xl mx-auto, text-center.
+         (2) SATU kartu form saja (max-w-3xl mx-auto) — form kini benar2 di
+             tengah, tidak ada lagi card-in-card.
+         (3) Info kontak (Alamat/Email/Telepon) dipindah jadi strip ringan
+             3 kolom terpusat DI BAWAH form (max-w-3xl), chip putih hover.
+       Latar section diubah bg-white -> bg-[#f5faff] agar kartu form putih
+       menonjol tanpa perlu banner. Kata "di samping" -> "di bawah ini" pada
+       deskripsi agar akurat dgn layout baru (satu2nya perubahan teks, krn
+       konsekuensi langsung perubahan tata letak). Semua field/isi form utuh.
+       tsc+eslint OK.
+
+
+BAGIAN B — DASHBOARD & HALAMAN ROLE (poles ulang tampilan)
+------------------------------------------------------------------------
+
+[x] B1. MagangLayout (resources/js/layouts/magang-layout.tsx)
+    - Poles shell dashboard: sidebar/topbar, animasi item nav (hover +
+      active state), transisi buka/tutup sidebar. Warna brand #106feb.
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 19:28)
+       Ringkasan: shell sudah matang (sidebar fixed, active state pill biru,
+       hover tint, topbar glassmorphism, dropdown user, Sheet mobile).
+       Ditambah: (1) animasi MASUK halaman fade+naik (motion.div membungkus
+       {children}) tiap dasbor dimuat, selaras dgn reveal landing; (2) ikon
+       nav sedikit membesar (scale-110) saat hover. Import motion/react
+       ditata sesuai import/order. tsc+eslint OK.
+
+[x] B2. Dashboard MAHASISWA (resources/js/pages/mahasiswa/**)
+    - Poles kartu ringkasan, tabel/list, badge status, hover — isi tetap.
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 19:35)
+       Ringkasan (dashboard.tsx): StatCard kini interaktif — hover naik
+       (-translate-y-0.5) + border #cddcef + shadow, dan kotak ikon non-accent
+       fill biru saat hover (motif landing). Kartu konten utama (timeline &
+       detail) diberi shadow-sm utk kedalaman. Animasi masuk halaman sudah
+       ditangani MagangLayout (B1). Isi/prop tetap. tsc+eslint OK.
+       CATATAN: sub-halaman mahasiswa lain (pengajuan.tsx, penyelesaian.tsx)
+       belum dipoles di item ini — bisa disapu di pass lanjutan bila diminta.
+
+[x] B3. Dashboard VERIFIKATOR (resources/js/pages/verifikator/**)
+    - Poles daftar pengajuan, pop-up review, filter — isi tetap.
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 19:56)
+       Ringkasan (dashboard.tsx): StatCard-filter sudah punya stagger masuk +
+       active ring + hover border; ditambah hover naik (-translate-y-0.5) +
+       shadow-md + ikon scale-110 saat hover (motif landing). Kartu tabel
+       daftar pengajuan diberi shadow-sm utk kedalaman. Baris tabel & dialog
+       review sudah punya hover/interaksi — dibiarkan. Isi/logika tetap.
+       tsc+eslint OK. CATATAN: sub-halaman verifikator lain (masuk, riwayat,
+       kuota, faq/*, reports/*) belum disapu di item ini.
+
+[x] B4. Dashboard ADMIN OPD (resources/js/pages/opd/**)
+    - Poles filter status (urutan & warna sesuai aturan), kartu peserta,
+      form keputusan — isi & aturan bisnis tetap.
+    >> sudah dikerjakan oleh claude pada tanggal (12/07/2026, pukul 20:11)
+       Ringkasan (dashboard.tsx): StatCard-filter dipoles sama spt verifikator
+       (hover naik + shadow-md + ikon scale-110) DI ATAS stagger+active ring.
+       ATURAN BISNIS DIJAGA: urutan filter (Perlu Keputusan->Disetujui->
+       Sedang Magang->Selesai->Ditolak->Semua) & warna kuning "Perlu Keputusan"
+       (bg-amber-50) TIDAK diubah. Kartu tabel + editor kuota diberi shadow-sm.
+       DecisionDialog (form ACC wajib Divisi/Pembimbing/Penanggung Jawab + alert)
+       tidak disentuh. tsc+eslint OK. CATATAN: keputusan.tsx & peserta.tsx belum
+       disapu di item ini.
+
+[ ] B5. HALAMAN PENDUKUNG (bantuan.tsx, pengaturan.tsx, lacak.tsx, auth/**)
+    - Selaraskan tipografi, kartu, tombol, dan animasi masuk dengan
+      bahasa visual baru.
+
+[ ] B6. SAPU AKHIR DASHBOARD
+    - Konsistensi lintas dashboard: spacing, radius, shadow, hover,
+      animasi masuk halaman. Pastikan build/lint/types lolos.
+
+========================================================================
+  RIWAYAT PENGERJAAN
+------------------------------------------------------------------------
+(catatan tanggal selesai tiap item ditulis di bawah baris itemnya)
+========================================================================

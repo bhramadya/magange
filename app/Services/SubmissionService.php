@@ -46,6 +46,9 @@ class SubmissionService implements PengajuanServiceContract
      *     major?: string|null,
      *     skills?: string|null,
      *     photo_path?: string|null,
+     *     surat_pengantar_path?: string|null,
+     *     cv_path?: string|null,
+     *     portfolio_path?: string|null,
      * }  $validatedData
      */
     public function submit(array $validatedData, string $ipAddress): InternshipApplication
@@ -58,10 +61,18 @@ class SubmissionService implements PengajuanServiceContract
                 [
                     'name' => $validatedData['name'],
                     'whatsapp_number' => $validatedData['whatsapp_number'] ?? null,
+                    // Pas foto pendaftaran otomatis jadi foto profil (Task 4).
+                    'avatar_path' => $validatedData['photo_path'] ?? null,
                     'role' => UserRole::Mahasiswa,
                     'is_active' => true,
                 ],
             );
+
+            // Peserta lama yang mendaftar ulang & mengunggah pas foto, tapi belum
+            // punya foto profil: adopsi pas foto terbaru sebagai foto profil.
+            if (($validatedData['photo_path'] ?? null) !== null && $user->avatar_path === null) {
+                $user->update(['avatar_path' => $validatedData['photo_path']]);
+            }
 
             $application = InternshipApplication::create([
                 'ticket_number' => $this->generateTicketNumber(),
@@ -78,6 +89,9 @@ class SubmissionService implements PengajuanServiceContract
                 'major' => $validatedData['major'] ?? null,
                 'skills' => $validatedData['skills'] ?? null,
                 'photo_path' => $validatedData['photo_path'] ?? null,
+                'surat_pengantar_path' => $validatedData['surat_pengantar_path'] ?? null,
+                'cv_path' => $validatedData['cv_path'] ?? null,
+                'portfolio_path' => $validatedData['portfolio_path'] ?? null,
                 'status' => ApplicationStatus::PendingVerifikator,
             ]);
 
@@ -149,6 +163,21 @@ class SubmissionService implements PengajuanServiceContract
         DB::transaction(function () use ($app, $data, $actor): void {
             $from = $app->status;
 
+            // Kunci baris OPD agar cek & increment kuota bebas race condition.
+            // Menyetujui saat kuota penuh akan membuat quota_used > quota_total
+            // (inkonsistensi yang tampil sebagai "sisa negatif" di landing page).
+            if ($app->opd_id !== null) {
+                $opd = Opd::whereKey($app->opd_id)->lockForUpdate()->firstOrFail();
+
+                if ($opd->quota_used >= $opd->quota_total) {
+                    throw new DomainException(
+                        "Kuota OPD {$opd->name} sudah penuh ({$opd->quota_used}/{$opd->quota_total}).",
+                    );
+                }
+
+                $opd->increment('quota_used');
+            }
+
             $app->update([
                 'division' => $data['division'],
                 'field_supervisor' => $data['field_supervisor'],
@@ -157,10 +186,6 @@ class SubmissionService implements PengajuanServiceContract
                 'opd_decision_by' => $actor->id,
                 'opd_decision_at' => Date::now(),
             ]);
-
-            if ($app->opd_id !== null) {
-                Opd::whereKey($app->opd_id)->increment('quota_used');
-            }
 
             $this->logStatus($app, $from, ApplicationStatus::Approved, $actor, 'Disetujui OPD');
         });
@@ -278,7 +303,7 @@ class SubmissionService implements PengajuanServiceContract
     }
 
     /**
-     * Nomor tiket unik berformat MGG-{tahun}-{urut 4 digit}.
+     * Nomor tiket unik berformat MGG-{tahun}-{urut 6 digit}, mis. MGG-2026-000042.
      */
     private function generateTicketNumber(): string
     {
@@ -288,6 +313,6 @@ class SubmissionService implements PengajuanServiceContract
             ->whereYear('created_at', $year)
             ->count() + 1;
 
-        return sprintf('MGG-%d-%04d', $year, $sequence);
+        return sprintf('MGG-%d-%06d', $year, $sequence);
     }
 }

@@ -189,6 +189,13 @@ type FilterKey =
     | 'rejected'
     | 'all';
 
+// Label status khusus perspektif OPD: pengajuan yang diteruskan verifikator
+// tampil sebagai "Perlu Keputusan" (bukan "Diteruskan ke OPD"). Status lain
+// memakai label default dari STATUS_META.
+const OPD_STATUS_LABEL: Partial<Record<ApplicationStatus, string>> = {
+    forwarded_opd: 'Perlu Keputusan',
+};
+
 const FILTERS: { key: FilterKey; label: string }[] = [
     { key: 'forwarded_opd', label: 'Perlu Keputusan' },
     { key: 'approved', label: 'Disetujui' },
@@ -289,7 +296,7 @@ function StatCard({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay, ease: 'circOut' }}
             className={cn(
-                'rounded-2xl border bg-white p-5 text-left transition',
+                'group rounded-2xl border bg-white p-5 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md',
                 active
                     ? 'border-[#106feb] ring-2 ring-[#106feb]/20'
                     : 'border-slate-200 hover:border-[#106feb]/40',
@@ -297,7 +304,7 @@ function StatCard({
         >
             <div
                 className={cn(
-                    'mb-3 flex size-10 items-center justify-center rounded-xl',
+                    'mb-3 flex size-10 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110',
                     tone,
                 )}
             >
@@ -311,13 +318,14 @@ function StatCard({
 
 /* ---- Editor kuota OPD ------------------------------------------------ */
 // Admin OPD hanya boleh mengubah kuota OPD-nya sendiri (Verifikator: semua).
-// Preview memakai simulasi; backend nyata di PATCH /kuota/{opd}.
+// Tersambung ke backend nyata: PATCH /kuota/{opd}.
 function QuotaEditor({ opd }: { opd: Opd }) {
     const used = opd.quota_used ?? 0;
     const [total, setTotal] = useState(opd.quota ?? 0);
     const [editing, setEditing] = useState(false);
     const [value, setValue] = useState(String(opd.quota ?? 0));
     const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const parsed = Number(value);
     const valid = Number.isInteger(parsed) && parsed >= used && parsed <= 1000;
@@ -329,17 +337,27 @@ function QuotaEditor({ opd }: { opd: Opd }) {
             return;
         }
 
+        setError(null);
         setProcessing(true);
-        // TODO(backend): router.patch(`/kuota/${opd.id}`, { quota_total: parsed })
-        setTimeout(() => {
-            setTotal(parsed);
-            setProcessing(false);
-            setEditing(false);
-        }, 700);
+        // Admin OPD hanya boleh kuota OPD-nya sendiri (403 di UpdateQuotaRequest).
+        router.patch(
+            `/kuota/${opd.id}`,
+            { quota_total: parsed },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setTotal(parsed);
+                    setEditing(false);
+                },
+                onError: (errs) =>
+                    setError(errs.quota_total ?? 'Gagal memperbarui kuota.'),
+                onFinish: () => setProcessing(false),
+            },
+        );
     }
 
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <p className="flex items-center gap-1.5 text-sm font-bold text-[#12213e]">
@@ -347,11 +365,11 @@ function QuotaEditor({ opd }: { opd: Opd }) {
                         OPD
                     </p>
                     <p className="mt-0.5 text-xs text-slate-500">
-                        Terpakai {used} dari {total} kursi — sisa{' '}
+                        Sisa{' '}
                         <span className="font-semibold text-emerald-600">
-                            {sisa}
-                        </span>
-                        .
+                            {sisa} kursi
+                        </span>{' '}
+                        — terpakai {used}.
                     </p>
                 </div>
                 {!editing && (
@@ -394,6 +412,11 @@ function QuotaEditor({ opd }: { opd: Opd }) {
                             <p className="text-xs text-rose-500">
                                 Kuota minimal {used} (yang sudah terpakai) dan
                                 maksimal 1000.
+                            </p>
+                        )}
+                        {error && (
+                            <p className="text-xs font-medium text-rose-600">
+                                {error}
                             </p>
                         )}
                     </div>
@@ -851,7 +874,10 @@ function DecisionDialog({
                                 <p className="mb-2 text-sm font-semibold text-[#12213e]">
                                     Status saat ini
                                 </p>
-                                <StatusBadge status={app.status} />
+                                <StatusBadge
+                                    status={app.status}
+                                    label={OPD_STATUS_LABEL[app.status]}
+                                />
                                 {app.status === 'rejected' &&
                                     app.rejection_reason && (
                                         <p className="mt-3 text-sm text-rose-600">
@@ -960,7 +986,7 @@ export default function OpdDashboard({
             <div className="space-y-6">
                 <div>
                     <h2 className="text-xl font-black text-[#12213e]">
-                        Selamat datang, {user.name.split(' ')[0]} 👋
+                        Selamat datang, {user.name.split(' ')[0]}
                     </h2>
                     <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
                         <Building2 className="size-4" /> {opd.name} ({opd.code})
@@ -1019,7 +1045,7 @@ export default function OpdDashboard({
                 </div>
 
                 {/* Tabel */}
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                     {/* Desktop */}
                     <table className="hidden w-full text-left text-sm md:table">
                         <thead className="border-b border-slate-200 bg-slate-50 text-xs tracking-wide text-slate-500 uppercase">
@@ -1071,7 +1097,10 @@ export default function OpdDashboard({
                                             : '—'}
                                     </td>
                                     <td className="px-5 py-3.5">
-                                        <StatusBadge status={app.status} />
+                                        <StatusBadge
+                                            status={app.status}
+                                            label={OPD_STATUS_LABEL[app.status]}
+                                        />
                                     </td>
                                     <td className="px-5 py-3.5 text-right">
                                         <button
@@ -1103,7 +1132,10 @@ export default function OpdDashboard({
                                     <span className="font-mono text-xs font-semibold text-[#12213e]">
                                         {app.ticket_number}
                                     </span>
-                                    <StatusBadge status={app.status} />
+                                    <StatusBadge
+                                        status={app.status}
+                                        label={OPD_STATUS_LABEL[app.status]}
+                                    />
                                 </div>
                                 <p className="text-sm font-bold text-[#12213e]">
                                     {app.applicant_name ?? '—'}

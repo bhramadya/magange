@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Opd\ApproveApplicationRequest;
 use App\Http\Requests\Verifikator\RejectApplicationRequest;
 use App\Models\InternshipApplication;
+use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -18,7 +19,12 @@ class SubmissionController extends Controller
     {
         $this->authorize('update', $application);
 
-        $this->submissionService->approve($application, $request->validated(), $request->user());
+        try {
+            $this->submissionService->approve($application, $request->validated(), $request->user());
+        } catch (DomainException $e) {
+            // mis. kuota OPD penuh — tampilkan pesan ramah di dialog, bukan 500.
+            return back()->withErrors(['division' => $e->getMessage()]);
+        }
 
         return back()->with('success', 'Pengajuan berhasil disetujui.');
     }

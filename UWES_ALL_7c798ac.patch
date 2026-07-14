@@ -1,0 +1,431 @@
+commit 7c798acb0ccdf79c1a94812a83e7417952715797
+Author: ANTI-KEWAN <bgjzhs@gmail.com>
+Date:   Fri Jul 10 23:25:58 2026 +0700
+
+    UWES ALL
+
+diff --git a/CLAUDE.md b/CLAUDE.md
+index ca82d6c..11e3635 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -18,6 +18,8 @@ #### Commands
+ - **composer lint** (Pint) / **npm run types:check** (tsc) / **npm run lint** (eslint --fix) — run individual gates while iterating.
+ - **php artisan schedule:test --name="magang:transition-statuses"** — dry-run the daily 01:00 status-transition cron (routes/console.php → app/Console/Commands/TransitionApplicationStatuses.php). PostgreSQL is the DB; a `.env` DB connection must be reachable for artisan/test.
+ 
++**Package manager.** Both `package-lock.json` and `pnpm-lock.yaml` are committed (there's a `pnpm-workspace.yaml` + `.npmrc` with `ignore-scripts=true`). `composer dev`/`composer ci:check` invoke the **npm** scripts, so npm is what the documented flows use — but the pnpm workspace config exists too. Pick one when installing and don't let the other lockfile drift.
++
+ #### Business Logic & Strict Constraints (CRUCIAL REVISION)
+ When editing workflows, controllers, or UI, you MUST strictly adhere to the following business rules:
+ 
+@@ -68,3 +70,9 @@ #### Architecture
+ **Domain service layer.** Business logic lives in app/Services/, not controllers — when the HTTP layer is written, controllers should be thin and delegate here. The lifecycle state machine is SubmissionService (submit, forwardToOpd, approve, reject): each transition runs inside a DB::transaction, calls guardStatus() to reject out-of-order moves (throws DomainException), writes an ApplicationStatusLog audit row, mutates side state (e.g. approve increments the OPD's quota_used), and dispatches a job. Match this shape for new transitions. Other services: CertificateService (upload to the **private** local disk, certificates start is_download_locked = true), OtpService, RateLimitService (anti-spam via FormRateLimit). Two services are bound by contract in app/Providers/AppServiceProvider.php (OtpServiceContract → OtpService, PengajuanServiceContract → SubmissionService) — type-hint the contract, not the class.
+ 
+ **Async side effects: Jobs + Mail + PDF.** Services dispatch queued app/Jobs/* (all on the emails queue, tries = 3 with backoff) for everything user-facing: confirmation, rejection, acceptance letter, certificate notice, OTP. Each job sends an app/Mail/* mailable rendered from resources/views/mail/*.blade.php. PDFs use **barryvdh/laravel-dompdf** — GenerateJobAcceptanceLetter renders resources/views/pdf/acceptance_letter.blade.php, stores it on the private local disk, and records the path on the application. The queue worker runs as part of composer dev; without it, dispatched jobs won't process.
++
++#### Tests
++Pest v4. Unit tests for services live in tests/Unit/ (SubmissionServiceTest, CertificateServiceTest, OtpServiceTest, RateLimitServiceTest). Feature tests have a **doubly-nested** layout: newer role/flow coverage sits under tests/Feature/Feature/{Auth,Mahasiswa,Opd,Verifikator,Penyelesaian,Security}/ — put new controller/flow tests there to match. tests/Feature/Feature/Penyelesaian/EndToEndFlowTest.php walks the full lifecycle and is the best reference for wiring a new transition; Security/{SingleSessionTest,RecaptchaRateLimitTest} cover the anti-abuse guards.
++
++#### Sibling docs
++Two design/handoff docs live at the repo root (both in Indonesian): **BLUEPRINT-REDESIGN.md** — the brand-locked (#106feb / #0b4fb0 / #cddcef) UI redesign spec; consult it for layout/typography/interaction decisions. **HANDOFF-BACKEND.md** — the frontend→backend handoff, describing pages built as self-rendering Inertia components with mock-data prop defaults; the contract is to swap mocks for real data **without changing prop paths or names**. Preserve that contract when wiring props.
+diff --git a/app/Http/Controllers/HomeController.php b/app/Http/Controllers/HomeController.php
+index b75f4cf..20f6c77 100644
+--- a/app/Http/Controllers/HomeController.php
++++ b/app/Http/Controllers/HomeController.php
+@@ -2,6 +2,7 @@
+ 
+ namespace App\Http\Controllers;
+ 
++use App\Http\Resources\OpdResource;
+ use App\Models\Faq;
+ use App\Models\Opd;
+ use App\Models\SatisfactionSurvey;
+@@ -22,10 +23,15 @@ public function index(): Response
+                 ->where('is_active', true)
+                 ->orderBy('sort_order')
+                 ->get(['id', 'question', 'answer']),
+-            'opds' => Opd::query()
+-                ->where('is_active', true)
+-                ->orderBy('name')
+-                ->get(['id', 'name', 'code']),
++            // Sumber tunggal kuota: OpdResource (quota_total/quota_used dari tabel
++            // opds), identik dengan dasbor OPD & Verifikator. Jangan menghitung
++            // ulang kuota di frontend.
++            'opds' => OpdResource::collection(
++                Opd::query()
++                    ->where('is_active', true)
++                    ->orderBy('name')
++                    ->get()
++            ),
+             'testimonials' => $this->testimonials(),
+         ]);
+     }
+diff --git a/app/Services/SubmissionService.php b/app/Services/SubmissionService.php
+index b36c709..ca5e162 100644
+--- a/app/Services/SubmissionService.php
++++ b/app/Services/SubmissionService.php
+@@ -149,6 +149,21 @@ public function approve(InternshipApplication $app, array $data, User $actor): v
+         DB::transaction(function () use ($app, $data, $actor): void {
+             $from = $app->status;
+ 
++            // Kunci baris OPD agar cek & increment kuota bebas race condition.
++            // Menyetujui saat kuota penuh akan membuat quota_used > quota_total
++            // (inkonsistensi yang tampil sebagai "sisa negatif" di landing page).
++            if ($app->opd_id !== null) {
++                $opd = Opd::whereKey($app->opd_id)->lockForUpdate()->firstOrFail();
++
++                if ($opd->quota_used >= $opd->quota_total) {
++                    throw new DomainException(
++                        "Kuota OPD {$opd->name} sudah penuh ({$opd->quota_used}/{$opd->quota_total}).",
++                    );
++                }
++
++                $opd->increment('quota_used');
++            }
++
+             $app->update([
+                 'division' => $data['division'],
+                 'field_supervisor' => $data['field_supervisor'],
+@@ -158,10 +173,6 @@ public function approve(InternshipApplication $app, array $data, User $actor): v
+                 'opd_decision_at' => Date::now(),
+             ]);
+ 
+-            if ($app->opd_id !== null) {
+-                Opd::whereKey($app->opd_id)->increment('quota_used');
+-            }
+-
+             $this->logStatus($app, $from, ApplicationStatus::Approved, $actor, 'Disetujui OPD');
+         });
+ 
+diff --git a/envSING PENER b/envSING PENER
+deleted file mode 100644
+index b3787c7..0000000
+--- a/envSING PENER	
++++ /dev/null
+@@ -1,73 +0,0 @@
+-APP_NAME=Laravel
+-APP_ENV=local
+-APP_KEY=base64:Mw7rIfwiJ/M9TQn0qfSo3POkuUEAPazWc3v5dtvGFM0=
+-APP_DEBUG=true
+-APP_URL=http://localhost
+-
+-APP_LOCALE=en
+-APP_FALLBACK_LOCALE=en
+-APP_FAKER_LOCALE=en_US
+-
+-APP_MAINTENANCE_DRIVER=file
+-# APP_MAINTENANCE_STORE=database
+-
+-# PHP_CLI_SERVER_WORKERS=4
+-
+-BCRYPT_ROUNDS=12
+-
+-LOG_CHANNEL=stack
+-LOG_STACK=single
+-LOG_DEPRECATIONS_CHANNEL=null
+-LOG_LEVEL=debug
+-
+-DB_CONNECTION=pgsql
+-DB_HOST=127.0.0.1
+-DB_PORT=5432
+-DB_DATABASE=magangdb
+-DB_USERNAME=postgres
+-DB_PASSWORD=
+-
+-SESSION_DRIVER=database
+-SESSION_LIFETIME=120
+-SESSION_ENCRYPT=false
+-SESSION_PATH=/
+-SESSION_DOMAIN=null
+-
+-BROADCAST_CONNECTION=log
+-FILESYSTEM_DISK=local
+-# sync = job email/OTP dikirim langsung dalam request (tanpa perlu queue worker
+-# terpisah saat testing manual). Untuk produksi, pakai `database` + worker.
+-QUEUE_CONNECTION=database
+-QUEUE_CONNECTION=sync
+-
+-
+-CACHE_STORE=database
+-# CACHE_PREFIX=
+-
+-MEMCACHED_HOST=127.0.0.1
+-
+-REDIS_CLIENT=phpredis
+-REDIS_HOST=127.0.0.1
+-REDIS_PASSWORD=null
+-REDIS_PORT=6379
+-
+-MAIL_MAILER=smtp
+-MAIL_HOST=127.0.0.1
+-MAIL_PORT=1025
+-MAIL_USERNAME=null
+-MAIL_PASSWORD=null
+-MAIL_ENCRYPTION=null
+-MAIL_FROM_ADDRESS="hello@example.com"
+-MAIL_FROM_NAME="${APP_NAME}"   
+-
+-AWS_ACCESS_KEY_ID=
+-AWS_SECRET_ACCESS_KEY=
+-AWS_DEFAULT_REGION=us-east-1
+-AWS_BUCKET=
+-AWS_USE_PATH_STYLE_ENDPOINT=false
+-
+-# Google reCAPTCHA v2 (checkbox) — isi dari https://www.google.com/recaptcha/admin
+-RECAPTCHA_SITE_KEY=6LdkU0otAAAAAGli3uatAl-ZUoVGOuWCom5iESLo
+-RECAPTCHA_SECRET_KEY=6LdkU0otAAAAAFdDrRwYYhTlWcq_VaGcGZ0ByGCi
+-
+-VITE_APP_NAME="${APP_NAME}"
+\ No newline at end of file
+diff --git a/resources/js/pages/opd/dashboard.tsx b/resources/js/pages/opd/dashboard.tsx
+index 9c0bca8..fb2da35 100644
+--- a/resources/js/pages/opd/dashboard.tsx
++++ b/resources/js/pages/opd/dashboard.tsx
+@@ -318,6 +318,7 @@ function QuotaEditor({ opd }: { opd: Opd }) {
+     const [editing, setEditing] = useState(false);
+     const [value, setValue] = useState(String(opd.quota ?? 0));
+     const [processing, setProcessing] = useState(false);
++    const [error, setError] = useState<string | null>(null);
+ 
+     const parsed = Number(value);
+     const valid = Number.isInteger(parsed) && parsed >= used && parsed <= 1000;
+@@ -329,13 +330,23 @@ function QuotaEditor({ opd }: { opd: Opd }) {
+             return;
+         }
+ 
++        setError(null);
+         setProcessing(true);
+-        // TODO(backend): router.patch(`/kuota/${opd.id}`, { quota_total: parsed })
+-        setTimeout(() => {
+-            setTotal(parsed);
+-            setProcessing(false);
+-            setEditing(false);
+-        }, 700);
++        // Admin OPD hanya boleh kuota OPD-nya sendiri (403 di UpdateQuotaRequest).
++        router.patch(
++            `/kuota/${opd.id}`,
++            { quota_total: parsed },
++            {
++                preserveScroll: true,
++                onSuccess: () => {
++                    setTotal(parsed);
++                    setEditing(false);
++                },
++                onError: (errs) =>
++                    setError(errs.quota_total ?? 'Gagal memperbarui kuota.'),
++                onFinish: () => setProcessing(false),
++            },
++        );
+     }
+ 
+     return (
+@@ -347,11 +358,11 @@ function QuotaEditor({ opd }: { opd: Opd }) {
+                         OPD
+                     </p>
+                     <p className="mt-0.5 text-xs text-slate-500">
+-                        Terpakai {used} dari {total} kursi — sisa{' '}
++                        Sisa{' '}
+                         <span className="font-semibold text-emerald-600">
+-                            {sisa}
+-                        </span>
+-                        .
++                            {sisa} kursi
++                        </span>{' '}
++                        — terpakai {used}.
+                     </p>
+                 </div>
+                 {!editing && (
+@@ -396,6 +407,11 @@ function QuotaEditor({ opd }: { opd: Opd }) {
+                                 maksimal 1000.
+                             </p>
+                         )}
++                        {error && (
++                            <p className="text-xs font-medium text-rose-600">
++                                {error}
++                            </p>
++                        )}
+                     </div>
+                     <div className="flex gap-2">
+                         <button
+diff --git a/resources/js/pages/verifikator/kuota.tsx b/resources/js/pages/verifikator/kuota.tsx
+index 18a3ae2..45c8c50 100644
+--- a/resources/js/pages/verifikator/kuota.tsx
++++ b/resources/js/pages/verifikator/kuota.tsx
+@@ -94,10 +94,11 @@ function OpdQuotaRow({ opd }: { opd: Opd }) {
+                     {opd.name}
+                 </p>
+                 <p className="text-xs text-slate-500">
+-                    {opd.code} • terpakai {used}/{total} • sisa{' '}
++                    {opd.code} • sisa{' '}
+                     <span className="font-semibold text-emerald-600">
+-                        {sisa}
+-                    </span>
++                        {sisa} kursi
++                    </span>{' '}
++                    • terpakai {used}
+                 </p>
+                 {error && (
+                     <p className="mt-1 text-xs font-medium text-rose-600">
+diff --git a/resources/js/pages/welcome.tsx b/resources/js/pages/welcome.tsx
+index 52eb089..b6a9a45 100644
+--- a/resources/js/pages/welcome.tsx
++++ b/resources/js/pages/welcome.tsx
+@@ -558,6 +558,8 @@ interface WelcomeOpd {
+     id: number;
+     name: string;
+     code: string;
++    quota: number;
++    quota_used: number;
+ }
+ 
+ interface WelcomeTestimonial {
+@@ -877,13 +879,19 @@ export default function Welcome({
+         { name: 'SEKRETARIAT DPRD', tags: ['Legislatif', 'Administrasi'] },
+     ];
+ 
+-    // Kuota magang per OPD. Angka di sini deterministik untuk pratinjau —
+-    // backend mengganti dengan kuota nyata (Opd.quota & Opd.quota_used).
+-    const opdWithQuota = daftarOPD.map((opd, i) => {
+-        const quota = 4 + (i % 5) * 2; // 4–12
+-        const quotaUsed = i % (quota + 1); // selalu ≤ quota
+-
+-        return { ...opd, quota, quotaUsed };
++    // Kuota magang per OPD — sumber tunggal dari prop `opds` (OpdResource →
++    // tabel opds), identik dengan dasbor OPD & Verifikator. Nama tag hanya ada
++    // di daftar statis, jadi kuota di-join berdasarkan nama OPD. Bila prop opds
++    // kosong (pratinjau tanpa backend), kuota tampil 0/0 (bukan angka palsu).
++    const quotaByName = new Map(opds.map((o) => [o.name, o]));
++    const opdWithQuota = daftarOPD.map((opd) => {
++        const real = quotaByName.get(opd.name);
++
++        return {
++            ...opd,
++            quota: real?.quota ?? 0,
++            quotaUsed: real?.quota_used ?? 0,
++        };
+     });
+ 
+     const filteredOPD = opdWithQuota.filter((opd) =>
+@@ -1696,13 +1704,7 @@ export default function Welcome({
+                                                                     : 'rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600'
+                                                             }
+                                                         >
+-                                                            {penuh
+-                                                                ? 'Penuh'
+-                                                                : `${sisa} tersisa`}
+-                                                            <span className="font-normal text-[#0a1628]/40">
+-                                                                {' '}
+-                                                                / {opd.quota}
+-                                                            </span>
++                                                            {sisa} tersisa
+                                                         </span>
+                                                     </div>
+                                                 );
+diff --git a/tests/Feature/Feature/HomeControllerTest.php b/tests/Feature/Feature/HomeControllerTest.php
+new file mode 100644
+index 0000000..13b77ef
+--- /dev/null
++++ b/tests/Feature/Feature/HomeControllerTest.php
+@@ -0,0 +1,37 @@
++<?php
++
++use App\Models\Opd;
++use Illuminate\Foundation\Testing\RefreshDatabase;
++
++uses(RefreshDatabase::class);
++
++test('landing page mengirim kuota OPD nyata dari tabel opds (sumber tunggal)', function () {
++    // Nama harus cocok dengan daftar OPD di welcome.tsx agar kuota tampil di kartu.
++    Opd::create([
++        'name' => 'DINAS KOMUNIKASI DAN INFORMATIKA',
++        'code' => 'DKI',
++        'is_active' => true,
++        'quota_total' => 8,
++        'quota_used' => 3,
++    ]);
++
++    $this->get('/')
++        ->assertOk()
++        ->assertInertia(fn ($page) => $page
++            ->component('welcome')
++            ->has('opds', 1)
++            // Bentuk & angka identik dengan dasbor OPD/Verifikator (OpdResource):
++            // quota_total dipetakan -> quota, quota_used apa adanya. Tidak ada
++            // angka palsu yang dihitung ulang di frontend.
++            ->where('opds.0.quota', 8)
++            ->where('opds.0.quota_used', 3)
++        );
++});
++
++test('landing page tidak menampilkan OPD nonaktif', function () {
++    Opd::create(['name' => 'INSPEKTORAT', 'code' => 'INS', 'is_active' => false, 'quota_total' => 5]);
++
++    $this->get('/')
++        ->assertOk()
++        ->assertInertia(fn ($page) => $page->component('welcome')->has('opds', 0));
++});
+diff --git a/tests/Feature/Feature/Opd/DashboardControllerTest.php b/tests/Feature/Feature/Opd/DashboardControllerTest.php
+index 814e70d..8aea789 100644
+--- a/tests/Feature/Feature/Opd/DashboardControllerTest.php
++++ b/tests/Feature/Feature/Opd/DashboardControllerTest.php
+@@ -35,6 +35,28 @@ function opdAdmin(): array
+     );
+ });
+ 
++test('opd admin dapat mengubah kuota OPD-nya sendiri dan tersimpan ke DB', function () {
++    [$user, $opd] = opdAdmin();
++
++    $this->actingAs($user)
++        ->patch("/kuota/{$opd->id}", ['quota_total' => 15])
++        ->assertRedirect();
++
++    // Tersimpan → landing page & dasbor Verifikator (baca DB) ikut terbarui.
++    $this->assertDatabaseHas('opds', ['id' => $opd->id, 'quota_total' => 15]);
++});
++
++test('opd admin tidak dapat mengubah kuota OPD lain (403)', function () {
++    [$user] = opdAdmin();
++    $otherOpd = Opd::create(['name' => 'Dinas Lain', 'code' => 'LAIN', 'is_active' => true, 'quota_total' => 3]);
++
++    $this->actingAs($user)
++        ->patch("/kuota/{$otherOpd->id}", ['quota_total' => 99])
++        ->assertForbidden();
++
++    $this->assertDatabaseHas('opds', ['id' => $otherOpd->id, 'quota_total' => 3]);
++});
++
+ test('opd keputusan lists only forwarded applications for this opd', function () {
+     [$user, $opd] = opdAdmin();
+     InternshipApplication::factory()->create(['opd_id' => $opd->id, 'status' => ApplicationStatus::ForwardedOpd]);
+diff --git a/tests/Unit/SubmissionServiceTest.php b/tests/Unit/SubmissionServiceTest.php
+index 4c9eb84..3d9b385 100644
+--- a/tests/Unit/SubmissionServiceTest.php
++++ b/tests/Unit/SubmissionServiceTest.php
+@@ -122,6 +122,28 @@ function pengajuanPayload(array $overrides = []): array
+     Queue::assertPushed(GenerateJobAcceptanceLetter::class);
+ });
+ 
++test('approve refuses when the OPD quota is already full', function () {
++    Queue::fake();
++    // Kuota penuh: quota_used == quota_total. Approve tidak boleh menembus batas.
++    $opd = Opd::create(['name' => 'Dinas Kominfo', 'code' => 'DKI', 'quota_total' => 1, 'quota_used' => 1]);
++    $verifikator = User::factory()->verifikator()->create();
++    $opdAdmin = User::factory()->opdAdmin($opd->id)->create();
++    $app = $this->service->submit(pengajuanPayload(), '127.0.0.1');
++    $this->service->forwardToOpd($app, ['opd_id' => $opd->id], $verifikator);
++
++    expect(fn () => $this->service->approve($app, [
++        'division' => 'Bidang Aplikasi',
++        'field_supervisor' => 'Pak Joko',
++        'person_in_charge' => 'Bu Sari',
++    ], $opdAdmin))->toThrow(DomainException::class);
++
++    // Tidak ada efek samping: kuota tak bertambah, status tetap forwarded.
++    expect($opd->refresh()->quota_used)->toBe(1)
++        ->and($app->refresh()->status)->toBe(ApplicationStatus::ForwardedOpd);
++
++    Queue::assertNotPushed(GenerateJobAcceptanceLetter::class);
++});
++
+ test('approve rejects an application not forwarded to the OPD', function () {
+     Queue::fake();
+     $opdAdmin = User::factory()->create();

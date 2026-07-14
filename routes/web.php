@@ -10,6 +10,8 @@ use App\Http\Controllers\Mahasiswa\ReportController;
 use App\Http\Controllers\Opd\DashboardController as OpdDashboardController;
 use App\Http\Controllers\Opd\SubmissionController as OpdSubmissionController;
 use App\Http\Controllers\OpdQuotaController;
+use App\Http\Controllers\ProfileAvatarController;
+use App\Http\Controllers\SharedPageController;
 use App\Http\Controllers\Verifikator\DashboardController as VerifikatorDashboardController;
 use App\Http\Controllers\Verifikator\FaqController;
 use App\Http\Controllers\Verifikator\PengajuanController;
@@ -70,9 +72,11 @@ Route::middleware(['auth', 'role:admin_opd'])->group(function () {
     Route::get('opd/peserta', [OpdDashboardController::class, 'peserta'])->name('opd.peserta');
 });
 
-// --- Bersama semua role ---
-Route::inertia('bantuan', 'bantuan')->name('bantuan');             // Pusat Bantuan
-Route::inertia('pengaturan', 'pengaturan')->name('pengaturan');    // Pengaturan
+// --- Bersama semua role (butuh login: header/sidebar pakai user yang login) ---
+Route::middleware('auth')->group(function () {
+    Route::get('bantuan', [SharedPageController::class, 'bantuan'])->name('bantuan');          // Pusat Bantuan
+    Route::get('pengaturan', [SharedPageController::class, 'pengaturan'])->name('pengaturan'); // Pengaturan
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -119,6 +123,12 @@ Route::middleware(['auth', 'role:admin_opd,admin_verifikator'])
     ->get('pengajuan/{application}/foto', [ApplicationPhotoController::class, 'show'])
     ->name('pengajuan.foto');
 
+// Foto profil pengguna yang login (disk privat). Untuk mahasiswa, otomatis
+// diisi dari pas foto pendaftaran. Tanpa parameter → hanya avatar diri sendiri.
+Route::middleware('auth')
+    ->get('profile/avatar', [ProfileAvatarController::class, 'show'])
+    ->name('profile.avatar');
+
 /*
 |--------------------------------------------------------------------------
 | PENYELESAIAN (Fase 4 — review laporan, sertifikat, survei)
@@ -134,6 +144,7 @@ Route::middleware(['auth', 'role:admin_verifikator'])
     ->name('verifikator.laporan.')
     ->group(function () {
         Route::get('/', [VerifikatorReportController::class, 'index'])->name('index');
+        Route::get('{report}/berkas', [VerifikatorReportController::class, 'downloadReport'])->name('berkas');
         Route::post('{report}/approve', [VerifikatorReportController::class, 'approve'])->name('approve');
         Route::post('{report}/sertifikat', [VerifikatorReportController::class, 'uploadCertificate'])->name('sertifikat');
     });

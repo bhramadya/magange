@@ -1,0 +1,209 @@
+================================================================================
+ TUTORIAL: MENGAMBIL KODE DARI COMMIT TERTENTU DI BRANCH LAIN
+ Studi kasus: commit 7c798acb0ccdf79c1a94812a83e7417952715797 ("UWES ALL")
+ pada branch: newback  (remote: origin/newback)
+ Ditulis oleh Claude — 2026-07-12
+================================================================================
+
+RINGKAS COMMIT INI
+------------------
+- Hash lengkap : 7c798acb0ccdf79c1a94812a83e7417952715797  (singkat: 7c798ac)
+- Branch       : newback  (tip/paling ujung = commit ini)
+- Author       : ANTI-KEWAN <bgjzhs@gmail.com>
+- Tanggal      : 2026-07-10 23:25:58 +0700
+- Subjek       : UWES ALL
+- Parent       : c2537fe1275402f5185b65b6467ba7edf3ccbc2e
+- Ubahan       : 10 file, +160 / -108
+    CLAUDE.md
+    app/Http/Controllers/HomeController.php
+    app/Services/SubmissionService.php
+    envSING PENER                         (DIHAPUS 73 baris — ini file .env bocor)
+    resources/js/pages/opd/dashboard.tsx
+    resources/js/pages/verifikator/kuota.tsx
+    resources/js/pages/welcome.tsx
+    tests/Feature/Feature/HomeControllerTest.php        (BARU)
+    tests/Feature/Feature/Opd/DashboardControllerTest.php
+    tests/Unit/SubmissionServiceTest.php
+
+CATATAN PENTING
+---------------
+* Commit ini menyentuh file yang JUGA diubah di branch `front` (opd/dashboard.tsx,
+  SubmissionService.php, welcome.tsx, dst). Jadi menggabungkannya BISA KONFLIK —
+  itulah kenapa `git merge` sebelumnya macet. Lihat bagian "MENANGANI KONFLIK".
+* Commit ini MENGHAPUS file `envSING PENER` (sebuah .env berisi APP_KEY yang
+  ter-commit tidak sengaja). Bagus, tapi APP_KEY yang bocor tetap ada di HISTORI
+  lama; sebaiknya tetap rotate APP_KEY (php artisan key:generate).
+
+--------------------------------------------------------------------------------
+ FILE PATCH YANG SUDAH DIBUATKAN (siap pakai, ada di root project)
+--------------------------------------------------------------------------------
+1. UWES_ALL_7c798ac.patch   -> hasil `git show` (untuk DIBACA / review manual)
+2. 0001-UWES-ALL.patch      -> hasil `git format-patch` (untuk DITERAPKAN via git am)
+
+================================================================================
+ LANGKAH 0 — PASTIKAN COMMIT SUDAH ADA DI LOKAL (fetch dulu)
+================================================================================
+Tanpa ini, git tidak tahu isi branch newback.
+
+    git fetch origin newback
+    # atau ambil semua branch remote:
+    git fetch --all
+
+Verifikasi commitnya ada:
+
+    git cat-file -t 7c798ac        # harus mencetak: commit
+    git log -1 --oneline 7c798ac   # 7c798ac UWES ALL
+
+================================================================================
+ LANGKAH 1 — MELIHAT ISI CommIT (tanpa mengubah apa pun)
+================================================================================
+Lihat metadata + seluruh diff:
+
+    git show 7c798ac
+
+Hanya daftar file yang berubah:
+
+    git show 7c798ac --stat
+
+Lihat isi SATU file pada versi commit itu (contoh dashboard OPD):
+
+    git show 7c798ac:resources/js/pages/opd/dashboard.tsx
+
+Simpan diff ke file (sudah saya buatkan, tapi ini caranya):
+
+    git show 7c798ac > UWES_ALL_7c798ac.patch
+
+================================================================================
+ CARA MENGAMBIL KODENYA — PILIH SALAH SATU SESUAI KEBUTUHAN
+================================================================================
+
+--------------------------------------------------------------------------------
+ CARA A — Checkout seluruh branch newback (paling sederhana untuk "lihat semua")
+--------------------------------------------------------------------------------
+Membuat branch lokal `newback` yang melacak remote, lalu pindah ke sana.
+Kerugian: kamu MENINGGALKAN branch `front` (pekerjaanmu sekarang). Pastikan
+`front` sudah commit/bersih dulu.
+
+    git switch front            # pastikan di front & bersih dulu
+    git status                  # harus "nothing to commit, working tree clean"
+    git switch -c newback origin/newback   # buat + pindah ke newback
+    # ...lihat/jalankan kodenya...
+    git switch front            # balik ke front saat selesai
+
+--------------------------------------------------------------------------------
+ CARA B — Ambil HANYA file tertentu dari commit itu (paling aman & terarah)
+--------------------------------------------------------------------------------
+Menyalin versi file dari commit 7c798ac ke working tree branch-mu SEKARANG,
+tanpa pindah branch. Cocok kalau cuma butuh 1-2 file.
+
+    # satu file:
+    git checkout 7c798ac -- resources/js/pages/opd/dashboard.tsx
+
+    # beberapa file sekaligus:
+    git checkout 7c798ac -- app/Http/Controllers/HomeController.php \
+                            app/Services/SubmissionService.php
+
+    # (git versi baru bisa pakai 'restore'):
+    git restore --source 7c798ac -- resources/js/pages/opd/dashboard.tsx
+
+Setelah itu file ada di working tree (statusnya "modified"). Review lalu:
+
+    git add <file> && git commit -m "ambil <file> dari 7c798ac (UWES ALL)"
+
+--------------------------------------------------------------------------------
+ CARA C — Cherry-pick commit-nya ke branch sekarang (bawa 1 commit utuh)
+--------------------------------------------------------------------------------
+Menerapkan SEMUA perubahan commit 7c798ac sebagai commit baru di branch aktif.
+Ini yang paling mungkin menimbulkan KONFLIK (karena file yang sama diubah di front).
+
+    git switch front
+    git cherry-pick 7c798ac
+    # kalau konflik -> selesaikan (lihat bagian MENANGANI KONFLIK), lalu:
+    git cherry-pick --continue
+    # kalau mau batal total:
+    git cherry-pick --abort
+
+--------------------------------------------------------------------------------
+ CARA D — Terapkan sebagai PATCH (git am / git apply)
+--------------------------------------------------------------------------------
+Pakai file patch yang sudah dibuat.
+
+    # metode 1: git am (mempertahankan pesan & author commit asli)
+    git am 0001-UWES-ALL.patch
+    # kalau gagal/konflik:
+    git am --abort            # batal
+    #   atau selesaikan konflik lalu:  git am --continue
+
+    # metode 2: git apply (hanya menaruh perubahan ke working tree, tanpa commit)
+    git apply --3way UWES_ALL_7c798ac.patch
+    #   --3way membantu auto-merge; kalau bentrok akan muncul penanda konflik.
+    #   Cek dulu tanpa mengubah apa pun:
+    git apply --check UWES_ALL_7c798ac.patch
+
+--------------------------------------------------------------------------------
+ CARA E — Inspeksi tanpa ganggu branch aktif (git worktree) [opsional, aman]
+--------------------------------------------------------------------------------
+Membuka commit itu di FOLDER TERPISAH, jadi branch `front` tak tersentuh.
+
+    git worktree add ../magange-newback 7c798ac
+    # sekarang ada salinan repo di folder ../magange-newback berisi kode commit itu
+    cd ../magange-newback        # jelajahi / jalankan
+    # kalau sudah selesai, hapus worktree-nya:
+    cd -                         # balik ke folder utama
+    git worktree remove ../magange-newback
+
+================================================================================
+ MENANGANI KONFLIK (kalau muncul saat Cara C / D)
+================================================================================
+Konflik ditandai blok berikut di dalam file:
+
+    <<<<<<< HEAD
+    (kode versi branch front — punyamu sekarang)
+    =======
+    (kode versi dari commit 7c798ac — UWES ALL)
+    >>>>>>> 7c798ac
+
+Langkah:
+    1. Buka tiap file yang konflik (git status akan menandainya "both modified").
+    2. Edit manual: pilih salah satu sisi, atau gabungkan keduanya, lalu HAPUS
+       ketiga baris penanda (<<<<<<<, =======, >>>>>>>).
+    3. Tandai selesai:      git add <file>
+    4. Lanjutkan:
+         - kalau cherry-pick:  git cherry-pick --continue
+         - kalau git am:       git am --continue
+    5. Kalau mau membatalkan semuanya & kembali ke kondisi semula:
+         - cherry-pick:  git cherry-pick --abort
+         - git am:       git am --abort
+         - merge:        git merge --abort
+
+Tips melihat 3 versi saat konflik:
+    git checkout --ours   <file>   # ambil versi front
+    git checkout --theirs <file>   # ambil versi 7c798ac
+    (lalu tetap: git add <file>)
+
+================================================================================
+ REKOMENDASI UNTUK KASUS INI
+================================================================================
+Karena commit 7c798ac dan branch `front` sama-sama menyentuh file inti
+(opd/dashboard.tsx, SubmissionService.php, HomeController.php, welcome.tsx):
+
+- Kalau hanya ingin MELIHAT/BANDINGKAN kodenya  -> CARA A (checkout branch) atau
+  CARA E (worktree, paling aman, tak ganggu front).
+- Kalau ingin MENGGABUNGKAN pekerjaannya ke front -> CARA C (cherry-pick) lalu
+  selesaikan konflik dengan teliti; bandingkan dulu:
+      git diff front 7c798ac -- resources/js/pages/opd/dashboard.tsx
+- Kalau hanya butuh 1-2 file spesifik            -> CARA B (checkout file).
+
+SEBELUM apa pun: pastikan branch `front` sudah commit & bersih (git status),
+supaya mudah balik kalau ada yang salah:  git switch front && git status
+
+================================================================================
+ SOAL FILE .env BOCOR (envSING PENER)
+================================================================================
+Commit 7c798ac justru MENGHAPUS file itu (bagus). Tapi APP_KEY sudah terekspos
+di histori. Setelah beres, tetap disarankan:
+    php artisan key:generate        # ganti APP_KEY dengan yang baru
+    # pastikan .env & file semacam "envSING PENER" masuk .gitignore
+Membersihkan dari SELURUH histori butuh rewrite (git filter-repo / BFG) dan
+mengubah histori bersama — lakukan hanya dengan koordinasi tim.
+================================================================================

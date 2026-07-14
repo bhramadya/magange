@@ -28,6 +28,9 @@ use Illuminate\Support\Carbon;
  * @property string|null $major
  * @property string|null $skills
  * @property string|null $photo_path
+ * @property string|null $surat_pengantar_path
+ * @property string|null $cv_path
+ * @property string|null $portfolio_path
  * @property ApplicationStatus $status
  * @property int|null $opd_id
  * @property string|null $division
@@ -58,6 +61,9 @@ use Illuminate\Support\Carbon;
     'major',
     'skills',
     'photo_path',
+    'surat_pengantar_path',
+    'cv_path',
+    'portfolio_path',
     'status',
     'opd_id',
     'division',
