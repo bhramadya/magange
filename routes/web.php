@@ -11,6 +11,7 @@ use App\Http\Controllers\Opd\DashboardController as OpdDashboardController;
 use App\Http\Controllers\Opd\SubmissionController as OpdSubmissionController;
 use App\Http\Controllers\OpdQuotaController;
 use App\Http\Controllers\ProfileAvatarController;
+use App\Http\Controllers\SharedPageController;
 use App\Http\Controllers\Verifikator\DashboardController as VerifikatorDashboardController;
 use App\Http\Controllers\Verifikator\FaqController;
 use App\Http\Controllers\Verifikator\PengajuanController;
@@ -71,9 +72,11 @@ Route::middleware(['auth', 'role:admin_opd'])->group(function () {
     Route::get('opd/peserta', [OpdDashboardController::class, 'peserta'])->name('opd.peserta');
 });
 
-// --- Bersama semua role ---
-Route::inertia('bantuan', 'bantuan')->name('bantuan');             // Pusat Bantuan
-Route::inertia('pengaturan', 'pengaturan')->name('pengaturan');    // Pengaturan
+// --- Bersama semua role (butuh login: header/sidebar pakai user yang login) ---
+Route::middleware('auth')->group(function () {
+    Route::get('bantuan', [SharedPageController::class, 'bantuan'])->name('bantuan');          // Pusat Bantuan
+    Route::get('pengaturan', [SharedPageController::class, 'pengaturan'])->name('pengaturan'); // Pengaturan
+});
 
 /*
 |--------------------------------------------------------------------------

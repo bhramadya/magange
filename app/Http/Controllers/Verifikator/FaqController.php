@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Verifikator;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\MagangUserResource;
 use App\Models\Faq;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,7 +12,7 @@ use Inertia\Response;
 
 class FaqController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $faqs = Faq::query()
             ->orderBy('sort_order')
@@ -19,13 +20,16 @@ class FaqController extends Controller
             ->paginate(20);
 
         return Inertia::render('verifikator/faq/index', [
+            'user' => new MagangUserResource($request->user()),
             'faqs' => $faqs,
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        return Inertia::render('verifikator/faq/create');
+        return Inertia::render('verifikator/faq/create', [
+            'user' => new MagangUserResource($request->user()),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -49,9 +53,10 @@ class FaqController extends Controller
             ->with('success', 'FAQ berhasil ditambahkan.');
     }
 
-    public function edit(Faq $faq): Response
+    public function edit(Request $request, Faq $faq): Response
     {
         return Inertia::render('verifikator/faq/edit', [
+            'user' => new MagangUserResource($request->user()),
             'faq' => $faq,
         ]);
     }
