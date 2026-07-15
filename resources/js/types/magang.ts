@@ -78,7 +78,9 @@ export interface InternshipApplication {
     // Diisi peserta saat mendaftar (welcome #daftar) — tampil di pop-up admin.
     nis?: string | null;
     address?: string | null;
+    campus_supervisor_whatsapp?: string | null; // no. WA dosen/guru pembimbing
     guardian_name?: string | null; // nama penanggung jawab
+    guardian_whatsapp?: string | null; // no. WA penanggung jawab
     photo_url?: string | null; // URL pas foto (disk privat, route terproteksi)
 
     // Diisi peserta saat mendaftar (welcome #daftar).

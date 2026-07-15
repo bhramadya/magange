@@ -78,6 +78,9 @@ interface LacakProps {
     // undefined bila halaman dibuka tanpa `?tiket=`.
     application?: PublicApplication | null;
     ticket?: string | null;
+    // User login (MagangUserResource, dengan avatar_url) — null bila tamu.
+    // Dipakai header dasbor agar foto profil tampil sama seperti halaman lain.
+    user?: MagangUser | null;
 }
 
 /* ---- util tanggal & format ------------------------------------------- */
@@ -225,17 +228,20 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
 
 type LookupState = 'idle' | 'loading' | 'found' | 'notfound';
 
-export default function Lacak({ application, ticket }: LacakProps) {
+export default function Lacak({ application, ticket, user }: LacakProps) {
     const [query, setQuery] = useState<string>(ticket ?? '');
     const [loading, setLoading] = useState(false);
 
-    // Konteks autentikasi (shared prop Inertia). Bila pengguna sudah login —
+    // Konteks autentikasi. Utamakan prop `user` dari controller (bentuk
+    // MagangUserResource dengan avatar_url — sama seperti halaman dasbor lain)
+    // dengan fallback shared prop auth.user (tanpa avatar_url). Bila login —
     // halaman dibuka via menu "Lacak Status Publik" di dasbor — kita sembunyikan
     // chrome tamu (CTA "Masuk") dan bungkus dengan MagangLayout agar terasa
     // sebagai halaman dasbor native (Task 8). Tamu (dari homepage) tetap versi publik.
-    const authUser =
+    const sharedAuthUser =
         usePage<{ auth: { user: MagangUser | null } }>().props.auth?.user ??
         null;
+    const authUser = user ?? sharedAuthUser;
     const isAuthed = authUser !== null;
 
     // Sudah mencari bila controller menerima `?tiket=` (ticket ter-set),

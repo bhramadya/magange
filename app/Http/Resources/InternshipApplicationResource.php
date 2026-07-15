@@ -45,7 +45,9 @@ class InternshipApplicationResource extends JsonResource
             // Diisi peserta saat mendaftar.
             'nis' => $this->nis,
             'address' => $this->address,
+            'campus_supervisor_whatsapp' => $this->campus_supervisor_whatsapp,
             'guardian_name' => $this->guardian_name,
+            'guardian_whatsapp' => $this->guardian_whatsapp,
             'major' => $this->major,
             'skills' => $this->skills,
 

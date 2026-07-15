@@ -40,6 +40,7 @@ export interface ApplicationDocument {
     label: string;
     file_name: string;
     url?: string;
+    kind?: 'image' | 'document';
 }
 
 interface PengajuanProps {
@@ -410,7 +411,29 @@ function ActionPanel({ application }: { application: InternshipApplication }) {
         );
     }
 
-    // pending_verifikator / forwarded_opd / approved
+    if (s === 'approved') {
+        return (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                <div className="flex items-center gap-2 text-emerald-700">
+                    <CheckCircle2 className="size-5" />
+                    <p className="text-sm font-bold">Pengajuan Disetujui</p>
+                </div>
+                <p className="mt-2 text-sm text-emerald-700/90">
+                    Selamat! Pengajuan Anda disetujui OPD. Magang dimulai pada{' '}
+                    {formatDate(application.start_date)} — silakan hadir di
+                    kantor OPD penempatan sesuai jadwal.
+                </p>
+                <Link
+                    href={`/lacak?tiket=${application.ticket_number}`}
+                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:underline"
+                >
+                    <Search className="size-4" /> Lacak status publik
+                </Link>
+            </div>
+        );
+    }
+
+    // pending_verifikator / forwarded_opd → menunggu peninjauan
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <div className="flex items-center gap-2 text-[#106feb]">
@@ -436,10 +459,20 @@ function ActionPanel({ application }: { application: InternshipApplication }) {
 /* --------------------------------- dokumen --------------------------------- */
 
 function DocumentItem({ doc }: { doc: ApplicationDocument }) {
+    const isImage = doc.kind === 'image';
+
     return (
         <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#cddcef]/40 text-[#106feb]">
-                <FileText className="size-5" />
+            <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#cddcef]/40 text-[#106feb]">
+                {isImage && doc.url ? (
+                    <img
+                        src={doc.url}
+                        alt={doc.label}
+                        className="h-full w-full object-cover"
+                    />
+                ) : (
+                    <FileText className="size-5" />
+                )}
             </span>
             <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-[#12213e]">
@@ -585,6 +618,12 @@ export default function Pengajuan({
                             Detail Pemohon
                         </h3>
                         <dl className="mt-4 grid grid-cols-1 gap-4">
+                            {application.nis && (
+                                <DetailRow
+                                    label="NIS / NIM"
+                                    value={application.nis}
+                                />
+                            )}
                             <DetailRow
                                 label="Tujuan Magang"
                                 value={application.tujuan_magang}
@@ -593,10 +632,46 @@ export default function Pengajuan({
                                 label="Asal Instansi"
                                 value={application.institution_name}
                             />
+                            {application.major && (
+                                <DetailRow
+                                    label="Jurusan"
+                                    value={application.major}
+                                />
+                            )}
+                            {application.skills && (
+                                <DetailRow
+                                    label="Keahlian / Keterampilan"
+                                    value={application.skills}
+                                />
+                            )}
+                            {application.address && (
+                                <DetailRow
+                                    label="Alamat Domisili"
+                                    value={application.address}
+                                />
+                            )}
                             <DetailRow
                                 label="Pembimbing Kampus/Sekolah"
                                 value={application.campus_supervisor}
                             />
+                            {application.campus_supervisor_whatsapp && (
+                                <DetailRow
+                                    label="No. WA Dosen/Guru Pembimbing"
+                                    value={application.campus_supervisor_whatsapp}
+                                />
+                            )}
+                            {application.guardian_name && (
+                                <DetailRow
+                                    label="Penanggung Jawab / Wali"
+                                    value={application.guardian_name}
+                                />
+                            )}
+                            {application.guardian_whatsapp && (
+                                <DetailRow
+                                    label="No. WA Penanggung Jawab"
+                                    value={application.guardian_whatsapp}
+                                />
+                            )}
                             <DetailRow
                                 label="Durasi"
                                 value={`${application.duration_months} Bulan`}

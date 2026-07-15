@@ -605,7 +605,9 @@ export default function Welcome({
         start_date: string;
         end_date: string;
         campus_supervisor: string;
+        campus_supervisor_whatsapp: string;
         guardian_name: string;
+        guardian_whatsapp: string;
         whatsapp_number: string;
         email: string;
         photo: File | null;
@@ -624,7 +626,9 @@ export default function Welcome({
         start_date: '',
         end_date: '',
         campus_supervisor: '',
+        campus_supervisor_whatsapp: '',
         guardian_name: '',
+        guardian_whatsapp: '',
         whatsapp_number: '',
         email: '',
         photo: null,
@@ -2108,6 +2112,8 @@ export default function Welcome({
                                         </label>
                                         <input
                                             type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
                                             value={data.nis}
                                             onChange={(e) =>
                                                 setData('nis', e.target.value)
@@ -2300,6 +2306,28 @@ export default function Welcome({
                                     </div>
                                     <div className="flex flex-col gap-2">
                                         <label className="text-[14px] font-semibold text-[#0a1628]">
+                                            No. WA Dosen/Guru Pembimbing
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            value={data.campus_supervisor_whatsapp}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'campus_supervisor_whatsapp',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder="Contoh: 081234567890"
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-6 sm:grid-cols-2">
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[14px] font-semibold text-[#0a1628]">
                                             Nama Penanggung Jawab
                                         </label>
                                         <input
@@ -2315,6 +2343,25 @@ export default function Welcome({
                                             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
                                         />
                                     </div>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[14px] font-semibold text-[#0a1628]">
+                                            No. WA Penanggung Jawab
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            value={data.guardian_whatsapp}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'guardian_whatsapp',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            placeholder="Contoh: 081234567890"
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="grid gap-6 sm:grid-cols-2">
@@ -2324,6 +2371,8 @@ export default function Welcome({
                                         </label>
                                         <input
                                             type="tel"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
                                             value={data.whatsapp_number}
                                             onChange={(e) =>
                                                 setData(

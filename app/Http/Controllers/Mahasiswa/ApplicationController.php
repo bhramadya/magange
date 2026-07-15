@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Mahasiswa;
 use App\Contracts\PengajuanServiceContract;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Application\StoreApplicationRequest;
+use App\Http\Resources\MagangUserResource;
 use App\Models\InternshipApplication;
 use App\Models\Opd;
 use App\Services\RateLimitService;
@@ -82,6 +83,8 @@ class ApplicationController extends Controller
     /**
      * Lacak status publik (tanpa login) berdasarkan NOMOR TIKET (`?tiket=`).
      * Kontrak props selaras HANDOFF-BACKEND.md: { application, ticket }.
+     * `user` (MagangUserResource) disuntik bila login agar header dasbor
+     * (foto profil dll.) tampil sama seperti halaman dasbor lain.
      */
     public function track(Request $request): Response
     {
@@ -94,6 +97,7 @@ class ApplicationController extends Controller
         return Inertia::render('lacak', [
             'application' => $application,
             'ticket' => $ticket !== '' ? $ticket : null,
+            'user' => $request->user() !== null ? new MagangUserResource($request->user()) : null,
         ]);
     }
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ApplicationDocumentController;
 use App\Http\Controllers\ApplicationPhotoController;
 use App\Http\Controllers\Auth\OtpLoginController;
 use App\Http\Controllers\HomeController;
@@ -117,11 +118,17 @@ Route::middleware(['auth', 'role:admin_opd,admin_verifikator'])
     ->patch('kuota/{opd}', [OpdQuotaController::class, 'update'])
     ->name('kuota.update');
 
-// Pas foto pemohon (disk privat) untuk pop-up tinjau admin. Otorisasi via
-// policy view: Verifikator semua, OPD hanya pengajuan miliknya.
-Route::middleware(['auth', 'role:admin_opd,admin_verifikator'])
+// Pas foto pemohon (disk privat) untuk pemilik/admin. Otorisasi via
+// policy view: Mahasiswa pemilik, Verifikator semua, OPD hanya pengajuan miliknya.
+Route::middleware(['auth', 'role:mahasiswa,admin_opd,admin_verifikator'])
     ->get('pengajuan/{application}/foto', [ApplicationPhotoController::class, 'show'])
     ->name('pengajuan.foto');
+
+// Berkas pendukung pengajuan (disk privat): Surat Pengantar / CV / Portofolio.
+Route::middleware(['auth', 'role:mahasiswa,admin_opd,admin_verifikator'])
+    ->get('pengajuan/{application}/dokumen/{type}', [ApplicationDocumentController::class, 'show'])
+    ->whereIn('type', ['surat-pengantar', 'cv', 'portofolio'])
+    ->name('pengajuan.dokumen');
 
 // Foto profil pengguna yang login (disk privat). Untuk mahasiswa, otomatis
 // diisi dari pas foto pendaftaran. Tanpa parameter → hanya avatar diri sendiri.
