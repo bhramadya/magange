@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Percayai proxy (ngrok/reverse proxy) agar Laravel mendeteksi HTTPS
+        // dari header X-Forwarded-* — tanpa ini aset & redirect jadi http://.
+        $middleware->trustProxies(at: '*');
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [
