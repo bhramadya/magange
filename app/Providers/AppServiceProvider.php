@@ -14,6 +14,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL; // <-- 1. Pastikan baris ini ditambahkan
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
@@ -38,6 +39,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // 2. Tambahkan kode ini agar aset otomatis pakai HTTPS saat di-tunnel
+        if (str_contains(request()->headers->get('X-Forwarded-Proto'), 'https') || str_contains(request()->getHost(), 'trycloudflare.com')) {
+            URL::forceScheme('https');
+        }
+
         $this->configureDefaults();
         $this->registerPolicies();
     }

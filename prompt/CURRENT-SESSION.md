@@ -1,58 +1,102 @@
 CONTEXT:
 Project: E-Magang Kota Madiun — Laravel 13 + Inertia v3 + React 19 + TypeScript + PostgreSQL, Spatie Permission (3 roles: Mahasiswa, Admin OPD, Admin Verifikator).
-Before making ANY change, follow AGENTS.md: use Laravel Boost MCP tools first (database-schema, search-docs, database-query). HANDOFF-BACKEND.md is source of truth for existing routes/prop shapes — check before adding new ones. Indonesian-language route paths already defined there must not be renamed casually; if a new route is needed, follow the existing naming convention.
+Follow AGENTS.md: use Laravel Boost MCP tools first (database-schema, database-query, search-docs, browser-logs). HANDOFF-BACKEND.md is source of truth for existing routes/prop shapes.
 
-PRODUCT DECISION (resolves an old TODO): the canonical ticket format is `MGG-YYYY-NNNNNN` (e.g. `MGG-2026-100200`), NOT `EMG-`. Find every place in the codebase that generates, validates, or displays ticket numbers (service classes, frontend regex/mask, tests) and make them consistent with `MGG-`. Report any place you find still using `EMG-` before changing it, in case it's used as a stored historical value rather than a generator pattern.
+I'm attaching 2 screenshots for reference:
+- Screenshot 1: "Pengajuan Saya" page (Mahasiswa dashboard) — status "Disetujui", but a card labeled "Sedang Diproses" (circled) still shows, saying the application is under review.
+- Screenshot 2: "Dasbor" page (Mahasiswa dashboard) — same issue, "Sedang Diproses" card (circled) still shows even though status is "Disetujui" and timeline shows "Pelaksanaan Magang — Sedang berlangsung".
 
-TASK 1 — Fix public "Lacak Tiket" (ticket tracking) page
-- Goal: any visitor (logged in or not) can look up application status by entering a ticket number in format `MGG-YYYY-NNNNNN`.
-- Investigate first: find the existing lacak-tiket route/controller/page, check why it's currently broken (wrong format regex, wrong query, wrong relation, or frontend not submitting — report which before fixing).
-- Fix so it correctly looks up `internship_applications` (or relevant table — confirm via database-schema) by ticket number and displays current status/progress publicly, without requiring login and without exposing sensitive personal data beyond what's appropriate for a public status check (confirm with me what fields are safe to show publicly — e.g. status and timeline yes, personal documents no).
+Work through tasks in order. Report status after each. Run relevant Pest tests and `pint --dirty` after each task.
 
-TASK 2 — Add "Lacak Status Publik" menu to every user dashboard
-- Add a new menu item labeled exactly "Lacak Status Publik" in the sidebar/nav of ALL three dashboards (Mahasiswa, Admin OPD, Admin Verifikator).
-- Position: between the "Bantuan" menu item and the last menu item in each dashboard's menu list (check each dashboard's current menu order first — they may differ, so position it consistently by that same rule for each).
-- Clicking it opens the same public lacak-tiket page/feature from Task 1 (reuse the component, don't duplicate).
+═══════════════════════════════════════
+TASK 1 — Mobile numeric input + new phone number fields on registration form
+═══════════════════════════════════════
+- Find the registration form fields for NIS/NIM and No. WA (WhatsApp number).
+- On mobile, these should trigger the numeric keypad directly (not full alphanumeric keyboard). Use `inputMode="numeric"` (and `pattern="[0-9]*"` if needed) on these inputs — confirm current input type/attributes first via the form component.
+- Add TWO new fields to the registration form:
+  1. "No. WA Dosen/Guru Pembimbing" (WhatsApp number of academic supervisor)
+  2. "No. WA Penanggung Jawab" (WhatsApp number of person in charge)
+- Both new fields should also use numeric-friendly mobile input like NIS/NIM and No. WA above.
+- Check database-schema first: do these columns already exist anywhere (e.g. on internship_applications or a related table)? If not, create migration for new columns. Follow existing naming/type conventions used by the current No. WA column.
+- Update validation rules (FormRequest) to include the new fields — confirm with me if they should be required or optional before assuming.
+- Update HANDOFF-BACKEND.md if it documents this form's field list/prop shape.
 
-TASK 3 — Add supporting file uploads to the registration page
-- On the homepage's "Daftar" (registration) section/page, add optional file upload fields: "Surat Pengantar", "CV", "Portofolio" — each labeled "jika ada" (optional, not required).
-- Confirm via database-schema whether storage columns/paths for these already exist (check for something like a documents/attachments table) before adding new ones — reuse existing document storage pattern if there is one, don't create a parallel system.
-- Standard validation: file type/size limits appropriate for PDF/doc/image uploads — check HANDOFF-BACKEND.md or existing upload code for the project's existing conventions and match them.
+═══════════════════════════════════════
+TASK 2 — Profile picture missing on "Lacak Status Publik" menu inside dashboard
+═══════════════════════════════════════
+- On the dashboard's "Lacak Status Publik" page (opened while logged in), the user's profile photo does not appear in the top-right account area, unlike other dashboard menu pages (Dasbor, Pengajuan Saya, etc.) where it displays correctly.
+- Investigate: is "Lacak Status Publik" using a different/incomplete header component than the other dashboard pages? Compare its header/account-area markup against a working page (e.g. Dasbor) to find the missing prop or component.
+- Fix so the profile picture renders identically to other dashboard menu pages — reuse the same header/account component, don't duplicate.
 
-TASK 4 — Registration photo becomes profile picture
-- The photo uploaded during registration should automatically become the user's profile picture in their account — no separate upload step needed later.
-- Find where profile pictures are currently stored/displayed (check users table / avatar column) and wire the registration upload to populate it directly at account creation, using existing image storage conventions (disk, path pattern) already in the project.
+═══════════════════════════════════════
+TASK 3 — Hide "Sedang Diproses" card once application is approved and internship is ongoing
+═══════════════════════════════════════
+- See screenshots 1 and 2: the "Sedang Diproses" card (text: "Pengajuan Anda sedang ditinjau...") incorrectly still shows even when application status is "Disetujui" and the internship period has started (timeline shows "Pelaksanaan Magang — Sedang berlangsung").
+- This card should only show while the application is genuinely still under review (status is pending/being verified) — NOT once it reaches "Disetujui" or later stages.
+- Investigate: find the conditional logic controlling this card's visibility on both "Pengajuan Saya" and "Dasbor" pages. Confirm which status value(s) SHOULD show it, using database-schema to check the actual status enum values.
+- Fix the conditional so this card only appears for genuinely pending/in-review statuses, and disappears once status is "Disetujui" or later in the lifecycle.
+- Apply the fix consistently to BOTH pages (Pengajuan Saya and Dasbor) since both currently have the same bug — check if they share a component for this card.
 
-TASK 5 — Fix Admin Verifikator "Laporan" (report) menu
-- Investigate first: find the current Laporan menu/page in Admin Verifikator dashboard and report what's broken or missing.
-- Fix so Admin Verifikator can: (a) view the final report ("laporan akhir") file uploaded by the Mahasiswa, and (b) upload the certificate ("surat sertifikat") from that same page.
-- "Sinkron" — make sure this connects to the same certificate-generation flow already built (CertificateService from earlier sessions) rather than creating a separate/parallel upload path. Confirm the certificate ends up linked to the correct application record and is retrievable from wherever certificates are currently displayed (e.g. Mahasiswa's own dashboard).
+═══════════════════════════════════════
+TASK 4 — Show uploaded photo + documents (read-only) in "Dokumen Pengajuan" section
+═══════════════════════════════════════
+- On "Pengajuan Saya" page, the "Dokumen Pengajuan" section currently shows "Tidak ada dokumen terlampir" (see screenshot 1) even though the participant uploaded a pasfoto and documents (Surat Pengantar, CV, Portofolio — from earlier session) during registration.
+- Investigate: confirm via database-schema/database-query whether these uploaded files ARE actually stored (check application_documents table or wherever they're stored) — is this a display bug (files exist but aren't queried/shown) or an upload bug (files never got saved)? Report which before fixing.
+- Fix so this section displays: pasfoto (as an image thumbnail/preview) and each uploaded document (Surat Pengantar, CV, Portofolio if present) with a way to view/download each.
+- IMPORTANT: this section must be READ-ONLY — the participant can VIEW their submitted files but must NOT be able to re-upload or replace them here. Do not add an upload/edit control in this section.
 
-TASK 6 — Fix Admin OPD "Peserta Aktif" (active participants) menu
-- Goal: shows all Mahasiswa whose application status is "approved" (disetujui), scoped to that specific OPD.
-- Investigate first: find the current "Peserta Aktif" controller/route/query. Confirm what status/condition it currently filters by — is it querying the correct status enum value for "approved" (confirm exact enum value via database-schema), or an outdated/wrong one?
-- Use database-query to manually run the intended query (approved applications scoped to a specific OPD) against real data, and compare with what "Peserta Aktif" currently shows — find the exact divergence.
-- Confirm scoping is correct: an Admin OPD should only see participants approved for THEIR OWN OPD, not all OPDs.
-- Report whether this is a read-path bug (wrong/stale query) or a genuinely missing feature (never fully wired) before fixing.
-- Fix using the same single-source-of-truth service pattern used for the kuota sync fix in a previous session, rather than a new ad-hoc query. Include relevant fields (name, ticket number, status, date approved — confirm against HANDOFF-BACKEND.md prop shape if one exists).
+═══════════════════════════════════════
+TASK 5 — Audit: which submitted participant data is NOT yet displayed anywhere in dashboards
+═══════════════════════════════════════
+- Use database-schema to list ALL columns/fields captured from the participant during registration (including the new WA fields from Task 1).
+- Cross-check against what's currently displayed across the Mahasiswa dashboard pages (Dasbor, Pengajuan Saya, etc.) — identify any submitted field that is captured in the DB but never shown anywhere in the UI.
+- Report the list of missing fields to me BEFORE adding anything — I'll confirm which ones should be added and where (e.g. "Detail Pemohon" card, a new section, etc.) before you implement.
 
-TASK 7 — Add "Lacak Tiket" link to navbar and footer on homepage
-- Add a nav link labeled "Lacak Tiket" in the homepage navbar, pointing to the public lacak-tiket page (from Task 1).
-- Add the same link in the homepage footer.
-- Match existing navbar/footer link styling — don't introduce a new visual pattern.
+ORDER: Task 1 → Task 3 (quick fix, high visibility) → Task 2 → Task 4 → Task 5 (report-only, wait for my confirmation before implementing).
+# Checklist: Form Fields, Profile Photo, Status Card, Dokumen View (2026-07-15)
 
-TASK 8 — Make lacak-tiket page context-aware when opened from a logged-in dashboard
-- When the public lacak-tiket page is opened via the "Lacak Status Publik" dashboard menu (Task 2) by an already-logged-in user, hide any "Masuk Akun" / login CTA / guest-only UI elements that assume the visitor is not authenticated.
-- Instead, render it wrapped in the same dashboard layout/chrome as other dashboard menu pages (e.g. "Bantuan") — same header, same nav, same page shell — so it feels like a native dashboard page, not a public page awkwardly embedded.
-- When accessed directly from the homepage/navbar/footer (Task 7) by a guest, keep the current public-facing version unchanged (with login CTA if relevant).
-- Implementation approach: check auth()->check() (or Inertia shared auth prop) to conditionally render the guest-facing chrome vs dashboard-wrapped chrome, reusing the same underlying ticket-lookup component/logic either way — don't duplicate the lookup logic itself.
+## Task 1 — Mobile numeric input + WA Dosen/Penanggung Jawab fields
+- [ ] Input NIS/NIM pakai numeric keypad di mobile
+- [ ] Input No. WA pakai numeric keypad di mobile
+- [ ] Kolom baru: No. WA Dosen/Guru Pembimbing (migration + form + validasi)
+- [ ] Kolom baru: No. WA Penanggung Jawab (migration + form + validasi)
+- [ ] Konfirmasi: field baru wajib atau opsional? → **[isi keputusanmu di sini]**
+- [ ] HANDOFF-BACKEND.md diupdate
+- [ ] Test pass
 
-TASK 9 — Remove redundant "jika ada" label on registration file uploads
-- On the homepage registration ("Daftar") section, remove the text "jika ada" next to Surat Pengantar / CV / Portofolio upload fields (from Task 3), since "Opsional" label already conveys this — having both is redundant.
-- Confirm the "Opsional" label/badge is still clearly visible after removing "jika ada" so optionality is still communicated to the user.
+## Task 2 — Foto profil hilang di menu "Lacak Status Publik"
+- [ ] Root cause ditemukan (komponen header beda dari halaman lain?)
+- [ ] Fix: reuse komponen header yang sama
+- [ ] Verifikasi: foto profil muncul sama seperti di Dasbor/Pengajuan Saya
+- [ ] Test pass
 
-Report status (done/blocked/needs decision) after each of these three, same as Tasks 1–6. Run pint --dirty and relevant tests after.
+## Task 3 — Card "Sedang Diproses" tidak hilang saat status "Disetujui"
+- [ ] Root cause ditemukan (kondisi status yang salah?)
+- [ ] Fix di halaman "Pengajuan Saya"
+- [ ] Fix di halaman "Dasbor"
+- [ ] Verifikasi: card hilang begitu status "Disetujui" / magang berjalan
+- [ ] Test pass
 
-ORDER OF EXECUTION: do these one task at a time, in the order listed above, and report status (done/blocked/needs my decision) after each before moving to the next. Task 1's ticket format decision affects Task 2. Task 3 and 4 touch the same registration form so implement together but verify separately. Task 6 follows the same architectural pattern as the earlier kuota fix — reuse that precedent.
+## Task 4 — Dokumen Pengajuan: tampilkan pasfoto + dokumen (read-only)
+- [ ] Root cause ditemukan (bug tampilan atau file memang tidak tersimpan?)
+- [ ] Pasfoto tampil sebagai thumbnail
+- [ ] Surat Pengantar tampil (kalau ada) + bisa dilihat/download
+- [ ] CV tampil (kalau ada) + bisa dilihat/download
+- [ ] Portofolio tampil (kalau ada) + bisa dilihat/download
+- [ ] Dikonfirmasi: TIDAK ada tombol upload/edit di section ini (read-only)
+- [ ] Test pass
 
-After each task: run relevant Pest tests (write minimal ones if none exist), `pint --dirty`, and confirm no regressions in the three dashboards' existing kuota/status/peserta features from previous sessions.
+## Task 5 — Audit data yang belum tertampil di dashboard
+- [ ] List field dari DB (termasuk WA baru dari Task 1) dikumpulkan
+- [ ] Cross-check dengan yang sudah tampil di UI
+- [ ] Laporan field yang hilang diterima → **[isi field mana yang mau ditambahkan]**
+- [ ] Implementasi field yang disetujui (setelah konfirmasi)
+- [ ] Test pass
+
+---
+
+## Status Keseluruhan
+- [ ] Semua 5 task selesai
+- [ ] Regresi dicek (kuota sync, lacak tiket, dll masih normal)
+- [ ] `pint --dirty` clean
+- [ ] Siap di-commit

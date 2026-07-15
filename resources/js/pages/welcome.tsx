@@ -2367,7 +2367,7 @@ export default function Welcome({
                                 <div className="grid gap-6 sm:grid-cols-2">
                                     <div className="flex flex-col gap-2">
                                         <label className="text-[14px] font-semibold text-[#0a1628]">
-                                            Nomor WhatsApp
+                                            Nomor WhatsApp Anda
                                         </label>
                                         <input
                                             type="tel"
@@ -2386,7 +2386,7 @@ export default function Welcome({
                                     </div>
                                     <div className="flex flex-col gap-2">
                                         <label className="text-[14px] font-semibold text-[#0a1628]">
-                                            Email Aktif
+                                            Email Aktif Anda
                                         </label>
                                         <input
                                             type="email"
