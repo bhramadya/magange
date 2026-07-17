@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
             OpdSeeder::class,
             AdminSeeder::class,
             FaqSeeder::class,
-            ApplicationSeeder::class,
+            RegistrationSeeder::class,
         ]);
     }
 }

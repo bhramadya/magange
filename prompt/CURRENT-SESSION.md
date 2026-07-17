@@ -1,102 +1,47 @@
-CONTEXT:
-Project: E-Magang Kota Madiun — Laravel 13 + Inertia v3 + React 19 + TypeScript + PostgreSQL, Spatie Permission (3 roles: Mahasiswa, Admin OPD, Admin Verifikator).
-Follow AGENTS.md: use Laravel Boost MCP tools first (database-schema, database-query, search-docs, browser-logs). HANDOFF-BACKEND.md is source of truth for existing routes/prop shapes.
+# CURRENT SESSION — E-Magang Kota Madiun
 
-I'm attaching 2 screenshots for reference:
-- Screenshot 1: "Pengajuan Saya" page (Mahasiswa dashboard) — status "Disetujui", but a card labeled "Sedang Diproses" (circled) still shows, saying the application is under review.
-- Screenshot 2: "Dasbor" page (Mahasiswa dashboard) — same issue, "Sedang Diproses" card (circled) still shows even though status is "Disetujui" and timeline shows "Pelaksanaan Magang — Sedang berlangsung".
+**Tanggal mulai:** 2026-07-16
+**Status:** 🟡 In Progress
 
-Work through tasks in order. Report status after each. Run relevant Pest tests and `pint --dirty` after each task.
+## Batch aktif
+Prompt yang sedang dikerjakan: lihat `claude-prompts/QUEUE/2026-07-16-batch.md`
 
-═══════════════════════════════════════
-TASK 1 — Mobile numeric input + new phone number fields on registration form
-═══════════════════════════════════════
-- Find the registration form fields for NIS/NIM and No. WA (WhatsApp number).
-- On mobile, these should trigger the numeric keypad directly (not full alphanumeric keyboard). Use `inputMode="numeric"` (and `pattern="[0-9]*"` if needed) on these inputs — confirm current input type/attributes first via the form component.
-- Add TWO new fields to the registration form:
-  1. "No. WA Dosen/Guru Pembimbing" (WhatsApp number of academic supervisor)
-  2. "No. WA Penanggung Jawab" (WhatsApp number of person in charge)
-- Both new fields should also use numeric-friendly mobile input like NIS/NIM and No. WA above.
-- Check database-schema first: do these columns already exist anywhere (e.g. on internship_applications or a related table)? If not, create migration for new columns. Follow existing naming/type conventions used by the current No. WA column.
-- Update validation rules (FormRequest) to include the new fields — confirm with me if they should be required or optional before assuming.
-- Update HANDOFF-BACKEND.md if it documents this form's field list/prop shape.
+## Sudah selesai
+- [x] 01 — OTP expiry 10 menit → 5 menit (OtpService TTL_MINUTES, mail otp.blade.php, OtpServiceTest — 6 tes lulus)
+- [x] 02 — Autofocus kolom OTP pertama (autoFocus di input index 0; efek fokus-saat-step-code sudah ada sebelumnya)
+- [x] 08 — Intervention Image (v4.2, app/Services/ImageService.php: scaleDown 1000px + JPEG q80, fallback simpan asli bila GD/Imagick tak ada) + validasi ukuran: surat_pengantar/cv 2MB (dari 5MB), portofolio tetap 10MB — backend (StoreApplicationRequest) & frontend (welcome.tsx, pesan "Ukuran file maksimal 2MB/10MB") + 3 tes ukuran baru
+- [x] 07/06/05/11 — Audit kelengkapan data dari form-pendaftaran. Temuan & perbaikan (semua frontend; backend resource sudah lengkap):
+  - Komponen baru `resources/js/components/application-documents.tsx` — chip tautan Surat Pengantar/CV/Portofolio (route terproteksi pengajuan.dokumen), dipakai keempat halaman admin.
+  - `types/magang.ts`: tambah `surat_pengantar_url`/`cv_url`/`portfolio_url` (sebelumnya prop backend ini tak bertipe & tak pernah dirender); `skills` jadi `string | null`.
+  - `verifikator/masuk.tsx`: panel tinjau sebelumnya TANPA identitas pemohon — kini tampil pas foto, NIS/NIM, nama, alamat, WA/email pemohon, WA pembimbing & penanggung jawab, + berkas; submit setTimeout diganti router.post forward/reject nyata + tampilan error.
+  - `opd/keputusan.tsx`: sama — identitas + foto + berkas ditambah; submit setTimeout diganti router.post approve/reject nyata + tampilan error.
+  - `verifikator/dashboard.tsx` & `opd/dashboard.tsx` (dialog tinjau/detail): tambah No. WA Pembimbing, No. WA Penanggung Jawab, dan berkas pendukung.
+  - Role rule terjaga: form verifikator tetap hanya OPD Tujuan + Catatan Khusus; form approve OPD tetap Divisi/Pembimbing Lapangan/Penanggung Jawab.
+  - Gate: tsc ✅, eslint ✅, prettier ✅, tes Feature Verifikator+Opd 17 lulus (135 assertion).
+- [x] 03 — Kelola Kuota OPD → Kelola OPD (CRUD penuh, mirror pola Verifikator\FaqController):
+  - Backend: `Verifikator\OpdController` (index/create/store/edit/update/destroy) + FormRequest `StoreOpdRequest`/`UpdateOpdRequest` (kode unik, kuota min = kuota_used) di bawah `verifikator/opd/*` (role:admin_verifikator). Hapus ditolak (flash error) bila kuota_used > 0.
+  - `OpdResource` ditambah `description` + `is_active` (aditif — kontrak prop lama utuh); tipe `Opd` di magang.ts ikut.
+  - Frontend: `pages/verifikator/opd/{index,create,edit}.tsx` mirror pola FAQ; sidebar verifikator kini "Kelola OPD" → `/verifikator/opd`. Halaman & route lama `/verifikator/kuota` + `PATCH /kuota/{opd}` DIPERTAHANKAN (dipakai Admin OPD di dasbornya + tes lama).
+  - Tes: `tests/Feature/Feature/Verifikator/OpdControllerTest.php` — 8 tes (list, create+kuota_used 0, kode unik, update, kuota < terpakai ditolak, delete kosong OK, delete berisi ditolak, 403 untuk admin OPD).
+- [x] Lockout progresif OTP (Fibonacci) [batch #6]: 3x salah input → token aktif diinvalidasi (wajib kirim ulang) + jeda kirim ulang naik per tingkat lockout 1,1,2,3,5,8… menit. Reset saat login sukses ATAU 24 jam tanpa percobaan (dicek saat baca, tanpa cron).
+  - Tabel/model baru `otp_lockouts`/`OtpLockout` (1 baris per user), service baru `app/Services/OtpLockoutService.php`, kontrak `OtpServiceContract` ditambah `invalidateActiveTokens()`, wiring di `OtpLoginController` (send & verify diblokir saat terkunci; pesan error Indonesia menyebut sisa waktu).
+  - Frontend `auth/otp-login.tsx`: prop flash `lockoutSeconds` → hitung mundur live "Coba lagi dalam X menit Y detik"; tombol kirim/verifikasi/kirim-ulang dinonaktifkan selama lockout. (Pola sync prop→state pakai "adjust state during render", bukan useEffect — aturan eslint react-hooks/set-state-in-effect.)
+  - Tes: `tests/Unit/OtpLockoutServiceTest.php` (6 tes — deret Fibonacci, ambang 3x, eskalasi tingkat, reset manual & idle 24 jam) + 4 tes feature di OtpLoginControllerTest (termasuk prop lockoutSeconds). Lockout independen dari expiry OTP 5 menit — tes "setelah jeda habis, login normal" membuktikan keduanya bekerja bersama.
+  - Gate penuh: Pint ✅, PHPStan ✅ (perlu `--memory-limit=1G`, limit default 128M di php.ini lokal kurang), Pest 135 lulus / 10 skip (721 assertion), tsc/eslint/prettier ✅, vite build ✅.
 
-═══════════════════════════════════════
-TASK 2 — Profile picture missing on "Lacak Status Publik" menu inside dashboard
-═══════════════════════════════════════
-- On the dashboard's "Lacak Status Publik" page (opened while logged in), the user's profile photo does not appear in the top-right account area, unlike other dashboard menu pages (Dasbor, Pengajuan Saya, etc.) where it displays correctly.
-- Investigate: is "Lacak Status Publik" using a different/incomplete header component than the other dashboard pages? Compare its header/account-area markup against a working page (e.g. Dasbor) to find the missing prop or component.
-- Fix so the profile picture renders identically to other dashboard menu pages — reuse the same header/account component, don't duplicate.
+## Sedang dikerjakan
+- (kosong — semua item batch 2026-07-16 selesai)
+- [ ] NEW — Progressive Fibonacci lockout OTP: 3x salah input → wajib kirim ulang, jeda kirim ulang naik deret Fibonacci (1,1,2,3,5,8... menit), reset counter kalau login sukses ATAU 24 jam tanpa percobaan (mana duluan)
 
-═══════════════════════════════════════
-TASK 3 — Hide "Sedang Diproses" card once application is approved and internship is ongoing
-═══════════════════════════════════════
-- See screenshots 1 and 2: the "Sedang Diproses" card (text: "Pengajuan Anda sedang ditinjau...") incorrectly still shows even when application status is "Disetujui" and the internship period has started (timeline shows "Pelaksanaan Magang — Sedang berlangsung").
-- This card should only show while the application is genuinely still under review (status is pending/being verified) — NOT once it reaches "Disetujui" or later stages.
-- Investigate: find the conditional logic controlling this card's visibility on both "Pengajuan Saya" and "Dasbor" pages. Confirm which status value(s) SHOULD show it, using database-schema to check the actual status enum values.
-- Fix the conditional so this card only appears for genuinely pending/in-review statuses, and disappears once status is "Disetujui" or later in the lifecycle.
-- Apply the fix consistently to BOTH pages (Pengajuan Saya and Dasbor) since both currently have the same bug — check if they share a component for this card.
 
-═══════════════════════════════════════
-TASK 4 — Show uploaded photo + documents (read-only) in "Dokumen Pengajuan" section
-═══════════════════════════════════════
-- On "Pengajuan Saya" page, the "Dokumen Pengajuan" section currently shows "Tidak ada dokumen terlampir" (see screenshot 1) even though the participant uploaded a pasfoto and documents (Surat Pengantar, CV, Portofolio — from earlier session) during registration.
-- Investigate: confirm via database-schema/database-query whether these uploaded files ARE actually stored (check application_documents table or wherever they're stored) — is this a display bug (files exist but aren't queried/shown) or an upload bug (files never got saved)? Report which before fixing.
-- Fix so this section displays: pasfoto (as an image thumbnail/preview) and each uploaded document (Surat Pengantar, CV, Portofolio if present) with a way to view/download each.
-- IMPORTANT: this section must be READ-ONLY — the participant can VIEW their submitted files but must NOT be able to re-upload or replace them here. Do not add an upload/edit control in this section.
+## Keputusan / catatan penting
+- Kontrak prop path dari HANDOFF-BACKEND.md tidak boleh berubah kecuali dicatat eksplisit di sini.
+- Role rule tetap: Admin Verifikator hanya isi "Catatan Khusus Admin Verifikator", tidak boleh isi Divisi/Pembimbing Lapangan/Penanggung Jawab.
+- PHP lokal TIDAK punya ekstensi GD/Imagick → ImageService fallback ke penyimpanan asli; di server produksi pastikan GD terpasang agar kompresi aktif. Tes yang butuh GD (`UploadedFile::fake()->image()`) diganti `create(..., 'image/jpeg')`.
+- Perbaikan PHPStan pre-existing ikut dibereskan: nullsafe pada start_date/end_date (NOT NULL di DB) dan guard null file_path di Verifikator\ReportController.
 
-═══════════════════════════════════════
-TASK 5 — Audit: which submitted participant data is NOT yet displayed anywhere in dashboards
-═══════════════════════════════════════
-- Use database-schema to list ALL columns/fields captured from the participant during registration (including the new WA fields from Task 1).
-- Cross-check against what's currently displayed across the Mahasiswa dashboard pages (Dasbor, Pengajuan Saya, etc.) — identify any submitted field that is captured in the DB but never shown anywhere in the UI.
-- Report the list of missing fields to me BEFORE adding anything — I'll confirm which ones should be added and where (e.g. "Detail Pemohon" card, a new section, etc.) before you implement.
+## Next step
+- Semua item batch 2026-07-16 (termasuk #6 lockout Fibonacci) selesai. Menunggu batch berikutnya.
 
-ORDER: Task 1 → Task 3 (quick fix, high visibility) → Task 2 → Task 4 → Task 5 (report-only, wait for my confirmation before implementing).
-# Checklist: Form Fields, Profile Photo, Status Card, Dokumen View (2026-07-15)
-
-## Task 1 — Mobile numeric input + WA Dosen/Penanggung Jawab fields
-- [ ] Input NIS/NIM pakai numeric keypad di mobile
-- [ ] Input No. WA pakai numeric keypad di mobile
-- [ ] Kolom baru: No. WA Dosen/Guru Pembimbing (migration + form + validasi)
-- [ ] Kolom baru: No. WA Penanggung Jawab (migration + form + validasi)
-- [ ] Konfirmasi: field baru wajib atau opsional? → **[isi keputusanmu di sini]**
-- [ ] HANDOFF-BACKEND.md diupdate
-- [ ] Test pass
-
-## Task 2 — Foto profil hilang di menu "Lacak Status Publik"
-- [ ] Root cause ditemukan (komponen header beda dari halaman lain?)
-- [ ] Fix: reuse komponen header yang sama
-- [ ] Verifikasi: foto profil muncul sama seperti di Dasbor/Pengajuan Saya
-- [ ] Test pass
-
-## Task 3 — Card "Sedang Diproses" tidak hilang saat status "Disetujui"
-- [ ] Root cause ditemukan (kondisi status yang salah?)
-- [ ] Fix di halaman "Pengajuan Saya"
-- [ ] Fix di halaman "Dasbor"
-- [ ] Verifikasi: card hilang begitu status "Disetujui" / magang berjalan
-- [ ] Test pass
-
-## Task 4 — Dokumen Pengajuan: tampilkan pasfoto + dokumen (read-only)
-- [ ] Root cause ditemukan (bug tampilan atau file memang tidak tersimpan?)
-- [ ] Pasfoto tampil sebagai thumbnail
-- [ ] Surat Pengantar tampil (kalau ada) + bisa dilihat/download
-- [ ] CV tampil (kalau ada) + bisa dilihat/download
-- [ ] Portofolio tampil (kalau ada) + bisa dilihat/download
-- [ ] Dikonfirmasi: TIDAK ada tombol upload/edit di section ini (read-only)
-- [ ] Test pass
-
-## Task 5 — Audit data yang belum tertampil di dashboard
-- [ ] List field dari DB (termasuk WA baru dari Task 1) dikumpulkan
-- [ ] Cross-check dengan yang sudah tampil di UI
-- [ ] Laporan field yang hilang diterima → **[isi field mana yang mau ditambahkan]**
-- [ ] Implementasi field yang disetujui (setelah konfirmasi)
-- [ ] Test pass
-
----
-
-## Status Keseluruhan
-- [ ] Semua 5 task selesai
-- [ ] Regresi dicek (kuota sync, lacak tiket, dll masih normal)
-- [ ] `pint --dirty` clean
-- [ ] Siap di-commit
+## Blocker
+- (belum ada)

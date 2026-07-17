@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     Search,
     Inbox,
@@ -16,6 +16,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { ApplicationDocuments } from '@/components/application-documents';
 import {
     Select,
     SelectContent,
@@ -33,9 +34,9 @@ import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
  *  master-detail: daftar di kiri, panel tinjau (teruskan/tolak) di kanan —
  *  berbeda dari dasbor yang memakai dialog.
  *
- *  FRONTEND ONLY. Rekan backend mengganti handler simulasi dengan:
- *    router.post(`/verifikator/pengajuan/${id}/teruskan`, { opd_id, division, field_supervisor, person_in_charge })
- *    router.post(`/verifikator/pengajuan/${id}/tolak`,     { rejection_reason })
+ *  Aksi tersambung ke backend (PengajuanController):
+ *    router.post(`/verifikator/pengajuan/${id}/forward`, { opd_id, verifikator_note })
+ *    router.post(`/verifikator/pengajuan/${id}/reject`,  { rejection_reason })
  * ========================================================================= */
 
 /* ---- util ------------------------------------------------------------ */
@@ -49,9 +50,8 @@ function formatDate(iso: string): string {
 
 function waitingDays(iso: string): number {
     const created = new Date(iso).getTime();
-    const now = new Date('2026-06-25').getTime(); // tanggal acuan demo; backend pakai now()
 
-    return Math.max(0, Math.floor((now - created) / 86_400_000));
+    return Math.max(0, Math.floor((Date.now() - created) / 86_400_000));
 }
 
 /* ---- mock ------------------------------------------------------------ */
@@ -85,6 +85,14 @@ function makeApp(
         campus_supervisor: 'Dr. Bambang Sutrisno',
         major: 'Teknik Informatika',
         skills: 'React, Laravel, desain UI/UX, manajemen basis data',
+        applicant_name: 'Peserta Magang',
+        applicant_email: 'peserta@example.com',
+        applicant_whatsapp: '6281234567890',
+        nis: '2026001234',
+        address: 'Jl. Pahlawan No. 1, Madiun',
+        campus_supervisor_whatsapp: '6281234500001',
+        guardian_name: 'Slamet Riyadi',
+        guardian_whatsapp: '6281234500002',
         verifikator_note: null,
         opd: null,
         division: null,
@@ -174,6 +182,7 @@ function ReviewPanel({
 }) {
     const [mode, setMode] = useState<ReviewMode>('forward');
     const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const [opdId, setOpdId] = useState('');
     const [note, setNote] = useState('');
@@ -186,12 +195,23 @@ function ReviewPanel({
             return;
         }
 
+        setError(null);
         setProcessing(true);
-        // TODO(backend): router.post(`/verifikator/pengajuan/${app.id}/teruskan`, { opd_id, verifikator_note: note })
-        setTimeout(() => {
-            setProcessing(false);
-            onForwarded(app.id);
-        }, 800);
+        router.post(
+            `/verifikator/pengajuan/${app.id}/forward`,
+            { opd_id: Number(opdId), verifikator_note: note.trim() || null },
+            {
+                preserveScroll: true,
+                onSuccess: () => onForwarded(app.id),
+                onError: (errs) =>
+                    setError(
+                        errs.opd_id ??
+                            errs.verifikator_note ??
+                            'Gagal meneruskan pengajuan.',
+                    ),
+                onFinish: () => setProcessing(false),
+            },
+        );
     }
 
     function submitReject() {
@@ -199,12 +219,21 @@ function ReviewPanel({
             return;
         }
 
+        setError(null);
         setProcessing(true);
-        // TODO(backend): router.post(`/verifikator/pengajuan/${app.id}/tolak`, { rejection_reason: reason })
-        setTimeout(() => {
-            setProcessing(false);
-            onRejected(app.id);
-        }, 800);
+        router.post(
+            `/verifikator/pengajuan/${app.id}/reject`,
+            { rejection_reason: reason.trim() },
+            {
+                preserveScroll: true,
+                onSuccess: () => onRejected(app.id),
+                onError: (errs) =>
+                    setError(
+                        errs.rejection_reason ?? 'Gagal menolak pengajuan.',
+                    ),
+                onFinish: () => setProcessing(false),
+            },
+        );
     }
 
     return (
@@ -214,13 +243,31 @@ function ReviewPanel({
                     {app.ticket_number}
                 </p>
                 <h3 className="mt-0.5 text-lg font-bold text-[#12213e]">
-                    {app.institution_name}
+                    {app.applicant_name ?? app.institution_name}
                 </h3>
             </div>
 
+            {/* Pas foto pemohon (disk privat, route terproteksi) */}
+            {app.photo_url && (
+                <div className="flex justify-center">
+                    <img
+                        src={app.photo_url}
+                        alt={`Pas foto ${app.applicant_name ?? 'pemohon'}`}
+                        className="h-40 w-32 rounded-xl border border-slate-200 object-cover shadow-sm"
+                    />
+                </div>
+            )}
+
             <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/60 px-4">
+                <DetailRow label="NIS / NIM" value={app.nis || '—'} />
+                <DetailRow
+                    label="Nama Lengkap"
+                    value={app.applicant_name || '—'}
+                />
+                <DetailRow label="Asal Instansi" value={app.institution_name} />
                 <DetailRow label="Tujuan Magang" value={app.tujuan_magang} />
                 <DetailRow label="Jurusan" value={app.major ?? '—'} />
+                <DetailRow label="Alamat" value={app.address || '—'} />
                 <DetailRow
                     label="Durasi"
                     value={`${app.duration_months} bulan`}
@@ -233,6 +280,23 @@ function ReviewPanel({
                     label="Pembimbing Kampus"
                     value={app.campus_supervisor}
                 />
+                <DetailRow
+                    label="No. WA Pembimbing"
+                    value={app.campus_supervisor_whatsapp || '—'}
+                />
+                <DetailRow
+                    label="Penanggung Jawab"
+                    value={app.guardian_name || '—'}
+                />
+                <DetailRow
+                    label="No. WA Penanggung Jawab"
+                    value={app.guardian_whatsapp || '—'}
+                />
+                <DetailRow
+                    label="No. WhatsApp"
+                    value={app.applicant_whatsapp || '—'}
+                />
+                <DetailRow label="Email" value={app.applicant_email || '—'} />
                 <DetailRow label="Masuk" value={formatDate(app.created_at)} />
             </div>
 
@@ -246,6 +310,9 @@ function ReviewPanel({
                     {app.skills || '—'}
                 </p>
             </div>
+
+            {/* Berkas pendukung opsional (surat pengantar / CV / portofolio) */}
+            <ApplicationDocuments app={app} />
 
             {/* Toggle mode */}
             <div className="flex gap-2 rounded-xl bg-slate-100 p-1">
@@ -322,6 +389,12 @@ function ReviewPanel({
                             />
                         </div>
 
+                        {error && (
+                            <p className="text-sm font-medium text-rose-600">
+                                {error}
+                            </p>
+                        )}
+
                         <button
                             type="button"
                             onClick={submitForward}
@@ -357,6 +430,12 @@ function ReviewPanel({
                                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#0a1628] transition outline-none placeholder:text-slate-400 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15"
                             />
                         </div>
+
+                        {error && (
+                            <p className="text-sm font-medium text-rose-600">
+                                {error}
+                            </p>
+                        )}
 
                         <button
                             type="button"

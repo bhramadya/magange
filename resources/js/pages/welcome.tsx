@@ -594,7 +594,16 @@ export default function Welcome({
         '';
 
     // Formulir pendaftaran publik → POST /pengajuan (multipart karena pas foto).
-    const { data, setData, post, processing, errors, reset } = useForm<{
+    const {
+        data,
+        setData,
+        post,
+        processing,
+        errors,
+        reset,
+        setError,
+        clearErrors,
+    } = useForm<{
         name: string;
         nis: string;
         institution_name: string;
@@ -642,6 +651,11 @@ export default function Welcome({
     const [pasFotoNama, setPasFotoNama] = useState('');
     const [pasFotoPreview, setPasFotoPreview] = useState('');
 
+    // Batas ukuran berkas (selaras StoreApplicationRequest): pas foto/dokumen
+    // 2MB, khusus portofolio 10MB.
+    const MAX_2MB = 2 * 1024 * 1024;
+    const MAX_10MB = 10 * 1024 * 1024;
+
     const handlePasFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
 
@@ -649,6 +663,14 @@ export default function Welcome({
             return;
         }
 
+        if (file.size > MAX_2MB) {
+            setError('photo', 'Ukuran file maksimal 2MB.');
+            e.target.value = '';
+
+            return;
+        }
+
+        clearErrors('photo');
         setData('photo', file);
         setPasFotoNama(file.name);
         setPasFotoPreview((prev) => {
@@ -672,6 +694,21 @@ export default function Welcome({
         ) =>
         (e: React.ChangeEvent<HTMLInputElement>) => {
             const file = e.target.files?.[0] ?? null;
+
+            // Validasi ukuran sisi klien: dokumen 2MB, portofolio 10MB.
+            const maxBytes = field === 'portfolio' ? MAX_10MB : MAX_2MB;
+
+            if (file && file.size > maxBytes) {
+                setError(
+                    field,
+                    `Ukuran file maksimal ${field === 'portfolio' ? '10MB' : '2MB'}.`,
+                );
+                e.target.value = '';
+
+                return;
+            }
+
+            clearErrors(field);
             setData(field, file);
             setNama(file?.name ?? '');
         };
@@ -1853,9 +1890,8 @@ export default function Welcome({
                                                 <strong className="font-bold text-[#0b4fb0]">
                                                     OTP
                                                 </strong>{' '}
-                                                via Email tanpa kata sandi
-                                                untuk mengunduh surat
-                                                persetujuan.
+                                                via Email tanpa kata sandi untuk
+                                                mengunduh surat persetujuan.
                                             </>
                                         ),
                                     },
@@ -2312,7 +2348,9 @@ export default function Welcome({
                                             type="tel"
                                             inputMode="numeric"
                                             pattern="[0-9]*"
-                                            value={data.campus_supervisor_whatsapp}
+                                            value={
+                                                data.campus_supervisor_whatsapp
+                                            }
                                             onChange={(e) =>
                                                 setData(
                                                     'campus_supervisor_whatsapp',
@@ -2434,6 +2472,11 @@ export default function Welcome({
                                             className="hidden"
                                         />
                                     </label>
+                                    {errors.photo && (
+                                        <p className="text-[13px] text-rose-600">
+                                            {errors.photo}
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* --- Berkas pendukung opsional ("jika ada") --- */}
@@ -2452,7 +2495,7 @@ export default function Welcome({
                                             nama: suratPengantarNama,
                                             setNama: setSuratPengantarNama,
                                             accept: '.pdf,.doc,.docx',
-                                            hint: 'PDF/Word, maks. 5MB',
+                                            hint: 'PDF/Word, maks. 2MB',
                                         },
                                         {
                                             field: 'cv' as const,
@@ -2460,7 +2503,7 @@ export default function Welcome({
                                             nama: cvNama,
                                             setNama: setCvNama,
                                             accept: '.pdf,.doc,.docx',
-                                            hint: 'PDF/Word, maks. 5MB',
+                                            hint: 'PDF/Word, maks. 2MB',
                                         },
                                         {
                                             field: 'portfolio' as const,
@@ -2471,31 +2514,39 @@ export default function Welcome({
                                             hint: 'PDF/Word/ZIP/gambar, maks. 10MB',
                                         },
                                     ].map((berkas) => (
-                                        <label
+                                        <div
                                             key={berkas.field}
-                                            className="group flex cursor-pointer items-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-[#f5faff] px-4 py-3.5 transition-colors hover:border-[#0b4fb0] hover:bg-[#e7f0fc]"
+                                            className="flex flex-col gap-1.5"
                                         >
-                                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white">
-                                                <FileText className="h-5 w-5 text-[#0b4fb0] transition-transform duration-300 group-hover:scale-110" />
-                                            </span>
-                                            <span className="flex min-w-0 flex-col">
-                                                <span className="text-[14px] font-medium text-[#0a1628]">
-                                                    {berkas.label}
+                                            <label className="group flex cursor-pointer items-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-[#f5faff] px-4 py-3.5 transition-colors hover:border-[#0b4fb0] hover:bg-[#e7f0fc]">
+                                                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white">
+                                                    <FileText className="h-5 w-5 text-[#0b4fb0] transition-transform duration-300 group-hover:scale-110" />
                                                 </span>
-                                                <span className="truncate text-[12px] text-[#0a1628]/50">
-                                                    {berkas.nama || berkas.hint}
+                                                <span className="flex min-w-0 flex-col">
+                                                    <span className="text-[14px] font-medium text-[#0a1628]">
+                                                        {berkas.label}
+                                                    </span>
+                                                    <span className="truncate text-[12px] text-[#0a1628]/50">
+                                                        {berkas.nama ||
+                                                            berkas.hint}
+                                                    </span>
                                                 </span>
-                                            </span>
-                                            <input
-                                                type="file"
-                                                accept={berkas.accept}
-                                                onChange={handleBerkas(
-                                                    berkas.field,
-                                                    berkas.setNama,
-                                                )}
-                                                className="hidden"
-                                            />
-                                        </label>
+                                                <input
+                                                    type="file"
+                                                    accept={berkas.accept}
+                                                    onChange={handleBerkas(
+                                                        berkas.field,
+                                                        berkas.setNama,
+                                                    )}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                            {errors[berkas.field] && (
+                                                <p className="text-[13px] text-rose-600">
+                                                    {errors[berkas.field]}
+                                                </p>
+                                            )}
+                                        </div>
                                     ))}
                                 </div>
 

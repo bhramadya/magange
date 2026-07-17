@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
+import { ApplicationDocuments } from '@/components/application-documents';
 import { StatusBadge } from '@/components/status-badge';
 import {
     Dialog,
@@ -42,8 +43,9 @@ import type {
 /* =========================================================================
  *  DASBOR ADMIN OPD — E-MAGANG (Pemkot Madiun)
  *  OPD menerima pengajuan yang SUDAH DITERUSKAN verifikator (`forwarded_opd`)
- *  beserta divisi, pembimbing lapangan, & penanggung jawab. OPD memutuskan:
- *  MENYETUJUI (→ peserta mulai magang) atau MENOLAK dengan alasan.
+ *  beserta catatan khusus verifikator. OPD memutuskan: MENYETUJUI (mengisi
+ *  divisi, pembimbing lapangan, & penanggung jawab → peserta mulai magang)
+ *  atau MENOLAK dengan alasan.
  *
  *  Aksi form terhubung ke backend nyata (OpdSubmissionController) via Inertia:
  *    router.post(`/opd/pengajuan/${id}/approve`, { division, field_supervisor, person_in_charge })
@@ -88,7 +90,11 @@ function makeApp(
         applicant_whatsapp: '6281234567890',
         nis: '2101234567',
         address: 'Jl. Pahlawan No. 10, Madiun',
+        campus_supervisor_whatsapp: '6281234500001',
         guardian_name: 'Drs. Suparno',
+        guardian_whatsapp: '6281234500002',
+        major: 'Teknik Informatika',
+        skills: 'React, Laravel, REST API, PostgreSQL',
         photo_url: null,
         tujuan_magang: 'Magang kompetensi keahlian',
         duration_months: 3,
@@ -676,8 +682,16 @@ function DecisionDialog({
                                 value={app.campus_supervisor}
                             />
                             <DetailRow
+                                label="No. WA Pembimbing"
+                                value={app.campus_supervisor_whatsapp || '—'}
+                            />
+                            <DetailRow
                                 label="Penanggung Jawab"
                                 value={app.guardian_name || '—'}
+                            />
+                            <DetailRow
+                                label="No. WA Penanggung Jawab"
+                                value={app.guardian_whatsapp || '—'}
                             />
                             <DetailRow
                                 label="No. WhatsApp"
@@ -719,6 +733,9 @@ function DecisionDialog({
                                 {app.skills || '—'}
                             </p>
                         </div>
+
+                        {/* Berkas pendukung opsional (surat pengantar / CV / portofolio) */}
+                        <ApplicationDocuments app={app} />
 
                         {/* Catatan dari Admin Verifikator */}
                         {app.verifikator_note && (

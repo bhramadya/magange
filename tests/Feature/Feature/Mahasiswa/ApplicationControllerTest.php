@@ -236,10 +236,43 @@ test('registration rejects an oversized supporting document', function () {
     Storage::fake('local');
 
     $response = $this->post('/pengajuan', pengajuanFormPayload([
-        'cv' => UploadedFile::fake()->create('cv.pdf', 6000, 'application/pdf'), // >5MB
+        'cv' => UploadedFile::fake()->create('cv.pdf', 3000, 'application/pdf'), // >2MB
     ]));
 
     $response->assertSessionHasErrors('cv');
+});
+
+test('registration rejects an oversized surat pengantar', function () {
+    Queue::fake();
+    Storage::fake('local');
+
+    $response = $this->post('/pengajuan', pengajuanFormPayload([
+        'surat_pengantar' => UploadedFile::fake()->create('pengantar.pdf', 3000, 'application/pdf'), // >2MB
+    ]));
+
+    $response->assertSessionHasErrors('surat_pengantar');
+});
+
+test('registration rejects an oversized portfolio', function () {
+    Queue::fake();
+    Storage::fake('local');
+
+    $response = $this->post('/pengajuan', pengajuanFormPayload([
+        'portfolio' => UploadedFile::fake()->create('porto.pdf', 11000, 'application/pdf'), // >10MB
+    ]));
+
+    $response->assertSessionHasErrors('portfolio');
+});
+
+test('registration accepts a portfolio between 2MB and 10MB', function () {
+    Queue::fake();
+    Storage::fake('local');
+
+    $this->post('/pengajuan', pengajuanFormPayload([
+        'portfolio' => UploadedFile::fake()->create('porto.pdf', 5000, 'application/pdf'), // ±5MB
+    ]))->assertRedirect(route('login.otp'));
+
+    expect(InternshipApplication::first()->portfolio_path)->not->toBeNull();
 });
 
 test('registration photo becomes the user avatar', function () {

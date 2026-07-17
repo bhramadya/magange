@@ -42,6 +42,18 @@ class InternshipApplicationResource extends JsonResource
             // URL pas foto (disk privat) bila ada — dilayani route terproteksi.
             'photo_url' => $this->photo_path !== null ? route('pengajuan.foto', $this->resource) : null,
 
+            // Berkas pendukung pendaftaran (disk privat) — route terproteksi
+            // pengajuan.dokumen, otorisasi policy view (sama seperti pas foto).
+            'surat_pengantar_url' => $this->surat_pengantar_path !== null
+                ? route('pengajuan.dokumen', [$this->resource, 'surat-pengantar'])
+                : null,
+            'cv_url' => $this->cv_path !== null
+                ? route('pengajuan.dokumen', [$this->resource, 'cv'])
+                : null,
+            'portfolio_url' => $this->portfolio_path !== null
+                ? route('pengajuan.dokumen', [$this->resource, 'portofolio'])
+                : null,
+
             // Diisi peserta saat mendaftar.
             'nis' => $this->nis,
             'address' => $this->address,

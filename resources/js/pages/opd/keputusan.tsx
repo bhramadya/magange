@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     Search,
     ClipboardCheck,
@@ -20,6 +20,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { ApplicationDocuments } from '@/components/application-documents';
 import MagangLayout, { opdNav } from '@/layouts/magang-layout';
 import { cn } from '@/lib/utils';
 import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
@@ -30,9 +31,9 @@ import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
  *  verifikator ke OPD ini. Tata letak master-detail: daftar di kiri, panel
  *  keputusan (setujui/tolak) di kanan — berbeda dari dasbor (dialog).
  *
- *  FRONTEND ONLY. Rekan backend mengganti handler simulasi dengan:
- *    router.post(`/opd/pengajuan/${id}/setujui`, {})
- *    router.post(`/opd/pengajuan/${id}/tolak`,   { rejection_reason })
+ *  Aksi tersambung ke backend (SubmissionController OPD):
+ *    router.post(`/opd/pengajuan/${id}/approve`, { division, field_supervisor, person_in_charge })
+ *    router.post(`/opd/pengajuan/${id}/reject`,  { rejection_reason })
  *  Backend hanya mengirim pengajuan milik OPD admin yang login.
  * ========================================================================= */
 
@@ -47,9 +48,8 @@ function formatDate(iso: string): string {
 
 function waitingDays(iso: string): number {
     const at = new Date(iso).getTime();
-    const now = new Date('2026-06-25').getTime(); // acuan demo; backend pakai now()
 
-    return Math.max(0, Math.floor((now - at) / 86_400_000));
+    return Math.max(0, Math.floor((Date.now() - at) / 86_400_000));
 }
 
 /* ---- mock ------------------------------------------------------------ */
@@ -81,6 +81,14 @@ function makeApp(
         campus_supervisor: 'Dr. Bambang Sutrisno',
         major: 'Teknik Informatika',
         skills: 'React, Laravel, REST API, PostgreSQL',
+        applicant_name: 'Peserta Magang',
+        applicant_email: 'peserta@example.com',
+        applicant_whatsapp: '6281234567890',
+        nis: '2026001234',
+        address: 'Jl. Pahlawan No. 1, Madiun',
+        campus_supervisor_whatsapp: '6281234500001',
+        guardian_name: 'Slamet Riyadi',
+        guardian_whatsapp: '6281234500002',
         verifikator_note:
             'Berkas lengkap & sesuai. Kandidat kuat untuk tim pengembangan aplikasi.',
         opd: THIS_OPD,
@@ -206,6 +214,7 @@ function DecisionPanel({
 }) {
     const [mode, setMode] = useState<DecisionMode>('approve');
     const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [reason, setReason] = useState('');
 
     // Penempatan kini diisi Admin OPD saat menyetujui (dipindah dari Verifikator).
@@ -221,12 +230,28 @@ function DecisionPanel({
             return;
         }
 
+        setError(null);
         setProcessing(true);
-        // TODO(backend): router.post(`/opd/pengajuan/${app.id}/setujui`, { division, field_supervisor, person_in_charge })
-        setTimeout(() => {
-            setProcessing(false);
-            onApproved(app.id);
-        }, 800);
+        router.post(
+            `/opd/pengajuan/${app.id}/approve`,
+            {
+                division: division.trim(),
+                field_supervisor: fieldSupervisor.trim(),
+                person_in_charge: personInCharge.trim(),
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => onApproved(app.id),
+                onError: (errs) =>
+                    setError(
+                        errs.division ??
+                            errs.field_supervisor ??
+                            errs.person_in_charge ??
+                            'Gagal menyetujui pengajuan.',
+                    ),
+                onFinish: () => setProcessing(false),
+            },
+        );
     }
 
     function submitReject() {
@@ -234,12 +259,21 @@ function DecisionPanel({
             return;
         }
 
+        setError(null);
         setProcessing(true);
-        // TODO(backend): router.post(`/opd/pengajuan/${app.id}/tolak`, { rejection_reason: reason })
-        setTimeout(() => {
-            setProcessing(false);
-            onRejected(app.id);
-        }, 800);
+        router.post(
+            `/opd/pengajuan/${app.id}/reject`,
+            { rejection_reason: reason.trim() },
+            {
+                preserveScroll: true,
+                onSuccess: () => onRejected(app.id),
+                onError: (errs) =>
+                    setError(
+                        errs.rejection_reason ?? 'Gagal menolak pengajuan.',
+                    ),
+                onFinish: () => setProcessing(false),
+            },
+        );
     }
 
     return (
@@ -249,13 +283,31 @@ function DecisionPanel({
                     {app.ticket_number}
                 </p>
                 <h3 className="mt-0.5 text-lg font-bold text-[#12213e]">
-                    {app.institution_name}
+                    {app.applicant_name ?? app.institution_name}
                 </h3>
             </div>
 
+            {/* Pas foto pemohon (disk privat, route terproteksi) */}
+            {app.photo_url && (
+                <div className="flex justify-center">
+                    <img
+                        src={app.photo_url}
+                        alt={`Pas foto ${app.applicant_name ?? 'pemohon'}`}
+                        className="h-40 w-32 rounded-xl border border-slate-200 object-cover shadow-sm"
+                    />
+                </div>
+            )}
+
             <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/60 px-4">
+                <DetailRow label="NIS / NIM" value={app.nis || '—'} />
+                <DetailRow
+                    label="Nama Lengkap"
+                    value={app.applicant_name || '—'}
+                />
+                <DetailRow label="Asal Instansi" value={app.institution_name} />
                 <DetailRow label="Tujuan Magang" value={app.tujuan_magang} />
                 <DetailRow label="Jurusan" value={app.major ?? '—'} />
+                <DetailRow label="Alamat" value={app.address || '—'} />
                 <DetailRow
                     label="Durasi"
                     value={`${app.duration_months} bulan`}
@@ -268,6 +320,23 @@ function DecisionPanel({
                     label="Pembimbing Kampus"
                     value={app.campus_supervisor}
                 />
+                <DetailRow
+                    label="No. WA Pembimbing"
+                    value={app.campus_supervisor_whatsapp || '—'}
+                />
+                <DetailRow
+                    label="Penanggung Jawab"
+                    value={app.guardian_name || '—'}
+                />
+                <DetailRow
+                    label="No. WA Penanggung Jawab"
+                    value={app.guardian_whatsapp || '—'}
+                />
+                <DetailRow
+                    label="No. WhatsApp"
+                    value={app.applicant_whatsapp || '—'}
+                />
+                <DetailRow label="Email" value={app.applicant_email || '—'} />
             </div>
 
             {/* Keahlian peserta */}
@@ -279,6 +348,9 @@ function DecisionPanel({
                     {app.skills || '—'}
                 </p>
             </div>
+
+            {/* Berkas pendukung opsional (surat pengantar / CV / portofolio) */}
+            <ApplicationDocuments app={app} />
 
             {/* Catatan dari Admin Verifikator */}
             {app.verifikator_note && (
@@ -372,6 +444,12 @@ function DecisionPanel({
                             </p>
                         </div>
 
+                        {error && (
+                            <p className="text-sm font-medium text-rose-600">
+                                {error}
+                            </p>
+                        )}
+
                         <button
                             type="button"
                             onClick={submitApprove}
@@ -407,6 +485,11 @@ function DecisionPanel({
                                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#0a1628] transition outline-none placeholder:text-slate-400 focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15"
                             />
                         </div>
+                        {error && (
+                            <p className="text-sm font-medium text-rose-600">
+                                {error}
+                            </p>
+                        )}
                         <button
                             type="button"
                             onClick={submitReject}

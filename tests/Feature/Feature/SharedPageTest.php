@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\UserRole;
+use App\Models\Faq;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -50,7 +51,7 @@ it('menampilkan nama Admin Verifikator yang login di seluruh halaman Kelola FAQ'
         'name' => 'Verifikator FAQ Unik',
         'role' => UserRole::AdminVerifikator,
     ]);
-    $faq = App\Models\Faq::create([
+    $faq = Faq::create([
         'question' => 'Pertanyaan uji?',
         'answer' => 'Jawaban uji.',
         'sort_order' => 0,

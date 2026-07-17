@@ -15,6 +15,7 @@ use App\Http\Controllers\ProfileAvatarController;
 use App\Http\Controllers\SharedPageController;
 use App\Http\Controllers\Verifikator\DashboardController as VerifikatorDashboardController;
 use App\Http\Controllers\Verifikator\FaqController;
+use App\Http\Controllers\Verifikator\OpdController;
 use App\Http\Controllers\Verifikator\PengajuanController;
 use App\Http\Controllers\Verifikator\ReportController as VerifikatorReportController;
 use Illuminate\Support\Facades\Route;
@@ -63,6 +64,8 @@ Route::middleware(['auth', 'role:admin_verifikator'])->group(function () {
     Route::get('verifikator', [VerifikatorDashboardController::class, 'index'])->name('verifikator.dashboard');
     Route::get('verifikator/masuk', [VerifikatorDashboardController::class, 'masuk'])->name('verifikator.masuk');
     Route::get('verifikator/riwayat', [VerifikatorDashboardController::class, 'riwayat'])->name('verifikator.riwayat');
+    // Kelola OPD (CRUD penuh) menggantikan halaman "Kelola Kuota OPD" lama.
+    // Halaman kuota lama tetap tersedia untuk kompatibilitas tautan/tes.
     Route::get('verifikator/kuota', [VerifikatorDashboardController::class, 'kuota'])->name('verifikator.kuota');
 });
 
@@ -176,6 +179,19 @@ Route::middleware(['auth', 'role:admin_verifikator'])
         Route::get('{faq}/edit', [FaqController::class, 'edit'])->name('edit');
         Route::put('{faq}', [FaqController::class, 'update'])->name('update');
         Route::delete('{faq}', [FaqController::class, 'destroy'])->name('destroy');
+    });
+
+// Verifikator: kelola OPD (CRUD penuh). Hanya Verifikator yang mengelola OPD.
+Route::middleware(['auth', 'role:admin_verifikator'])
+    ->prefix('verifikator/opd')
+    ->name('verifikator.opd.')
+    ->group(function () {
+        Route::get('/', [OpdController::class, 'index'])->name('index');
+        Route::get('create', [OpdController::class, 'create'])->name('create');
+        Route::post('/', [OpdController::class, 'store'])->name('store');
+        Route::get('{opd}/edit', [OpdController::class, 'edit'])->name('edit');
+        Route::put('{opd}', [OpdController::class, 'update'])->name('update');
+        Route::delete('{opd}', [OpdController::class, 'destroy'])->name('destroy');
     });
 
 require __DIR__.'/settings.php';

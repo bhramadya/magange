@@ -112,9 +112,9 @@ export const verifikatorNav: MagangNavItem[] = [
         icon: History,
     },
     {
-        key: 'kuota',
-        title: 'Kelola Kuota OPD',
-        href: '/verifikator/kuota',
+        key: 'opd',
+        title: 'Kelola OPD',
+        href: '/verifikator/opd',
         icon: Users,
     },
     {

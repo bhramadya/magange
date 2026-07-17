@@ -64,10 +64,10 @@ class StoreApplicationRequest extends FormRequest
             'major' => ['nullable', 'string', 'max:255'],
             'skills' => ['nullable', 'string', 'max:2000'],
             'photo' => ['nullable', 'image', 'mimes:jpeg,jpg,png', 'max:2048'],
-            // Berkas pendukung opsional ("jika ada"). Dokumen: PDF/Word; Portofolio
-            // juga menerima gambar/ZIP. Batas ukuran lebih longgar dari pas foto.
-            'surat_pengantar' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
-            'cv' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
+            // Berkas pendukung opsional ("jika ada"). Dokumen: PDF/Word maks 2MB;
+            // Portofolio juga menerima gambar/ZIP dengan batas lebih longgar (10MB).
+            'surat_pengantar' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:2048'],
+            'cv' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:2048'],
             'portfolio' => ['nullable', 'file', 'mimes:pdf,doc,docx,zip,jpeg,jpg,png', 'max:10240'],
             // Gerbang anti-bot (flowchart Fase 1): token reCAPTCHA v2 checkbox.
             'recaptcha_token' => [$captchaConfigured ? 'required' : 'nullable', new Recaptcha($this->ip())],
@@ -139,11 +139,11 @@ class StoreApplicationRequest extends FormRequest
             'photo.mimes' => 'Pas foto harus berformat JPG atau PNG.',
             'photo.max' => 'Ukuran pas foto maksimal 2 MB.',
             'surat_pengantar.mimes' => 'Surat Pengantar harus berformat PDF atau Word.',
-            'surat_pengantar.max' => 'Ukuran Surat Pengantar maksimal 5 MB.',
+            'surat_pengantar.max' => 'Ukuran Surat Pengantar maksimal 2MB.',
             'cv.mimes' => 'CV harus berformat PDF atau Word.',
-            'cv.max' => 'Ukuran CV maksimal 5 MB.',
+            'cv.max' => 'Ukuran CV maksimal 2MB.',
             'portfolio.mimes' => 'Portofolio harus berformat PDF, Word, ZIP, atau gambar.',
-            'portfolio.max' => 'Ukuran Portofolio maksimal 10 MB.',
+            'portfolio.max' => 'Ukuran Portofolio maksimal 10MB.',
             'recaptcha_token.required' => 'Verifikasi captcha wajib diselesaikan.',
         ];
     }

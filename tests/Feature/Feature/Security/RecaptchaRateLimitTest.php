@@ -61,7 +61,7 @@ test('field pendaftaran tambahan tersimpan termasuk pas foto', function () {
     Storage::fake('local');
 
     $this->post('/pengajuan', validPengajuan([
-        'photo' => UploadedFile::fake()->image('foto.jpg', 300, 400),
+        'photo' => UploadedFile::fake()->create('foto.jpg', 200, 'image/jpeg'),
     ]));
 
     $app = InternshipApplication::firstOrFail();

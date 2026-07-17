@@ -657,7 +657,9 @@ export default function Pengajuan({
                             {application.campus_supervisor_whatsapp && (
                                 <DetailRow
                                     label="No. WA Dosen/Guru Pembimbing"
-                                    value={application.campus_supervisor_whatsapp}
+                                    value={
+                                        application.campus_supervisor_whatsapp
+                                    }
                                 />
                             )}
                             {application.guardian_name && (

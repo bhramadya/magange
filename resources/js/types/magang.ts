@@ -32,6 +32,8 @@ export interface Opd {
     id: number;
     name: string;
     code: string;
+    description?: string | null; // deskripsi OPD (opsional) — tampil di form Kelola OPD
+    is_active?: boolean; // status aktif OPD
     // Kuota magang — tampil di card OPD halaman utama (inisiatif UX).
     quota?: number; // total kuota
     quota_used?: number; // sudah terpakai
@@ -83,9 +85,15 @@ export interface InternshipApplication {
     guardian_whatsapp?: string | null; // no. WA penanggung jawab
     photo_url?: string | null; // URL pas foto (disk privat, route terproteksi)
 
+    // Berkas pendukung opsional ("jika ada") — disk privat, route terproteksi
+    // pengajuan.dokumen (GET pengajuan/{application}/dokumen/{jenis}).
+    surat_pengantar_url?: string | null;
+    cv_url?: string | null;
+    portfolio_url?: string | null;
+
     // Diisi peserta saat mendaftar (welcome #daftar).
     major?: string | null; // jurusan (opsional)
-    skills?: string; // keahlian/keterampilan — tampil di card verifikator
+    skills?: string | null; // keahlian/keterampilan — tampil di card verifikator
 
     // Diisi Admin Verifikator saat meneruskan — catatan untuk dibaca Admin OPD.
     verifikator_note?: string | null;
