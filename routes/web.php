@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ApplicationDocumentController;
 use App\Http\Controllers\ApplicationPhotoController;
 use App\Http\Controllers\Auth\OtpLoginController;
 use App\Http\Controllers\HomeController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\ProfileAvatarController;
 use App\Http\Controllers\SharedPageController;
 use App\Http\Controllers\Verifikator\DashboardController as VerifikatorDashboardController;
 use App\Http\Controllers\Verifikator\FaqController;
+use App\Http\Controllers\Verifikator\OpdController;
 use App\Http\Controllers\Verifikator\PengajuanController;
 use App\Http\Controllers\Verifikator\ReportController as VerifikatorReportController;
 use Illuminate\Support\Facades\Route;
@@ -62,6 +64,8 @@ Route::middleware(['auth', 'role:admin_verifikator'])->group(function () {
     Route::get('verifikator', [VerifikatorDashboardController::class, 'index'])->name('verifikator.dashboard');
     Route::get('verifikator/masuk', [VerifikatorDashboardController::class, 'masuk'])->name('verifikator.masuk');
     Route::get('verifikator/riwayat', [VerifikatorDashboardController::class, 'riwayat'])->name('verifikator.riwayat');
+    // Kelola OPD (CRUD penuh) menggantikan halaman "Kelola Kuota OPD" lama.
+    // Halaman kuota lama tetap tersedia untuk kompatibilitas tautan/tes.
     Route::get('verifikator/kuota', [VerifikatorDashboardController::class, 'kuota'])->name('verifikator.kuota');
 });
 
@@ -117,11 +121,17 @@ Route::middleware(['auth', 'role:admin_opd,admin_verifikator'])
     ->patch('kuota/{opd}', [OpdQuotaController::class, 'update'])
     ->name('kuota.update');
 
-// Pas foto pemohon (disk privat) untuk pop-up tinjau admin. Otorisasi via
-// policy view: Verifikator semua, OPD hanya pengajuan miliknya.
-Route::middleware(['auth', 'role:admin_opd,admin_verifikator'])
+// Pas foto pemohon (disk privat) untuk pemilik/admin. Otorisasi via
+// policy view: Mahasiswa pemilik, Verifikator semua, OPD hanya pengajuan miliknya.
+Route::middleware(['auth', 'role:mahasiswa,admin_opd,admin_verifikator'])
     ->get('pengajuan/{application}/foto', [ApplicationPhotoController::class, 'show'])
     ->name('pengajuan.foto');
+
+// Berkas pendukung pengajuan (disk privat): Surat Pengantar / CV / Portofolio.
+Route::middleware(['auth', 'role:mahasiswa,admin_opd,admin_verifikator'])
+    ->get('pengajuan/{application}/dokumen/{type}', [ApplicationDocumentController::class, 'show'])
+    ->whereIn('type', ['surat-pengantar', 'cv', 'portofolio'])
+    ->name('pengajuan.dokumen');
 
 // Foto profil pengguna yang login (disk privat). Untuk mahasiswa, otomatis
 // diisi dari pas foto pendaftaran. Tanpa parameter → hanya avatar diri sendiri.
@@ -169,6 +179,19 @@ Route::middleware(['auth', 'role:admin_verifikator'])
         Route::get('{faq}/edit', [FaqController::class, 'edit'])->name('edit');
         Route::put('{faq}', [FaqController::class, 'update'])->name('update');
         Route::delete('{faq}', [FaqController::class, 'destroy'])->name('destroy');
+    });
+
+// Verifikator: kelola OPD (CRUD penuh). Hanya Verifikator yang mengelola OPD.
+Route::middleware(['auth', 'role:admin_verifikator'])
+    ->prefix('verifikator/opd')
+    ->name('verifikator.opd.')
+    ->group(function () {
+        Route::get('/', [OpdController::class, 'index'])->name('index');
+        Route::get('create', [OpdController::class, 'create'])->name('create');
+        Route::post('/', [OpdController::class, 'store'])->name('store');
+        Route::get('{opd}/edit', [OpdController::class, 'edit'])->name('edit');
+        Route::put('{opd}', [OpdController::class, 'update'])->name('update');
+        Route::delete('{opd}', [OpdController::class, 'destroy'])->name('destroy');
     });
 
 require __DIR__.'/settings.php';

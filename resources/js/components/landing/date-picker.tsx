@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useState, useEffect, useRef } from 'react';
 
 /* =========================================================================
  *  DATE PICKER — kalender popover kustom (Indonesia locale).
@@ -11,20 +11,35 @@ import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const NAMA_HARI = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 const NAMA_BULAN = [
-    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
 ];
 
 function toISODate(d: Date) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
+
     return `${y}-${m}-${day}`;
 }
 
 function formatTanggalID(iso: string) {
-    if (!iso) return '';
+    if (!iso) {
+        return '';
+    }
+
     const [y, m, d] = iso.split('-').map(Number);
+
     return `${d} ${NAMA_BULAN[m - 1]} ${y}`;
 }
 
@@ -48,7 +63,9 @@ export function DatePicker({
     const ref = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (!open) return;
+        if (!open) {
+            return;
+        }
 
         function handlePointer(e: MouseEvent) {
             if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -56,10 +73,13 @@ export function DatePicker({
             }
         }
         function handleKey(e: KeyboardEvent) {
-            if (e.key === 'Escape') setOpen(false);
+            if (e.key === 'Escape') {
+                setOpen(false);
+            }
         }
         document.addEventListener('mousedown', handlePointer);
         document.addEventListener('keydown', handleKey);
+
         return () => {
             document.removeEventListener('mousedown', handlePointer);
             document.removeEventListener('keydown', handleKey);
@@ -73,21 +93,33 @@ export function DatePicker({
     const todayISO = toISODate(new Date());
 
     const cells: (number | null)[] = [];
-    for (let i = 0; i < firstWeekday; i++) cells.push(null);
-    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
-    const goMonth = (delta: number) => setViewDate(new Date(year, month + delta, 1));
+    for (let i = 0; i < firstWeekday; i++) {
+        cells.push(null);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+        cells.push(d);
+    }
+
+    const goMonth = (delta: number) =>
+        setViewDate(new Date(year, month + delta, 1));
 
     return (
         <div ref={ref} className="relative">
             <button
                 type="button"
                 onClick={() => {
-                    if (!open && value) setViewDate(new Date(`${value}T00:00:00`));
+                    if (!open && value) {
+                        setViewDate(new Date(`${value}T00:00:00`));
+                    }
+
                     setOpen((o) => !o);
                 }}
-                className={`flex w-full items-center justify-between rounded-2xl border bg-white px-4 py-3.5 text-left text-[15px] transition-all focus:ring-2 focus:ring-brand-hover focus:outline-none cursor-pointer ${
-                    open ? 'border-transparent ring-2 ring-brand-hover' : 'border-slate-200'
+                className={`focus:ring-brand-hover flex w-full cursor-pointer items-center justify-between rounded-2xl border bg-white px-4 py-3.5 text-left text-[15px] transition-all focus:ring-2 focus:outline-none ${
+                    open
+                        ? 'ring-brand-hover border-transparent ring-2'
+                        : 'border-slate-200'
                 } ${value ? 'text-brand-ink' : 'text-brand-ink/40'}`}
             >
                 <span>{value ? formatTanggalID(value) : placeholder}</span>
@@ -111,17 +143,17 @@ export function DatePicker({
                             <button
                                 type="button"
                                 onClick={() => goMonth(-1)}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg text-brand-ink/60 transition-colors hover:bg-brand-bg hover:text-brand-hover cursor-pointer"
+                                className="text-brand-ink/60 hover:bg-brand-bg hover:text-brand-hover flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-colors"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </button>
-                            <span className="text-[14px] font-semibold text-brand-ink">
+                            <span className="text-brand-ink text-[14px] font-semibold">
                                 {NAMA_BULAN[month]} {year}
                             </span>
                             <button
                                 type="button"
                                 onClick={() => goMonth(1)}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg text-brand-ink/60 transition-colors hover:bg-brand-bg hover:text-brand-hover cursor-pointer"
+                                className="text-brand-ink/60 hover:bg-brand-bg hover:text-brand-hover flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition-colors"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </button>
@@ -131,7 +163,7 @@ export function DatePicker({
                             {NAMA_HARI.map((h) => (
                                 <span
                                     key={h}
-                                    className="flex h-8 items-center justify-center text-[11px] font-semibold text-brand-ink/35 uppercase"
+                                    className="text-brand-ink/35 flex h-8 items-center justify-center text-[11px] font-semibold uppercase"
                                 >
                                     {h}
                                 </span>
@@ -140,7 +172,10 @@ export function DatePicker({
 
                         <div className="grid grid-cols-7 gap-1">
                             {cells.map((d, i) => {
-                                if (d === null) return <span key={`empty-${i}`} />;
+                                if (d === null) {
+                                    return <span key={`empty-${i}`} />;
+                                }
+
                                 const iso = toISODate(new Date(year, month, d));
                                 const disabled = min ? iso < min : false;
                                 const selected = iso === value;
@@ -155,11 +190,11 @@ export function DatePicker({
                                             onChange(iso);
                                             setOpen(false);
                                         }}
-                                        className={`flex h-9 items-center justify-center rounded-lg text-[13px] font-medium transition-colors cursor-pointer ${
+                                        className={`flex h-9 cursor-pointer items-center justify-center rounded-lg text-[13px] font-medium transition-colors ${
                                             selected
                                                 ? 'bg-brand-primary text-white shadow-sm'
                                                 : disabled
-                                                  ? 'cursor-not-allowed text-brand-ink/20'
+                                                  ? 'text-brand-ink/20 cursor-not-allowed'
                                                   : isToday
                                                     ? 'bg-brand-bg text-brand-hover hover:bg-[#e7f0fc]'
                                                     : 'text-brand-ink/70 hover:bg-brand-bg hover:text-brand-hover'

@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
     ArrowRight,
@@ -11,6 +11,7 @@ import {
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ClipboardEvent, KeyboardEvent } from 'react';
+import { useRecaptchaV3 } from '@/hooks/use-recaptcha-v3';
 import { cn } from '@/lib/utils';
 
 /* =========================================================================
@@ -40,12 +41,31 @@ interface OtpLoginProps {
     status?: string;
     // Diisi controller setelah submit form pendaftaran → langsung ke langkah kode.
     prefillEmail?: string | null;
+    // Sisa detik lockout progresif (flash) → hitung mundur live di UI.
+    lockoutSeconds?: number | null;
     errors?: Record<string, string>;
+}
+
+/** Format sisa lockout Indonesia: "2 menit 15 detik" / "45 detik". */
+function formatLockout(totalSeconds: number): string {
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+
+    if (m > 0 && s > 0) {
+        return `${m} menit ${s} detik`;
+    }
+
+    if (m > 0) {
+        return `${m} menit`;
+    }
+
+    return `${s} detik`;
 }
 
 export default function OtpLogin({
     status,
     prefillEmail,
+    lockoutSeconds,
     errors,
 }: OtpLoginProps) {
     const [step, setStep] = useState<Step>(prefillEmail ? 'code' : 'email');
@@ -56,8 +76,27 @@ export default function OtpLogin({
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [resendIn, setResendIn] = useState(prefillEmail ? RESEND_SECONDS : 0);
+    // Lockout progresif (Fibonacci): sisa detik dari server, dihitung mundur live.
+    const [lockLeft, setLockLeft] = useState(lockoutSeconds ?? 0);
+    // Sinkronkan saat server mengirim nilai lockout baru (pola "adjust state
+    // during render" — tanpa effect, tanpa render ganda kaskade).
+    const [prevLockout, setPrevLockout] = useState(lockoutSeconds ?? 0);
+
+    if ((lockoutSeconds ?? 0) !== prevLockout) {
+        setPrevLockout(lockoutSeconds ?? 0);
+        setLockLeft(lockoutSeconds ?? 0);
+    }
 
     const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
+
+    // reCAPTCHA v3 (invisible): token diambil saat kirim OTP (anti-bot login).
+    const recaptchaSiteKey = (
+        usePage().props as {
+            recaptchaSiteKey?: string;
+        }
+    ).recaptchaSiteKey;
+    const executeRecaptcha = useRecaptchaV3(recaptchaSiteKey, 'otp_send');
+
     const emailValid = useMemo(
         () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()),
         [email],
@@ -76,6 +115,18 @@ export default function OtpLogin({
         return () => clearTimeout(t);
     }, [resendIn]);
 
+    // Sinkronkan sisa lockout dari server (flash prop berubah tiap respons).
+    // Hitung mundur lockout progresif.
+    useEffect(() => {
+        if (lockLeft <= 0) {
+            return;
+        }
+
+        const t = setTimeout(() => setLockLeft((s) => s - 1), 1000);
+
+        return () => clearTimeout(t);
+    }, [lockLeft]);
+
     // Fokus otomatis ke kotak pertama saat masuk langkah kode.
     useEffect(() => {
         if (step === 'code') {
@@ -85,42 +136,53 @@ export default function OtpLogin({
 
     // Error yang ditampilkan: prioritaskan hasil handler lokal (router.post
     // onError), lalu error yang datang lewat props Inertia (redirect back server).
-    const shownError = error ?? errors?.otp ?? errors?.email ?? null;
+    // Selama lockout progresif, tampilkan hitung mundur live menggantikan pesan statis.
+    const locked = lockLeft > 0;
+    const shownError = locked
+        ? `Terlalu banyak percobaan salah. Coba lagi dalam ${formatLockout(lockLeft)}.`
+        : (error ?? errors?.otp ?? errors?.email ?? null);
 
     /* ---- Langkah 1: minta OTP ---------------------------------------- */
     function handleRequestOtp(e: React.FormEvent) {
         e.preventDefault();
 
-        if (!emailValid || processing) {
+        if (!emailValid || processing || locked) {
             return;
         }
 
         setError(null);
         setProcessing(true);
 
-        router.post(
-            '/otp/send',
-            { email: email.trim() },
-            {
-                preserveScroll: true,
-                // Controller flash `status` bila sukses → pindah ke langkah kode.
-                onSuccess: () => {
-                    setStep('code');
-                    setResendIn(RESEND_SECONDS);
+        // Token reCAPTCHA v3 diambil dulu (invisible), lalu POST.
+        void executeRecaptcha().then((token) => {
+            router.post(
+                '/otp/send',
+                { email: email.trim(), recaptcha_token: token },
+                {
+                    preserveScroll: true,
+                    // Controller flash `status` bila sukses → pindah ke langkah kode.
+                    onSuccess: () => {
+                        setStep('code');
+                        setResendIn(RESEND_SECONDS);
+                    },
+                    onError: (errs) => {
+                        setError(
+                            errs.recaptcha_token ??
+                                errs.email ??
+                                'Gagal mengirim kode. Coba lagi.',
+                        );
+                    },
+                    onFinish: () => setProcessing(false),
                 },
-                onError: (errs) => {
-                    setError(errs.email ?? 'Gagal mengirim kode. Coba lagi.');
-                },
-                onFinish: () => setProcessing(false),
-            },
-        );
+            );
+        });
     }
 
     /* ---- Langkah 2: verifikasi OTP ----------------------------------- */
     function handleVerifyOtp(e?: React.FormEvent) {
         e?.preventDefault();
 
-        if (!codeComplete || processing) {
+        if (!codeComplete || processing || locked) {
             return;
         }
 
@@ -148,7 +210,7 @@ export default function OtpLogin({
     }
 
     function handleResend() {
-        if (resendIn > 0 || processing) {
+        if (resendIn > 0 || processing || locked) {
             return;
         }
 
@@ -156,23 +218,27 @@ export default function OtpLogin({
         setCode(Array(OTP_LENGTH).fill(''));
         setProcessing(true);
 
-        router.post(
-            '/otp/send',
-            { email: email.trim() },
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setResendIn(RESEND_SECONDS);
-                    inputsRef.current[0]?.focus();
+        void executeRecaptcha().then((token) => {
+            router.post(
+                '/otp/send',
+                { email: email.trim(), recaptcha_token: token },
+                {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        setResendIn(RESEND_SECONDS);
+                        inputsRef.current[0]?.focus();
+                    },
+                    onError: (errs) => {
+                        setError(
+                            errs.recaptcha_token ??
+                                errs.email ??
+                                'Gagal mengirim ulang kode. Coba lagi.',
+                        );
+                    },
+                    onFinish: () => setProcessing(false),
                 },
-                onError: (errs) => {
-                    setError(
-                        errs.email ?? 'Gagal mengirim ulang kode. Coba lagi.',
-                    );
-                },
-                onFinish: () => setProcessing(false),
-            },
-        );
+            );
+        });
     }
 
     /* ---- Input OTP: ketik, hapus, navigasi panah, tempel ------------- */
@@ -354,7 +420,11 @@ export default function OtpLogin({
 
                                         <button
                                             type="submit"
-                                            disabled={!emailValid || processing}
+                                            disabled={
+                                                !emailValid ||
+                                                processing ||
+                                                locked
+                                            }
                                             className={primaryBtn}
                                         >
                                             {processing ? (
@@ -436,6 +506,7 @@ export default function OtpLogin({
                                                     type="text"
                                                     inputMode="numeric"
                                                     maxLength={1}
+                                                    autoFocus={i === 0}
                                                     value={digit}
                                                     onChange={(e) =>
                                                         setDigit(
@@ -470,7 +541,9 @@ export default function OtpLogin({
                                         <button
                                             type="submit"
                                             disabled={
-                                                !codeComplete || processing
+                                                !codeComplete ||
+                                                processing ||
+                                                locked
                                             }
                                             className={primaryBtn}
                                         >
@@ -490,7 +563,12 @@ export default function OtpLogin({
 
                                     <p className="mt-8 text-center text-sm text-[#0a1628]/55">
                                         Tidak menerima kode?{' '}
-                                        {resendIn > 0 ? (
+                                        {locked ? (
+                                            <span className="font-semibold text-slate-400">
+                                                Kirim ulang dalam{' '}
+                                                {formatLockout(lockLeft)}
+                                            </span>
+                                        ) : resendIn > 0 ? (
                                             <span className="font-semibold text-slate-400">
                                                 Kirim ulang dalam {resendIn}s
                                             </span>

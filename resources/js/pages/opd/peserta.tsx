@@ -11,9 +11,11 @@ import {
     Award,
     CheckCircle2,
     Loader2,
+    History,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
+import { ApplicationDocuments } from '@/components/application-documents';
 import { StatusBadge } from '@/components/status-badge';
 import {
     Dialog,
@@ -24,6 +26,7 @@ import {
 } from '@/components/ui/dialog';
 import MagangLayout, { opdNav } from '@/layouts/magang-layout';
 import { cn } from '@/lib/utils';
+import { STATUS_META } from '@/types/magang';
 import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
 
 /* =========================================================================
@@ -328,6 +331,94 @@ function CompleteAction({
     );
 }
 
+/* ---- rekam jejak progres tiket (audit ApplicationStatusLog) ----------- */
+function StatusTimeline({ app }: { app: InternshipApplication }) {
+    // Utamakan status_logs dari backend; bila belum ada, susun garis waktu
+    // minimal dari timestamp yang tersedia agar tetap informatif.
+    const events =
+        app.status_logs && app.status_logs.length > 0
+            ? app.status_logs
+            : [
+                  {
+                      status: 'pending_verifikator' as const,
+                      note: 'Pengajuan dibuat',
+                      actor_name: null,
+                      created_at: app.created_at,
+                  },
+                  ...(app.forwarded_at
+                      ? [
+                            {
+                                status: 'forwarded_opd' as const,
+                                note: app.verifikator_note ?? null,
+                                actor_name: null,
+                                created_at: app.forwarded_at,
+                            },
+                        ]
+                      : []),
+                  ...(app.opd_decision_at
+                      ? [
+                            {
+                                status:
+                                    app.status === 'rejected'
+                                        ? ('rejected' as const)
+                                        : ('approved' as const),
+                                note: app.rejection_reason ?? null,
+                                actor_name: null,
+                                created_at: app.opd_decision_at,
+                            },
+                        ]
+                      : []),
+              ];
+
+    return (
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-[#12213e]">
+                <History className="size-4 text-[#106feb]" /> Rekam Jejak Tiket
+            </p>
+            <ol className="mt-3 space-y-0">
+                {events.map((ev, i) => {
+                    const meta = STATUS_META[ev.status];
+                    const last = i === events.length - 1;
+
+                    return (
+                        <li key={i} className="relative flex gap-3 pb-4">
+                            {/* garis penghubung */}
+                            {!last && (
+                                <span
+                                    aria-hidden
+                                    className="absolute top-4 left-[5px] h-full w-px bg-slate-200"
+                                />
+                            )}
+                            <span
+                                className={cn(
+                                    'relative mt-1 size-[11px] shrink-0 rounded-full ring-2',
+                                    last
+                                        ? 'bg-[#106feb] ring-[#cddcef]'
+                                        : 'bg-slate-300 ring-slate-100',
+                                )}
+                            />
+                            <div className="min-w-0">
+                                <p className="text-sm font-semibold text-[#12213e]">
+                                    {meta.label}
+                                </p>
+                                {ev.note && (
+                                    <p className="mt-0.5 text-xs text-slate-500">
+                                        {ev.note}
+                                    </p>
+                                )}
+                                <p className="mt-0.5 text-[11px] text-slate-400">
+                                    {formatDate(ev.created_at)}
+                                    {ev.actor_name ? ` · ${ev.actor_name}` : ''}
+                                </p>
+                            </div>
+                        </li>
+                    );
+                })}
+            </ol>
+        </div>
+    );
+}
+
 function DetailDialog({
     participant,
     onClose,
@@ -357,7 +448,23 @@ function DetailDialog({
                             </DialogDescription>
                         </DialogHeader>
 
+                        {/* Pas foto peserta (disk privat, route terproteksi) */}
+                        {app.photo_url && (
+                            <div className="flex justify-center">
+                                <img
+                                    src={app.photo_url}
+                                    alt={`Pas foto ${participant.student_name}`}
+                                    className="h-40 w-32 rounded-xl border border-slate-200 object-cover shadow-sm"
+                                />
+                            </div>
+                        )}
+
+                        {/* Seluruh data peserta — identitas + penempatan */}
                         <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white px-4">
+                            <DetailRow
+                                label="NIS / NIM"
+                                value={app.nis || '—'}
+                            />
                             <DetailRow
                                 label="Asal Instansi"
                                 value={app.institution_name}
@@ -365,6 +472,30 @@ function DetailDialog({
                             <DetailRow
                                 label="Tujuan Magang"
                                 value={app.tujuan_magang}
+                            />
+                            <DetailRow
+                                label="Jurusan"
+                                value={app.major || '—'}
+                            />
+                            <DetailRow
+                                label="Keahlian"
+                                value={app.skills || '—'}
+                            />
+                            <DetailRow
+                                label="Alamat"
+                                value={app.address || '—'}
+                            />
+                            <DetailRow
+                                label="No. WhatsApp"
+                                value={app.applicant_whatsapp || '—'}
+                            />
+                            <DetailRow
+                                label="Email"
+                                value={app.applicant_email || '—'}
+                            />
+                            <DetailRow
+                                label="Durasi"
+                                value={`${app.duration_months} bulan`}
                             />
                             <DetailRow
                                 label="Periode"
@@ -386,11 +517,41 @@ function DetailDialog({
                                 icon={GraduationCap}
                             />
                             <DetailRow
+                                label="No. WA Pembimbing"
+                                value={app.campus_supervisor_whatsapp || '—'}
+                            />
+                            <DetailRow
                                 label="Penanggung Jawab"
                                 value={app.person_in_charge ?? '—'}
                                 icon={UserCog}
                             />
+                            <DetailRow
+                                label="Penanggung Jawab / Wali"
+                                value={app.guardian_name || '—'}
+                            />
+                            <DetailRow
+                                label="No. WA Wali"
+                                value={app.guardian_whatsapp || '—'}
+                            />
+                            <DetailRow
+                                label="No. SK Penerimaan"
+                                value={app.sk_number ?? '—'}
+                            />
+                            <DetailRow
+                                label="Tanggal Terbit SK"
+                                value={
+                                    app.sk_issued_at
+                                        ? formatDate(app.sk_issued_at)
+                                        : '—'
+                                }
+                            />
                         </div>
+
+                        {/* Dokumen lampiran (surat pengantar / CV / portofolio) */}
+                        <ApplicationDocuments app={app} />
+
+                        {/* Rekam jejak progres tiket */}
+                        <StatusTimeline app={app} />
 
                         {app.final_report && (
                             <div className="rounded-xl border border-slate-200 bg-white p-4">

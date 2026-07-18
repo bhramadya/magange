@@ -1,9 +1,9 @@
 <x-mail::message>
-@include('mail.partials.header', ['badge' => 'Diterima', 'badgeBg' => '#dbeafe', 'badgeText' => '#106feb'])
+@include('mail.partials.header', ['badge' => 'Menunggu Verifikasi', 'badgeBg' => '#fef3c7', 'badgeText' => '#b45309'])
 
 Halo {{ $application->user->name }},
 
-Pengajuan magang Anda telah **kami terima** dan sedang menunggu verifikasi admin.
+Pengajuan magang Anda **Sedang menunggu verifikasi admin**.
 
 <x-mail::panel>
 Nomor Tiket: **{{ $application->ticket_number }}**

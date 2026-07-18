@@ -3,7 +3,7 @@
 
 Halo {{ $user->name }},
 
-Berikut adalah kode OTP untuk masuk ke portal **Magang Kota Madiun**. Kode berlaku selama 10 menit dan hanya dapat digunakan satu kali.
+Berikut adalah kode OTP untuk masuk ke portal **Magang Kota Madiun**. Kode berlaku selama 5 menit dan hanya dapat digunakan satu kali.
 
 <x-mail::panel>
 # {{ $plainOtp }}

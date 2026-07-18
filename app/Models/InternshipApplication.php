@@ -24,7 +24,9 @@ use Illuminate\Support\Carbon;
  * @property string $institution_name
  * @property string|null $address
  * @property string $campus_supervisor
+ * @property string|null $campus_supervisor_whatsapp
  * @property string|null $guardian_name
+ * @property string|null $guardian_whatsapp
  * @property string|null $major
  * @property string|null $skills
  * @property string|null $photo_path
@@ -57,7 +59,9 @@ use Illuminate\Support\Carbon;
     'institution_name',
     'address',
     'campus_supervisor',
+    'campus_supervisor_whatsapp',
     'guardian_name',
+    'guardian_whatsapp',
     'major',
     'skills',
     'photo_path',

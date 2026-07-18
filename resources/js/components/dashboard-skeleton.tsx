@@ -44,18 +44,27 @@ export function DetailCardSkeleton({ rows = 4 }: { rows?: number }) {
 }
 
 /** Tabel — skeleton untuk tabel daftar pengajuan (Verifikator/OPD). */
-export function TableSkeleton({ rows = 5, cols = 5 }: { rows?: number; cols?: number }) {
+export function TableSkeleton({
+    rows = 5,
+    cols = 5,
+}: {
+    rows?: number;
+    cols?: number;
+}) {
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             {/* Header */}
-            <div className="flex gap-4 pb-3 border-b border-slate-100">
+            <div className="flex gap-4 border-b border-slate-100 pb-3">
                 {Array.from({ length: cols }).map((_, i) => (
                     <Skeleton key={i} className="h-4 flex-1" />
                 ))}
             </div>
             {/* Rows */}
             {Array.from({ length: rows }).map((_, r) => (
-                <div key={r} className="flex gap-4 py-3 border-b border-slate-50 last:border-0">
+                <div
+                    key={r}
+                    className="flex gap-4 border-b border-slate-50 py-3 last:border-0"
+                >
                     {Array.from({ length: cols }).map((_, c) => (
                         <Skeleton key={c} className="h-4 flex-1" />
                     ))}
@@ -98,7 +107,9 @@ export function DashboardPageSkeleton({
         <div className="space-y-6">
             <StatCardsSkeleton />
             <div className="grid gap-6 lg:grid-cols-3">
-                <div className={`${showTimeline ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
+                <div
+                    className={`${showTimeline ? 'lg:col-span-2' : 'lg:col-span-3'}`}
+                >
                     {showTimeline ? (
                         <TimelineSkeleton />
                     ) : tableRows ? (

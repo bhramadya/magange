@@ -22,6 +22,9 @@ interface PengajuanServiceContract
      *     end_date: string,
      *     institution_name: string,
      *     campus_supervisor: string,
+     *     campus_supervisor_whatsapp?: string|null,
+     *     guardian_name?: string|null,
+     *     guardian_whatsapp?: string|null,
      *     major?: string|null,
      *     skills?: string|null,
      * }  $validatedData

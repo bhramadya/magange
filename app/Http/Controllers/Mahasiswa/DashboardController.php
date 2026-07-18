@@ -8,6 +8,7 @@ use App\Http\Resources\MagangUserResource;
 use App\Models\ApplicationDocument;
 use App\Models\InternshipApplication;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -37,12 +38,7 @@ class DashboardController extends Controller
     {
         $application = $this->latestApplication($request, ['opd', 'documents']);
 
-        $documents = $application
-            ? $application->documents->map(fn (ApplicationDocument $doc): array => [
-                'label' => $doc->type->label(),
-                'file_name' => $doc->file_name,
-            ])->all()
-            : [];
+        $documents = $application ? $this->applicationDocuments($application) : [];
 
         return Inertia::render('mahasiswa/pengajuan', [
             'user' => new MagangUserResource($request->user()),
@@ -62,6 +58,52 @@ class DashboardController extends Controller
             'user' => new MagangUserResource($request->user()),
             'application' => $application ? new InternshipApplicationResource($application) : null,
         ]);
+    }
+
+    /**
+     * Dokumen read-only yang ditampilkan di Pengajuan Saya.
+     *
+     * @return array<int, array{label: string, file_name: string, url?: string, kind?: string}>
+     */
+    private function applicationDocuments(InternshipApplication $application): array
+    {
+        $documents = [];
+
+        if ($application->photo_path !== null) {
+            $documents[] = [
+                'label' => 'Pas Foto',
+                'file_name' => basename($application->photo_path),
+                'url' => route('pengajuan.foto', $application),
+                'kind' => 'image',
+            ];
+        }
+
+        foreach ([
+            'surat_pengantar_path' => ['Surat Pengantar', 'surat-pengantar'],
+            'cv_path' => ['Curriculum Vitae', 'cv'],
+            'portfolio_path' => ['Portofolio', 'portofolio'],
+        ] as $column => [$label, $type]) {
+            $path = $application->{$column};
+
+            if ($path === null) {
+                continue;
+            }
+
+            $documents[] = [
+                'label' => $label,
+                'file_name' => basename((string) $path),
+                'url' => route('pengajuan.dokumen', [$application, $type]),
+            ];
+        }
+
+        return array_merge(
+            $documents,
+            $application->documents->map(fn (ApplicationDocument $doc): array => [
+                'label' => $doc->type->label(),
+                'file_name' => $doc->file_name,
+                'url' => Storage::disk('local')->exists($doc->file_path) ? Storage::disk('local')->url($doc->file_path) : null,
+            ])->all(),
+        );
     }
 
     /**

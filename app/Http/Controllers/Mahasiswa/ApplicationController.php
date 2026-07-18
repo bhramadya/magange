@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Mahasiswa;
 use App\Contracts\PengajuanServiceContract;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Application\StoreApplicationRequest;
+use App\Http\Resources\MagangUserResource;
 use App\Models\InternshipApplication;
 use App\Models\Opd;
+use App\Services\ImageService;
 use App\Services\RateLimitService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,6 +30,7 @@ class ApplicationController extends Controller
     public function __construct(
         private PengajuanServiceContract $submissionService,
         private RateLimitService $rateLimit,
+        private ImageService $imageService,
     ) {}
 
     public function create(): Response
@@ -54,8 +57,12 @@ class ApplicationController extends Controller
         }
 
         // Simpan pas foto (opsional) ke disk privat sebelum membuat pengajuan.
+        // Dinormalisasi via Intervention Image (resize + kompresi JPEG).
         if ($request->hasFile('photo')) {
-            $validated['photo_path'] = $request->file('photo')->store('applications/photos', 'local');
+            $validated['photo_path'] = $this->imageService->processAndStore(
+                $request->file('photo'),
+                'applications/photos',
+            );
         }
 
         // Berkas pendukung opsional ("jika ada") — disk privat, satu folder khusus.
@@ -82,6 +89,8 @@ class ApplicationController extends Controller
     /**
      * Lacak status publik (tanpa login) berdasarkan NOMOR TIKET (`?tiket=`).
      * Kontrak props selaras HANDOFF-BACKEND.md: { application, ticket }.
+     * `user` (MagangUserResource) disuntik bila login agar header dasbor
+     * (foto profil dll.) tampil sama seperti halaman dasbor lain.
      */
     public function track(Request $request): Response
     {
@@ -94,6 +103,7 @@ class ApplicationController extends Controller
         return Inertia::render('lacak', [
             'application' => $application,
             'ticket' => $ticket !== '' ? $ticket : null,
+            'user' => $request->user() !== null ? new MagangUserResource($request->user()) : null,
         ]);
     }
 
@@ -122,8 +132,8 @@ class ApplicationController extends Controller
             'tujuan_magang' => $application->tujuan_magang,
             'institution_name' => $application->institution_name,
             'duration_months' => $application->duration_months,
-            'start_date' => $application->start_date?->toDateString(),
-            'end_date' => $application->end_date?->toDateString(),
+            'start_date' => $application->start_date->toDateString(),
+            'end_date' => $application->end_date->toDateString(),
             'opd' => $application->opd !== null ? [
                 'id' => $application->opd->id,
                 'name' => $application->opd->name,

@@ -32,9 +32,14 @@ export interface Opd {
     id: number;
     name: string;
     code: string;
+    description?: string | null; // deskripsi OPD (opsional) — tampil di form Kelola OPD
+    is_active?: boolean; // status aktif OPD
     // Kuota magang — tampil di card OPD halaman utama (inisiatif UX).
     quota?: number; // total kuota
     quota_used?: number; // sudah terpakai
+    // Revisi baru: kode internal (angka) + inisial publik (string).
+    kode_opd?: number | null;
+    inisial_opd?: string | null;
 }
 
 export interface FinalReport {
@@ -59,6 +64,14 @@ export interface Faq {
     is_active: boolean;
 }
 
+// Satu baris rekam jejak status tiket (dari ApplicationStatusLog).
+export interface ApplicationStatusLog {
+    status: ApplicationStatus;
+    note?: string | null;
+    actor_name?: string | null; // pelaku transisi (null = sistem)
+    created_at: string;
+}
+
 export interface InternshipApplication {
     id: number;
     ticket_number: string;
@@ -78,12 +91,20 @@ export interface InternshipApplication {
     // Diisi peserta saat mendaftar (welcome #daftar) — tampil di pop-up admin.
     nis?: string | null;
     address?: string | null;
+    campus_supervisor_whatsapp?: string | null; // no. WA dosen/guru pembimbing
     guardian_name?: string | null; // nama penanggung jawab
+    guardian_whatsapp?: string | null; // no. WA penanggung jawab
     photo_url?: string | null; // URL pas foto (disk privat, route terproteksi)
+
+    // Berkas pendukung opsional ("jika ada") — disk privat, route terproteksi
+    // pengajuan.dokumen (GET pengajuan/{application}/dokumen/{jenis}).
+    surat_pengantar_url?: string | null;
+    cv_url?: string | null;
+    portfolio_url?: string | null;
 
     // Diisi peserta saat mendaftar (welcome #daftar).
     major?: string | null; // jurusan (opsional)
-    skills?: string; // keahlian/keterampilan — tampil di card verifikator
+    skills?: string | null; // keahlian/keterampilan — tampil di card verifikator
 
     // Diisi Admin Verifikator saat meneruskan — catatan untuk dibaca Admin OPD.
     verifikator_note?: string | null;
@@ -94,10 +115,22 @@ export interface InternshipApplication {
     field_supervisor: string | null;
     person_in_charge: string | null;
 
+    // Surat Keputusan penerimaan (di-generate backend saat OPD menyetujui;
+    // nomor auto-increment + tanggal terbit STATIS — cetak ulang tidak berubah).
+    sk_number?: string | null;
+    sk_issued_at?: string | null; // ISO date
+
+    // Surat penyelesaian magang (di-generate verifikator di menu laporan).
+    completion_sk_number?: string | null;
+    completion_sk_issued_at?: string | null;
+
     rejection_reason: string | null;
     forwarded_at: string | null;
     opd_decision_at: string | null;
     created_at: string;
+
+    // Rekam jejak progres tiket (audit ApplicationStatusLog) — urut kronologis.
+    status_logs?: ApplicationStatusLog[];
 
     // Tahap penyelesaian (Fase 4).
     final_report: FinalReport | null;

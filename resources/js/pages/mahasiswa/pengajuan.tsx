@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     Send,
     ClipboardCheck,
@@ -17,6 +17,7 @@ import {
     FileDown,
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useState } from 'react';
 import { StatusBadge } from '@/components/status-badge';
 import MagangLayout from '@/layouts/magang-layout';
 import type { InternshipApplication, MagangUser } from '@/types/magang';
@@ -40,6 +41,7 @@ export interface ApplicationDocument {
     label: string;
     file_name: string;
     url?: string;
+    kind?: 'image' | 'document';
 }
 
 interface PengajuanProps {
@@ -346,8 +348,26 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
 
 function ActionPanel({ application }: { application: InternshipApplication }) {
     const s = application.status;
+    const [resubmitting, setResubmitting] = useState(false);
 
     if (s === 'rejected') {
+        // Ajukan Ulang: data pengajuan lama di-copy backend menjadi tiket
+        // baru (status pending_verifikator). Tiket ditolak tidak bisa diedit.
+        const resubmit = () => {
+            setResubmitting(true);
+            router.post(
+                `/mahasiswa/pengajuan/${application.id}/ajukan-ulang`,
+                {},
+                {
+                    preserveScroll: true,
+                    // Endpoint belum tersedia (backend menyusul) → fallback
+                    // ke form pendaftaran publik agar tombol tetap berguna.
+                    onError: () => router.visit('/#daftar'),
+                    onFinish: () => setResubmitting(false),
+                },
+            );
+        };
+
         return (
             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5">
                 <div className="flex items-center gap-2 text-rose-700">
@@ -358,12 +378,21 @@ function ActionPanel({ application }: { application: InternshipApplication }) {
                     {application.rejection_reason ??
                         'Mohon maaf, pengajuan Anda belum dapat disetujui.'}
                 </p>
-                <Link
-                    href="/#daftar"
-                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+                <button
+                    type="button"
+                    onClick={resubmit}
+                    disabled={resubmitting}
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
                 >
+                    {resubmitting ? (
+                        <Loader2 className="size-4 animate-spin" />
+                    ) : null}
                     Ajukan Ulang <ArrowRight className="size-4" />
-                </Link>
+                </button>
+                <p className="mt-2 text-xs text-rose-600/80">
+                    Data pengajuan Anda akan disalin menjadi tiket baru dan
+                    kembali masuk antrean verifikasi.
+                </p>
             </div>
         );
     }
@@ -410,7 +439,29 @@ function ActionPanel({ application }: { application: InternshipApplication }) {
         );
     }
 
-    // pending_verifikator / forwarded_opd / approved
+    if (s === 'approved') {
+        return (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                <div className="flex items-center gap-2 text-emerald-700">
+                    <CheckCircle2 className="size-5" />
+                    <p className="text-sm font-bold">Pengajuan Disetujui</p>
+                </div>
+                <p className="mt-2 text-sm text-emerald-700/90">
+                    Selamat! Pengajuan Anda disetujui OPD. Magang dimulai pada{' '}
+                    {formatDate(application.start_date)} — silakan hadir di
+                    kantor OPD penempatan sesuai jadwal.
+                </p>
+                <Link
+                    href={`/lacak?tiket=${application.ticket_number}`}
+                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:underline"
+                >
+                    <Search className="size-4" /> Lacak status publik
+                </Link>
+            </div>
+        );
+    }
+
+    // pending_verifikator / forwarded_opd → menunggu peninjauan
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <div className="flex items-center gap-2 text-[#106feb]">
@@ -436,10 +487,20 @@ function ActionPanel({ application }: { application: InternshipApplication }) {
 /* --------------------------------- dokumen --------------------------------- */
 
 function DocumentItem({ doc }: { doc: ApplicationDocument }) {
+    const isImage = doc.kind === 'image';
+
     return (
         <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[#cddcef]/40 text-[#106feb]">
-                <FileText className="size-5" />
+            <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#cddcef]/40 text-[#106feb]">
+                {isImage && doc.url ? (
+                    <img
+                        src={doc.url}
+                        alt={doc.label}
+                        className="h-full w-full object-cover"
+                    />
+                ) : (
+                    <FileText className="size-5" />
+                )}
             </span>
             <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-[#12213e]">
@@ -585,6 +646,12 @@ export default function Pengajuan({
                             Detail Pemohon
                         </h3>
                         <dl className="mt-4 grid grid-cols-1 gap-4">
+                            {application.nis && (
+                                <DetailRow
+                                    label="NIS / NIM"
+                                    value={application.nis}
+                                />
+                            )}
                             <DetailRow
                                 label="Tujuan Magang"
                                 value={application.tujuan_magang}
@@ -593,10 +660,48 @@ export default function Pengajuan({
                                 label="Asal Instansi"
                                 value={application.institution_name}
                             />
+                            {application.major && (
+                                <DetailRow
+                                    label="Jurusan"
+                                    value={application.major}
+                                />
+                            )}
+                            {application.skills && (
+                                <DetailRow
+                                    label="Keahlian / Keterampilan"
+                                    value={application.skills}
+                                />
+                            )}
+                            {application.address && (
+                                <DetailRow
+                                    label="Alamat Domisili"
+                                    value={application.address}
+                                />
+                            )}
                             <DetailRow
                                 label="Pembimbing Kampus/Sekolah"
                                 value={application.campus_supervisor}
                             />
+                            {application.campus_supervisor_whatsapp && (
+                                <DetailRow
+                                    label="No. WA Dosen/Guru Pembimbing"
+                                    value={
+                                        application.campus_supervisor_whatsapp
+                                    }
+                                />
+                            )}
+                            {application.guardian_name && (
+                                <DetailRow
+                                    label="Penanggung Jawab / Wali"
+                                    value={application.guardian_name}
+                                />
+                            )}
+                            {application.guardian_whatsapp && (
+                                <DetailRow
+                                    label="No. WA Penanggung Jawab"
+                                    value={application.guardian_whatsapp}
+                                />
+                            )}
                             <DetailRow
                                 label="Durasi"
                                 value={`${application.duration_months} Bulan`}

@@ -1,0 +1,37 @@
+1. unutuk kolom NIM keyboard yang muncul dan data yang diterima bisa angka dan huruf. dan dibatasi maksimal 15 karakter.
+2. captcha diubah ke V3 dan diperbaiki supaya menghitungnya setelah dicentang pada form pendaftaran di welcome.tsx
+3. Ubah teks email setelah form berhasil diajukan dari "kami terima" menjadi "Sedang menunggu verifikasi admin". dan logo laravel diganti dengan logo pemkot yang tersedia pada \public\images\Lambang_Kota_Madiun.png
+4. setelah pengajuan di ACC oleh admin OPD, pendaftar akan menerima email dan file surat penerimaan magang dengan format kop surat yang ada pada \public\images\acuan_kopsurat.jpeg.
+5. Sistem men- generate PDF penerimaan menggunakan Kop Surat Dinas Kominfo. Nomor SK berbasis Auto-Increment dan memiliki "Tanggal Terbit" statis. Jika admin mencetak ulang surat, Nomor dan Tanggal tidak boleh berubah. Sediakan opsi agar admin bisa memasukkan awalan Start Number (misal: mulai dari angka 40). namun di menu admin OPD ketika diterima nomor suratnya ini. dan ketika admin OPD menyetujui, langsung membuat nomor SK dan tanggal terbit.
+6. pada dasbor admin OPD menu peserta aktif harus Menampilkan seluruh data, dokumen lampiran, dan rekam jejak progres tiket secara utuh.
+7. Setiap input wajib di- sanitize menggunakan Clean HTML untuk mencegah XSS. Karakter strip (-) diperbolehkan, tetapi script tags harus dibersihkan.
+8. reCAPTCHA V3 Wajib dipasang di form pendaftaran, form login User, dan form login Admin.
+9. pada dasbor admin verifikator menu laporan Sistem men- generate surat penyelesaian magang menggunakan Kop Surat Dinas Kominfo. Nomor SK berbasis Auto-Increment dan memiliki "Tanggal Terbit" statis. Jika admin mencetak ulang surat, Nomor dan Tanggal tidak boleh berubah.
+10. pada dasbor admin verifikator menu Kelola OPD harus ada sistem auto generate akun ketika menambahkan akun OPD, ketika OPD pertama kali login akan ada pop up unutuk mengganti password dan otomatis tertambah ke daftar OPD pada welcome.tsx. serta tambahkan fitur reset password OPD.
+11. Tambahkan kolom input kode_opd (Integer/angka untuk internal) dan inisial_opd (String untuk publik).
+12. tambahkan menu kelola user pada dasbor admin verifikator tepat dibawah menu kelola OPD yang Menampilkan data akun mahasiswa(peserta magang), status aktif, dan kolom last_login.
+13. tambahkan menu kelola admin pada dasbor admin verifikator tepat dibawah menu kelola user Untuk menambah sesama tim Verifikator. Mekanisme sama dengan Kelola OPD ( generate password otomatis & paksa ganti password di awal).
+14. tambahkan fitur search pada setiap halaman atau menu yang menampilkan banyak data.
+15. Tiket yang ditolak (oleh Verifikator/OPD) tidak bisa diedit. Pengguna harus klik tombol "Ajukan Ulang". Sistem akan men- generate Nomor Tiket Baru, namun seluruh data form dari tiket lama di-copy otomatis agar pengguna tidak mengetik ulang.
+
+================================================================
+TO-DO LIST FRONTEND (backend dikerjakan rekan — lihat catatan_backend_newrevisi.txt)
+Tandai [x] setiap kali selesai.
+================================================================
+
+[x] R1  — Input NIM (welcome.tsx): terima huruf+angka, maxLength 15, hapus inputMode="numeric"/pattern angka.
+[x] R2  — reCAPTCHA v3 pada form pendaftaran welcome.tsx: ganti widget v2 checkbox → v3 invisible (execute saat submit), token dikirim di field recaptcha_token yang sama.
+[x] R3  — Email konfirmasi: teks "kami terima" → "Sedang menunggu verifikasi admin", badge "Diterima" → "Menunggu Verifikasi", logo Laravel (vendor/mail header) → /images/Lambang_Kota_Madiun.png.
+[ ] R4  — (BACKEND: PDF kop surat — lihat catatan backend. Tidak ada pekerjaan frontend.)
+[x] R5  — Tampilkan No. SK + Tanggal Terbit di dasbor OPD setelah ACC (types/magang.ts + keputusan.tsx + peserta.tsx + dashboard.tsx). Field: sk_number, sk_issued_at (kontrak dgn backend).
+[x] R6  — opd/peserta.tsx detail dialog: tampilkan SELURUH data pemohon (NIS/NIM, alamat, WA, jurusan, keahlian, dst), dokumen lampiran (foto/surat pengantar/CV/portofolio via ApplicationDocuments), dan rekam jejak progres tiket (timeline status_logs).
+[ ] R7  — (BACKEND: sanitasi Clean HTML — lihat catatan backend. Frontend tidak menambah filter ketat selain yang sudah ada.)
+[x] R8  — reCAPTCHA v3 juga di form login user (auth/otp-login.tsx) dan login admin (auth/admin-login.tsx).
+[x] R9  — verifikator/reports/index.tsx: UI generate/unduh Surat Penyelesaian Magang (No. SK auto-increment + tanggal terbit statis; cetak ulang tidak mengubah nomor/tanggal).
+[x] R10 — Kelola OPD: tampilkan kredensial auto-generate setelah tambah akun OPD (dialog salin username+password), tombol Reset Password; halaman ganti-password wajib saat login pertama (auth/force-password.tsx); daftar OPD welcome.tsx dirender dari prop opds (bukan hardcode) agar OPD baru otomatis muncul.
+[x] R11 — Form OPD (create/edit): tambah kolom kode_opd (angka, internal) dan inisial_opd (string, publik) + tampilkan di index.
+[x] R12 — Menu "Kelola User" di sidebar verifikator (di bawah Kelola OPD): halaman daftar akun mahasiswa + status aktif + last_login.
+[x] R13 — Menu "Kelola Admin" di sidebar verifikator (di bawah Kelola User): CRUD sesama verifikator, mekanisme sama dgn Kelola OPD (password auto-generate + paksa ganti).
+[x] R14 — Search di halaman data yang belum punya: verifikator/opd/index.tsx, verifikator/faq/index.tsx, verifikator/reports/index.tsx (+ halaman baru R12/R13 langsung dibuat dengan search).
+[x] R15 — mahasiswa/pengajuan.tsx: tiket ditolak tidak bisa diedit; tombol "Ajukan Ulang" → POST ajukan-ulang (data lama di-copy backend, tiket baru) dengan fallback link /#daftar selama backend belum siap.
+[x] GATE — npm run types:check + lint + prettier; update checklist ini.

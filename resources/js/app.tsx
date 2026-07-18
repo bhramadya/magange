@@ -26,6 +26,9 @@ createInertiaApp({
             // Login admin branded (Username + Password) — layout sendiri.
             case name === 'auth/admin-login':
                 return null;
+            // Ganti password wajib (login pertama admin) — layout sendiri.
+            case name === 'auth/force-password':
+                return null;
             // Lacak status publik (tanpa login) — branded sendiri.
             case name === 'lacak':
                 return null;

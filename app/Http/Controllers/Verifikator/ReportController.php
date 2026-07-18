@@ -48,10 +48,7 @@ class ReportController extends Controller
      */
     public function downloadReport(FinalReport $report): StreamedResponse
     {
-        abort_if(
-            $report->file_path === null || ! Storage::disk('local')->exists($report->file_path),
-            404,
-        );
+        abort_if(! Storage::disk('local')->exists($report->file_path), 404);
 
         return Storage::disk('local')->response($report->file_path, $report->file_name);
     }

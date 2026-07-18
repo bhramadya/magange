@@ -1,6 +1,14 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { HelpCircle, Plus, Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
-import { useState } from 'react';
+import {
+    HelpCircle,
+    Plus,
+    Pencil,
+    Trash2,
+    Eye,
+    EyeOff,
+    Search,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
 import MagangLayout, { verifikatorNav } from '@/layouts/magang-layout';
 import { cn } from '@/lib/utils';
 import type { Faq, MagangUser } from '@/types/magang';
@@ -94,6 +102,23 @@ export default function FaqIndex({
     user = MOCK_USER,
     faqs = MOCK_FAQS,
 }: FaqIndexProps) {
+    const [query, setQuery] = useState('');
+
+    // Pencarian client-side: pertanyaan / jawaban.
+    const filtered = useMemo(() => {
+        const q = query.trim().toLowerCase();
+
+        if (!q) {
+            return faqs.data;
+        }
+
+        return faqs.data.filter(
+            (faq) =>
+                faq.question.toLowerCase().includes(q) ||
+                faq.answer.toLowerCase().includes(q),
+        );
+    }, [faqs.data, query]);
+
     return (
         <MagangLayout
             user={user}
@@ -121,8 +146,20 @@ export default function FaqIndex({
                     </Link>
                 </div>
 
+                {/* Pencarian */}
+                <div className="relative sm:w-72">
+                    <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                        type="search"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Cari pertanyaan / jawaban…"
+                        className="h-10 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-sm transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                    />
+                </div>
+
                 <div className="space-y-3">
-                    {faqs.data.map((faq) => (
+                    {filtered.map((faq) => (
                         <div
                             key={faq.id}
                             className="rounded-2xl border border-slate-200 bg-white p-5"
@@ -171,11 +208,13 @@ export default function FaqIndex({
                         </div>
                     ))}
 
-                    {faqs.data.length === 0 && (
+                    {filtered.length === 0 && (
                         <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
                             <HelpCircle className="size-10 text-slate-300" />
                             <p className="text-sm font-medium text-slate-500">
-                                Belum ada FAQ. Tambahkan yang pertama.
+                                {faqs.data.length === 0
+                                    ? 'Belum ada FAQ. Tambahkan yang pertama.'
+                                    : 'Tidak ada FAQ yang cocok dengan pencarian.'}
                             </p>
                         </div>
                     )}

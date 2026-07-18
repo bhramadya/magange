@@ -42,7 +42,7 @@ export function OrbitImage({
     return (
         <motion.div
             aria-hidden
-            className="absolute top-1/2 left-1/2 h-0 w-0 motion-safe-only"
+            className="motion-safe-only absolute top-1/2 left-1/2 h-0 w-0"
             initial={{ rotate: startAngle, opacity: 0 }}
             animate={{ rotate: startAngle + dir * 360, opacity: 1 }}
             transition={{

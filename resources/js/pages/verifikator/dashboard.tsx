@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
+import { ApplicationDocuments } from '@/components/application-documents';
 import { StatusBadge } from '@/components/status-badge';
 import {
     Dialog,
@@ -113,8 +114,11 @@ function makeApp(
         applicant_whatsapp: '6281234567890',
         nis: '2101234567',
         address: 'Jl. Pahlawan No. 10, Madiun',
+        campus_supervisor_whatsapp: '6281234500001',
         guardian_name: 'Drs. Suparno',
+        guardian_whatsapp: '6281234500002',
         major: 'Teknik Informatika',
+        skills: 'React, Laravel, REST API, PostgreSQL',
         photo_url: null,
         tujuan_magang: 'Magang kompetensi keahlian',
         duration_months: 3,
@@ -508,8 +512,16 @@ function ReviewDialog({
                                 value={app.campus_supervisor}
                             />
                             <DetailRow
+                                label="No. WA Pembimbing"
+                                value={app.campus_supervisor_whatsapp || '—'}
+                            />
+                            <DetailRow
                                 label="Penanggung Jawab"
                                 value={app.guardian_name || '—'}
+                            />
+                            <DetailRow
+                                label="No. WA Penanggung Jawab"
+                                value={app.guardian_whatsapp || '—'}
                             />
                             <DetailRow
                                 label="No. WhatsApp"
@@ -520,6 +532,9 @@ function ReviewDialog({
                                 value={app.applicant_email || '—'}
                             />
                         </div>
+
+                        {/* Berkas pendukung opsional (surat pengantar / CV / portofolio) */}
+                        <ApplicationDocuments app={app} />
 
                         {reviewable && (
                             <>

@@ -20,6 +20,12 @@ interface OtpServiceContract
     public function verify(User $user, string $plainOtp): bool;
 
     /**
+     * Invalidasi semua token OTP aktif milik user (mis. saat lockout dipicu
+     * sehingga user wajib kirim ulang kode).
+     */
+    public function invalidateActiveTokens(User $user): void;
+
+    /**
      * Cek apakah email/IP ini masih boleh meminta OTP
      * (maks 3 permintaan dalam 15 menit).
      */

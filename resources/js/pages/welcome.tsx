@@ -34,23 +34,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView, animate } from 'motion/react';
 import { useState, useEffect, useRef } from 'react';
-
-/* Widget reCAPTCHA v2 (checkbox) — dimuat via script Google saat runtime. */
-declare global {
-    interface Window {
-        grecaptcha?: {
-            render: (
-                el: HTMLElement,
-                opts: {
-                    sitekey: string;
-                    callback: (token: string) => void;
-                    'expired-callback'?: () => void;
-                },
-            ) => number;
-            reset: (id?: number) => void;
-        };
-    }
-}
+import { useRecaptchaV3 } from '@/hooks/use-recaptcha-v3';
 
 /* =========================================================================
  *  ANIMATION HELPERS (Framer Motion)
@@ -594,7 +578,17 @@ export default function Welcome({
         '';
 
     // Formulir pendaftaran publik → POST /pengajuan (multipart karena pas foto).
-    const { data, setData, post, processing, errors, reset } = useForm<{
+    const {
+        data,
+        setData,
+        post,
+        processing,
+        errors,
+        reset,
+        setError,
+        clearErrors,
+        transform,
+    } = useForm<{
         name: string;
         nis: string;
         institution_name: string;
@@ -605,7 +599,7 @@ export default function Welcome({
         start_date: string;
         end_date: string;
         campus_supervisor: string;
-        guardian_name: string;
+        campus_supervisor_whatsapp: string;
         whatsapp_number: string;
         email: string;
         photo: File | null;
@@ -624,7 +618,7 @@ export default function Welcome({
         start_date: '',
         end_date: '',
         campus_supervisor: '',
-        guardian_name: '',
+        campus_supervisor_whatsapp: '',
         whatsapp_number: '',
         email: '',
         photo: null,
@@ -638,6 +632,11 @@ export default function Welcome({
     const [pasFotoNama, setPasFotoNama] = useState('');
     const [pasFotoPreview, setPasFotoPreview] = useState('');
 
+    // Batas ukuran berkas (selaras StoreApplicationRequest): pas foto/dokumen
+    // 2MB, khusus portofolio 10MB.
+    const MAX_2MB = 2 * 1024 * 1024;
+    const MAX_10MB = 10 * 1024 * 1024;
+
     const handlePasFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
 
@@ -645,6 +644,14 @@ export default function Welcome({
             return;
         }
 
+        if (file.size > MAX_2MB) {
+            setError('photo', 'Ukuran file maksimal 2MB.');
+            e.target.value = '';
+
+            return;
+        }
+
+        clearErrors('photo');
         setData('photo', file);
         setPasFotoNama(file.name);
         setPasFotoPreview((prev) => {
@@ -668,6 +675,21 @@ export default function Welcome({
         ) =>
         (e: React.ChangeEvent<HTMLInputElement>) => {
             const file = e.target.files?.[0] ?? null;
+
+            // Validasi ukuran sisi klien: dokumen 2MB, portofolio 10MB.
+            const maxBytes = field === 'portfolio' ? MAX_10MB : MAX_2MB;
+
+            if (file && file.size > maxBytes) {
+                setError(
+                    field,
+                    `Ukuran file maksimal ${field === 'portfolio' ? '10MB' : '2MB'}.`,
+                );
+                e.target.value = '';
+
+                return;
+            }
+
+            clearErrors(field);
             setData(field, file);
             setNama(file?.name ?? '');
         };
@@ -707,94 +729,34 @@ export default function Welcome({
     // State menu mobile (Dropdown Menu dengan AnimatePresence)
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    // --- reCAPTCHA v2 checkbox: render eksplisit + simpan token ke form ---
-    const recaptchaRef = useRef<HTMLDivElement | null>(null);
-    const recaptchaWidgetId = useRef<number | null>(null);
-
-    const resetRecaptcha = () => {
-        if (recaptchaWidgetId.current !== null) {
-            window.grecaptcha?.reset(recaptchaWidgetId.current);
-        }
-
-        setData('recaptcha_token', '');
-    };
-
-    useEffect(() => {
-        if (!recaptchaSiteKey) {
-            return;
-        }
-
-        let cancelled = false;
-
-        const renderWidget = () => {
-            if (cancelled || recaptchaWidgetId.current !== null) {
-                return;
-            }
-
-            if (!recaptchaRef.current || !window.grecaptcha?.render) {
-                return;
-            }
-
-            recaptchaWidgetId.current = window.grecaptcha.render(
-                recaptchaRef.current,
-                {
-                    sitekey: recaptchaSiteKey,
-                    callback: (token: string) =>
-                        setData('recaptcha_token', token),
-                    'expired-callback': () => setData('recaptcha_token', ''),
-                },
-            );
-        };
-
-        if (window.grecaptcha?.render) {
-            renderWidget();
-
-            return;
-        }
-
-        const scriptId = 'recaptcha-api';
-
-        if (!document.getElementById(scriptId)) {
-            const script = document.createElement('script');
-            script.id = scriptId;
-            script.src =
-                'https://www.google.com/recaptcha/api.js?render=explicit';
-            script.async = true;
-            script.defer = true;
-            document.body.appendChild(script);
-        }
-
-        const timer = window.setInterval(() => {
-            if (window.grecaptcha?.render) {
-                window.clearInterval(timer);
-                renderWidget();
-            }
-        }, 300);
-
-        return () => {
-            cancelled = true;
-            window.clearInterval(timer);
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [recaptchaSiteKey]);
+    // --- reCAPTCHA v3 (invisible): execute saat submit, token ke form ---
+    const executeRecaptcha = useRecaptchaV3(recaptchaSiteKey, 'daftar');
 
     const handleSubmitPengajuan = (e: React.FormEvent) => {
         e.preventDefault();
 
-        post('/pengajuan', {
-            forceFormData: true,
-            preserveScroll: true,
-            onSuccess: () => {
-                reset();
-                setPasFotoNama('');
-                setPasFotoPreview('');
-                setSuratPengantarNama('');
-                setCvNama('');
-                setPortfolioNama('');
-                setTanggalMulai('');
-                setTanggalSelesai('');
-                resetRecaptcha();
-            },
+        // Ambil token v3 dulu (skor dihitung Google saat execute), baru POST
+        // via transform agar token segar ikut tanpa menunggu re-render state.
+        void executeRecaptcha().then((token) => {
+            transform((current) => ({
+                ...current,
+                recaptcha_token: token,
+            }));
+
+            post('/pengajuan', {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    reset();
+                    setPasFotoNama('');
+                    setPasFotoPreview('');
+                    setSuratPengantarNama('');
+                    setCvNama('');
+                    setPortfolioNama('');
+                    setTanggalMulai('');
+                    setTanggalSelesai('');
+                },
+            });
         });
     };
 
@@ -904,20 +866,23 @@ export default function Welcome({
         { name: 'SEKRETARIAT DPRD', tags: ['Legislatif', 'Administrasi'] },
     ];
 
-    // Kuota magang per OPD — sumber tunggal dari prop `opds` (OpdResource →
-    // tabel opds), identik dengan dasbor OPD & Verifikator. Nama tag hanya ada
-    // di daftar statis, jadi kuota di-join berdasarkan nama OPD. Bila prop opds
-    // kosong (pratinjau tanpa backend), kuota tampil 0/0 (bukan angka palsu).
-    const quotaByName = new Map(opds.map((o) => [o.name, o]));
-    const opdWithQuota = daftarOPD.map((opd) => {
-        const real = quotaByName.get(opd.name);
-
-        return {
-            ...opd,
-            quota: real?.quota ?? 0,
-            quotaUsed: real?.quota_used ?? 0,
-        };
-    });
+    // Sumber tunggal daftar OPD = prop `opds` (OpdResource → tabel opds), agar
+    // OPD baru yang ditambahkan Verifikator LANGSUNG tampil di halaman utama.
+    // Daftar statis di atas hanya dipakai sebagai kamus Tag Kompetensi
+    // (di-join berdasarkan nama) dan sebagai fallback pratinjau tanpa backend.
+    const tagsByName = new Map(daftarOPD.map((o) => [o.name, o.tags]));
+    const opdWithQuota =
+        opds.length > 0
+            ? opds.map((real) => ({
+                  name: real.name,
+                  tags: tagsByName.get(real.name) ?? [
+                      'Administrasi',
+                      'Pelayanan Publik',
+                  ],
+                  quota: real.quota ?? 0,
+                  quotaUsed: real.quota_used ?? 0,
+              }))
+            : daftarOPD.map((opd) => ({ ...opd, quota: 0, quotaUsed: 0 }));
 
     const filteredOPD = opdWithQuota.filter((opd) =>
         opd.name.toLowerCase().includes(searchOpd.toLowerCase()),
@@ -1849,9 +1814,8 @@ export default function Welcome({
                                                 <strong className="font-bold text-[#0b4fb0]">
                                                     OTP
                                                 </strong>{' '}
-                                                via Email tanpa kata sandi
-                                                untuk mengunduh surat
-                                                persetujuan.
+                                                via Email tanpa kata sandi untuk
+                                                mengunduh surat persetujuan.
                                             </>
                                         ),
                                     },
@@ -2108,9 +2072,19 @@ export default function Welcome({
                                         </label>
                                         <input
                                             type="text"
+                                            maxLength={15}
                                             value={data.nis}
                                             onChange={(e) =>
-                                                setData('nis', e.target.value)
+                                                // Alfanumerik (huruf+angka), maks 15 karakter.
+                                                setData(
+                                                    'nis',
+                                                    e.target.value
+                                                        .replace(
+                                                            /[^a-zA-Z0-9]/g,
+                                                            '',
+                                                        )
+                                                        .slice(0, 15),
+                                                )
                                             }
                                             placeholder="Nomor Induk Siswa/Mahasiswa"
                                             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
@@ -2300,18 +2274,22 @@ export default function Welcome({
                                     </div>
                                     <div className="flex flex-col gap-2">
                                         <label className="text-[14px] font-semibold text-[#0a1628]">
-                                            Nama Penanggung Jawab
+                                            No. WA Dosen/Guru Pembimbing
                                         </label>
                                         <input
-                                            type="text"
-                                            value={data.guardian_name}
+                                            type="tel"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            value={
+                                                data.campus_supervisor_whatsapp
+                                            }
                                             onChange={(e) =>
                                                 setData(
-                                                    'guardian_name',
+                                                    'campus_supervisor_whatsapp',
                                                     e.target.value,
                                                 )
                                             }
-                                            placeholder="Nama orang tua / wali yang dapat dihubungi"
+                                            placeholder="Contoh: 081234567890"
                                             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
                                         />
                                     </div>
@@ -2320,10 +2298,12 @@ export default function Welcome({
                                 <div className="grid gap-6 sm:grid-cols-2">
                                     <div className="flex flex-col gap-2">
                                         <label className="text-[14px] font-semibold text-[#0a1628]">
-                                            Nomor WhatsApp
+                                            Nomor WhatsApp Anda
                                         </label>
                                         <input
                                             type="tel"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
                                             value={data.whatsapp_number}
                                             onChange={(e) =>
                                                 setData(
@@ -2337,7 +2317,7 @@ export default function Welcome({
                                     </div>
                                     <div className="flex flex-col gap-2">
                                         <label className="text-[14px] font-semibold text-[#0a1628]">
-                                            Email Aktif
+                                            Email Aktif Anda
                                         </label>
                                         <input
                                             type="email"
@@ -2385,6 +2365,11 @@ export default function Welcome({
                                             className="hidden"
                                         />
                                     </label>
+                                    {errors.photo && (
+                                        <p className="text-[13px] text-rose-600">
+                                            {errors.photo}
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* --- Berkas pendukung opsional ("jika ada") --- */}
@@ -2403,7 +2388,7 @@ export default function Welcome({
                                             nama: suratPengantarNama,
                                             setNama: setSuratPengantarNama,
                                             accept: '.pdf,.doc,.docx',
-                                            hint: 'PDF/Word, maks. 5MB',
+                                            hint: 'PDF/Word, maks. 2MB',
                                         },
                                         {
                                             field: 'cv' as const,
@@ -2411,7 +2396,7 @@ export default function Welcome({
                                             nama: cvNama,
                                             setNama: setCvNama,
                                             accept: '.pdf,.doc,.docx',
-                                            hint: 'PDF/Word, maks. 5MB',
+                                            hint: 'PDF/Word, maks. 2MB',
                                         },
                                         {
                                             field: 'portfolio' as const,
@@ -2422,45 +2407,57 @@ export default function Welcome({
                                             hint: 'PDF/Word/ZIP/gambar, maks. 10MB',
                                         },
                                     ].map((berkas) => (
-                                        <label
+                                        <div
                                             key={berkas.field}
-                                            className="group flex cursor-pointer items-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-[#f5faff] px-4 py-3.5 transition-colors hover:border-[#0b4fb0] hover:bg-[#e7f0fc]"
+                                            className="flex flex-col gap-1.5"
                                         >
-                                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white">
-                                                <FileText className="h-5 w-5 text-[#0b4fb0] transition-transform duration-300 group-hover:scale-110" />
-                                            </span>
-                                            <span className="flex min-w-0 flex-col">
-                                                <span className="text-[14px] font-medium text-[#0a1628]">
-                                                    {berkas.label}
+                                            <label className="group flex cursor-pointer items-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-[#f5faff] px-4 py-3.5 transition-colors hover:border-[#0b4fb0] hover:bg-[#e7f0fc]">
+                                                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white">
+                                                    <FileText className="h-5 w-5 text-[#0b4fb0] transition-transform duration-300 group-hover:scale-110" />
                                                 </span>
-                                                <span className="truncate text-[12px] text-[#0a1628]/50">
-                                                    {berkas.nama || berkas.hint}
+                                                <span className="flex min-w-0 flex-col">
+                                                    <span className="text-[14px] font-medium text-[#0a1628]">
+                                                        {berkas.label}
+                                                    </span>
+                                                    <span className="truncate text-[12px] text-[#0a1628]/50">
+                                                        {berkas.nama ||
+                                                            berkas.hint}
+                                                    </span>
                                                 </span>
-                                            </span>
-                                            <input
-                                                type="file"
-                                                accept={berkas.accept}
-                                                onChange={handleBerkas(
-                                                    berkas.field,
-                                                    berkas.setNama,
-                                                )}
-                                                className="hidden"
-                                            />
-                                        </label>
+                                                <input
+                                                    type="file"
+                                                    accept={berkas.accept}
+                                                    onChange={handleBerkas(
+                                                        berkas.field,
+                                                        berkas.setNama,
+                                                    )}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                            {errors[berkas.field] && (
+                                                <p className="text-[13px] text-rose-600">
+                                                    {errors[berkas.field]}
+                                                </p>
+                                            )}
+                                        </div>
                                     ))}
                                 </div>
 
-                                {/* --- reCAPTCHA v2 (checkbox) — gerbang anti-bot Fase 1 --- */}
+                                {/* --- reCAPTCHA v3 (invisible) — gerbang anti-bot Fase 1.
+                                        Skor dihitung otomatis saat tombol kirim ditekan
+                                        (grecaptcha.execute), tanpa checkbox. --- */}
                                 <div className="mt-6 border-t border-[#e5e7eb] pt-8">
                                     <label className="mb-3 block text-[14px] font-semibold text-[#0a1628]">
                                         Validasi Anti-Spam
                                     </label>
 
                                     {recaptchaSiteKey ? (
-                                        <div
-                                            ref={recaptchaRef}
-                                            className="min-h-[78px] max-w-full overflow-x-auto"
-                                        />
+                                        <p className="text-[13px] leading-relaxed text-[#0a1628]/60">
+                                            Formulir ini dilindungi reCAPTCHA
+                                            v3. Verifikasi berjalan otomatis
+                                            saat Anda menekan tombol kirim —
+                                            tidak perlu mencentang apa pun.
+                                        </p>
                                     ) : (
                                         <p className="text-[13px] text-amber-600">
                                             Kunci reCAPTCHA belum dikonfigurasi.
@@ -2508,32 +2505,32 @@ export default function Welcome({
                                 </div>
 
                                 {/* Tombol Submit — Sliding Animation (overlay #cddcef geser
-                                        dari kiri menutupi background biru #106feb). */}
+                                        dari kiri menutupi background biru #106feb).
+                                        v3: token diambil otomatis saat submit, tombol
+                                        selalu aktif kecuali sedang mengirim. */}
                                 <motion.button
                                     type="submit"
-                                    disabled={
-                                        !data.recaptcha_token || processing
-                                    }
+                                    disabled={processing}
                                     whileTap={
-                                        data.recaptcha_token && !processing
+                                        !processing
                                             ? { scale: 0.98 }
                                             : undefined
                                     }
                                     className={`group relative mt-2 flex w-full items-center justify-between gap-3 overflow-hidden rounded-full py-1.5 pr-1.5 pl-7 transition-shadow duration-300 ${
-                                        data.recaptcha_token && !processing
+                                        !processing
                                             ? 'cursor-pointer bg-[#106feb] shadow-lg shadow-[#106feb]/30 hover:shadow-xl hover:shadow-[#106feb]/40'
                                             : 'cursor-not-allowed bg-[#e5e7eb]'
                                     }`}
                                 >
-                                    {/* Overlay #cddcef geser dari kiri (hanya saat captcha terverifikasi) */}
-                                    {data.recaptcha_token && !processing && (
+                                    {/* Overlay #cddcef geser dari kiri */}
+                                    {!processing && (
                                         <span
                                             aria-hidden
                                             className="absolute inset-0 z-0 -translate-x-[101%] bg-[#cddcef] transition-transform duration-500 ease-out group-hover:translate-x-0"
                                         />
                                     )}
                                     <span
-                                        className={`relative z-10 text-[16px] font-semibold transition-colors duration-500 ease-out ${data.recaptcha_token && !processing ? 'text-white group-hover:text-[#0a1628]' : 'text-[#0a1628]/40'}`}
+                                        className={`relative z-10 text-[16px] font-semibold transition-colors duration-500 ease-out ${!processing ? 'text-white group-hover:text-[#0a1628]' : 'text-[#0a1628]/40'}`}
                                     >
                                         {processing
                                             ? 'Mengirim…'
@@ -2541,7 +2538,7 @@ export default function Welcome({
                                     </span>
                                     {/* Lingkaran ikon — membalik kontras saat overlay menutupi */}
                                     <span
-                                        className={`relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-500 ease-out ${data.recaptcha_token && !processing ? 'bg-[#cddcef] text-[#106feb] group-hover:bg-[#106feb] group-hover:text-white' : 'bg-white/60 text-[#0a1628]/30'}`}
+                                        className={`relative z-10 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors duration-500 ease-out ${!processing ? 'bg-[#cddcef] text-[#106feb] group-hover:bg-[#106feb] group-hover:text-white' : 'bg-white/60 text-[#0a1628]/30'}`}
                                     >
                                         <Send className="size-5 transition-transform duration-500 ease-out group-hover:translate-x-0.5" />
                                     </span>

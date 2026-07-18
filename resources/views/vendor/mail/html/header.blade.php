@@ -2,11 +2,8 @@
 <tr>
 <td class="header">
 <a href="{{ $url }}" style="display: inline-block;">
-@if (trim($slot) === 'Laravel')
-<img src="https://laravel.com/img/notification-logo-v2.1.png" class="logo" alt="Laravel Logo">
-@else
-{!! $slot !!}
-@endif
+{{-- Logo Pemerintah Kota Madiun (menggantikan logo Laravel bawaan). --}}
+<img src="{{ asset('images/Lambang_Kota_Madiun.png') }}" class="logo" alt="Lambang Kota Madiun" style="height: 64px; width: auto;">
 </a>
 </td>
 </tr>

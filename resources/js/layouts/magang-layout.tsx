@@ -13,6 +13,8 @@ import {
     Users,
     Ticket,
     ShieldCheck,
+    GraduationCap,
+    UserCog,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -112,10 +114,22 @@ export const verifikatorNav: MagangNavItem[] = [
         icon: History,
     },
     {
-        key: 'kuota',
-        title: 'Kelola Kuota OPD',
-        href: '/verifikator/kuota',
+        key: 'opd',
+        title: 'Kelola OPD',
+        href: '/verifikator/opd',
         icon: Users,
+    },
+    {
+        key: 'users',
+        title: 'Kelola User',
+        href: '/verifikator/users',
+        icon: GraduationCap,
+    },
+    {
+        key: 'admins',
+        title: 'Kelola Admin',
+        href: '/verifikator/admins',
+        icon: UserCog,
     },
     {
         key: 'faq',

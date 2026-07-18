@@ -11,6 +11,7 @@ import {
     Loader2,
     Award,
     ClipboardCheck,
+    FileBadge2,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
@@ -36,6 +37,10 @@ interface ReportRow {
     status: ReportStatus;
     submitted_at: string;
     is_confirmed: boolean;
+    // Surat Penyelesaian Magang (kop Kominfo) — nomor SK auto-increment +
+    // tanggal terbit STATIS; terisi setelah surat pertama kali di-generate.
+    completion_sk_number?: string | null;
+    completion_sk_issued_at?: string | null;
     application: {
         id: number;
         ticket_number: string;
@@ -244,6 +249,68 @@ function UploadCertificate({ reportId }: { reportId: number }) {
     );
 }
 
+/* ---- aksi: surat penyelesaian magang (kop Kominfo) -------------------- */
+/**
+ * Generate/unduh Surat Penyelesaian Magang. Nomor SK auto-increment dan
+ * tanggal terbit ditetapkan SEKALI saat generate pertama; cetak/unduh ulang
+ * tidak mengubah nomor maupun tanggal (idempoten di backend).
+ */
+function CompletionLetter({ report }: { report: ReportRow }) {
+    const [processing, setProcessing] = useState(false);
+    const generated = Boolean(report.completion_sk_number);
+
+    function generate() {
+        setProcessing(true);
+        router.post(
+            `/verifikator/laporan/${report.id}/surat-penyelesaian`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setProcessing(false),
+            },
+        );
+    }
+
+    if (!generated) {
+        return (
+            <button
+                type="button"
+                onClick={generate}
+                disabled={processing}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#106feb] bg-white px-3.5 py-2 text-sm font-semibold text-[#106feb] transition hover:bg-[#e8f2fe] disabled:opacity-50"
+                title="Terbitkan Surat Penyelesaian Magang (kop Dinas Kominfo)"
+            >
+                {processing ? (
+                    <Loader2 className="size-4 animate-spin" />
+                ) : (
+                    <FileBadge2 className="size-4" />
+                )}
+                Terbitkan Surat Penyelesaian
+            </button>
+        );
+    }
+
+    return (
+        <div className="flex flex-col gap-1.5">
+            <a
+                href={`/verifikator/laporan/${report.id}/surat-penyelesaian`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#106feb] px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-[#0b4fb0]"
+                title="Unduh ulang — nomor & tanggal terbit tidak berubah"
+            >
+                <FileBadge2 className="size-4" /> Unduh Surat Penyelesaian
+            </a>
+            <p className="text-center text-[11px] text-slate-400">
+                No. {report.completion_sk_number}
+                {report.completion_sk_issued_at
+                    ? ` · terbit ${formatDate(report.completion_sk_issued_at)}`
+                    : ''}
+            </p>
+        </div>
+    );
+}
+
 /* ---- halaman --------------------------------------------------------- */
 type FilterKey = 'all' | ReportStatus;
 
@@ -391,12 +458,18 @@ export default function VerifikatorReports({
                                     </p>
                                 </div>
 
-                                <div className="shrink-0">
+                                <div className="flex shrink-0 flex-col items-stretch gap-2">
                                     {r.status === 'pending' && (
                                         <ApproveButton reportId={r.id} />
                                     )}
                                     {r.status === 'approved' && (
-                                        <UploadCertificate reportId={r.id} />
+                                        <>
+                                            <UploadCertificate
+                                                reportId={r.id}
+                                            />
+                                            {/* Surat Penyelesaian Magang (kop Kominfo) */}
+                                            <CompletionLetter report={r} />
+                                        </>
                                     )}
                                     {r.status === 'rejected' && (
                                         <span className="text-xs font-medium text-rose-500">
