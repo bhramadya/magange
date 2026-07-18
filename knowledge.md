@@ -40,6 +40,7 @@ npm run types:check  # tsc --noEmit (TS type check)
 composer lint        # Pint (PHP style fix)
 composer test        # Pint check + PHPStan + php artisan test
 composer types:check # phpstan analyse
+composer ci:check    # npm lint:check + format:check + types:check + composer test
 ```
 
 ### Testing
@@ -90,6 +91,8 @@ php artisan schedule:test --name="magang:transition-statuses"  # Dry run
 | `tests/Unit/` | Service unit tests |
 | `database/migrations/` | DB migrations |
 | `database/seeders/` | Seeders (must run in order: OPD → Admin → FAQ → Registration) |
+| `prompt/CURRENT-SESSION.md` | Working task log for the active batch |
+| `.cursor/skills/**` | Domain-specific skills (activate when working in that domain) |
 
 ### Data Flow
 
@@ -113,6 +116,7 @@ php artisan schedule:test --name="magang:transition-statuses"  # Dry run
 - **Indonesian** for all UI text, comments, and domain terms
 - PHP: constructor property promotion, explicit return types, curly braces always
 - Follow sibling file conventions when editing
+- Activate the relevant domain skill from `.cursor/skills/**` when working in that area
 
 ### Application Status Flow (CRITICAL)
 - Only valid transitions allowed (guarded by `SubmissionService::guardStatus()`)
@@ -147,3 +151,4 @@ php artisan schedule:test --name="magang:transition-statuses"  # Dry run
 - reCAPTCHA keys optional in local dev (rule checks `config('services.recaptcha.secret')`)
 - Mock data props still exist as fallbacks — don't strip until real backend prop is wired
 - Vite manifest error? Run `npm run build` or start `npm run dev`
+- PHPStan may need `--memory-limit=1G` locally

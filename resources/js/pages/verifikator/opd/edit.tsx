@@ -180,7 +180,7 @@ export default function OpdEdit({ user = MOCK_USER, opd }: OpdEditProps) {
                                 htmlFor="description"
                                 className="text-sm font-medium text-[#12213e]"
                             >
-                                Deskripsi{' '}
+                                Tag{' '}
                                 <span className="font-normal text-slate-400">
                                     (opsional)
                                 </span>
@@ -193,6 +193,7 @@ export default function OpdEdit({ user = MOCK_USER, opd }: OpdEditProps) {
                                     setData('description', e.target.value)
                                 }
                                 className={`mt-1.5 resize-none ${inputClass}`}
+                                placeholder="tambahkan tag (pisahkan dengan koma)"
                             />
                             {errors.description && (
                                 <p className="mt-1 text-xs text-rose-600">

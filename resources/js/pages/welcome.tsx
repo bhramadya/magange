@@ -2447,10 +2447,6 @@ export default function Welcome({
                                         Skor dihitung otomatis saat tombol kirim ditekan
                                         (grecaptcha.execute), tanpa checkbox. --- */}
                                 <div className="mt-6 border-t border-[#e5e7eb] pt-8">
-                                    <label className="mb-3 block text-[14px] font-semibold text-[#0a1628]">
-                                        Validasi Anti-Spam
-                                    </label>
-
                                     {recaptchaSiteKey ? (
                                         <p className="text-[13px] leading-relaxed text-[#0a1628]/60">
                                             Formulir ini dilindungi reCAPTCHA

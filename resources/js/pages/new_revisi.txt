@@ -14,6 +14,19 @@
 14. tambahkan fitur search pada setiap halaman atau menu yang menampilkan banyak data.
 15. Tiket yang ditolak (oleh Verifikator/OPD) tidak bisa diedit. Pengguna harus klik tombol "Ajukan Ulang". Sistem akan men- generate Nomor Tiket Baru, namun seluruh data form dari tiket lama di-copy otomatis agar pengguna tidak mengetik ulang.
 
+revisi yang tertinggal:
+16. Hapus kolom Input "Penanggung Jawab" dan "Nomor WhatsApp Penanggung Jawab".
+17. Hapus teks "validasi antispam" di UI pendaftaran.
+18. Tampilkan Testimoni/Survei Kepuasan di landing page yang memuat: Inisial/Nama, Rating Bintang, dan Komentar.
+19. Jangan mempublikasikan file foto secara bebas, gunakan sistem tarik data Profile Picture lokal dari akun user tersebut.
+20. tambahan unutk Konfigurasi reCAPTCHA v3: Wajib dipasang di form pendaftaran, form login User, dan form login Admin. Konfigurasi ditarik melalui file config.php (buat variabel statis) bukan langsung memanggil .env agar tidak error saat sistem melakukan clear cache.
+21. Pengubahan sisa kuota/slot instansi dapat dilakukan oleh Admin Verifikator dan Admin OPD. Ubah keterangan deskripsi menjadi ”tambahkan tag”.
+22. Log Presensi Harian (Peserta Magang): Tambah menu di dasbor peserta untuk input: Tanggal (bebas pilih), Jam Mulai, Jam Selesai, Rincian Aktivitas, dan Lampiran file (bisa lebih dari satu/ multiple ).
+Beri tombol Export (Word/Excel) dengan format nama file: "Aktivitas kegiatan magang Nama Peserta".
+23. Fitur Ajukan Ulang (Jika Ditolak): Tiket yang ditolak (oleh Verifikator/OPD) tidak bisa diedit. Pengguna harus klik tombol "Ajukan Ulang". Sistem akan men- generate Nomor Tiket Baru, namun seluruh data form dari tiket lama di-copy otomatis agar pengguna tidak mengetik ulang.
+
+
+
 ================================================================
 TO-DO LIST FRONTEND (backend dikerjakan rekan — lihat catatan_backend_newrevisi.txt)
 Tandai [x] setiap kali selesai.

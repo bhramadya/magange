@@ -43,8 +43,6 @@ export function RegistrationForm() {
         end_date: '',
         campus_supervisor: '',
         campus_supervisor_whatsapp: '',
-        guardian_name: '',
-        guardian_whatsapp: '',
         whatsapp_number: '',
         email: '',
         photo: null as File | null,
@@ -330,16 +328,7 @@ export function RegistrationForm() {
                                     label: 'No. WA Dosen/Guru Pembimbing',
                                     required: true,
                                 },
-                                {
-                                    field: 'guardian_name' as const,
-                                    label: 'Nama Penanggung Jawab / Wali',
-                                    required: true,
-                                },
-                                {
-                                    field: 'guardian_whatsapp' as const,
-                                    label: 'No. WA Penanggung Jawab',
-                                    required: true,
-                                },
+
                             ].map(
                                 ({
                                     field,
@@ -489,13 +478,7 @@ export function RegistrationForm() {
                         </div>
 
                         {/* reCAPTCHA v3 (invisible) + Submit */}
-                        <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-                            {recaptchaSiteKey && (
-                                <p className="text-xs text-slate-400">
-                                    Dilindungi reCAPTCHA v3 — verifikasi
-                                    berjalan otomatis saat mengirim.
-                                </p>
-                            )}
+                        <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-end">
                             <button
                                 type="submit"
                                 disabled={processing}

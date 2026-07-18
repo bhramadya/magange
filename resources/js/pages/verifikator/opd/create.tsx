@@ -178,7 +178,7 @@ export default function OpdCreate({ user = MOCK_USER }: OpdCreateProps) {
                                 htmlFor="description"
                                 className="text-sm font-medium text-[#12213e]"
                             >
-                                Deskripsi{' '}
+                                Tag{' '}
                                 <span className="font-normal text-slate-400">
                                     (opsional)
                                 </span>
@@ -191,7 +191,7 @@ export default function OpdCreate({ user = MOCK_USER }: OpdCreateProps) {
                                     setData('description', e.target.value)
                                 }
                                 className={`mt-1.5 resize-none ${inputClass}`}
-                                placeholder="Keterangan singkat mengenai OPD…"
+                                placeholder="tambahkan tag (pisahkan dengan koma)"
                             />
                             {errors.description && (
                                 <p className="mt-1 text-xs text-rose-600">
