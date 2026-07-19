@@ -25,8 +25,6 @@ use Illuminate\Support\Carbon;
  * @property string|null $address
  * @property string $campus_supervisor
  * @property string|null $campus_supervisor_whatsapp
- * @property string|null $guardian_name
- * @property string|null $guardian_whatsapp
  * @property string|null $major
  * @property string|null $skills
  * @property string|null $photo_path
@@ -45,6 +43,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $opd_decision_at
  * @property string|null $rejection_reason
  * @property string|null $surat_penerimaan_path
+ * @property string|null $sk_number Nomor SK surat penerimaan (set sekali saat approve)
+ * @property Carbon|null $sk_issued_at Tanggal terbit SK (statis)
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -60,8 +60,6 @@ use Illuminate\Support\Carbon;
     'address',
     'campus_supervisor',
     'campus_supervisor_whatsapp',
-    'guardian_name',
-    'guardian_whatsapp',
     'major',
     'skills',
     'photo_path',
@@ -80,6 +78,8 @@ use Illuminate\Support\Carbon;
     'opd_decision_at',
     'rejection_reason',
     'surat_penerimaan_path',
+    'sk_number',
+    'sk_issued_at',
 ])]
 class InternshipApplication extends Model
 {
@@ -95,6 +95,7 @@ class InternshipApplication extends Model
             'status' => ApplicationStatus::class,
             'start_date' => 'date',
             'end_date' => 'date',
+            'sk_issued_at' => 'date',
             'forwarded_at' => 'datetime',
             'opd_decision_at' => 'datetime',
         ];

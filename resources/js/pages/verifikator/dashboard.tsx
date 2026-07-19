@@ -115,8 +115,6 @@ function makeApp(
         nis: '2101234567',
         address: 'Jl. Pahlawan No. 10, Madiun',
         campus_supervisor_whatsapp: '6281234500001',
-        guardian_name: 'Drs. Suparno',
-        guardian_whatsapp: '6281234500002',
         major: 'Teknik Informatika',
         skills: 'React, Laravel, REST API, PostgreSQL',
         photo_url: null,
@@ -514,14 +512,6 @@ function ReviewDialog({
                             <DetailRow
                                 label="No. WA Pembimbing"
                                 value={app.campus_supervisor_whatsapp || '—'}
-                            />
-                            <DetailRow
-                                label="Penanggung Jawab"
-                                value={app.guardian_name || '—'}
-                            />
-                            <DetailRow
-                                label="No. WA Penanggung Jawab"
-                                value={app.guardian_whatsapp || '—'}
                             />
                             <DetailRow
                                 label="No. WhatsApp"

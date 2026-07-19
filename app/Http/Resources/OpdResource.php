@@ -23,6 +23,8 @@ class OpdResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'code' => $this->code,
+            'kode_opd' => $this->kode_opd,
+            'inisial_opd' => $this->inisial_opd,
             'description' => $this->description,
             'is_active' => $this->is_active,
             'quota' => $this->quota_total,

@@ -2,22 +2,27 @@
 
 use App\Http\Controllers\ApplicationDocumentController;
 use App\Http\Controllers\ApplicationPhotoController;
+use App\Http\Controllers\Auth\ForcePasswordController;
 use App\Http\Controllers\Auth\OtpLoginController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Mahasiswa\ApplicationController;
 use App\Http\Controllers\Mahasiswa\CertificateController;
 use App\Http\Controllers\Mahasiswa\DashboardController as MahasiswaDashboardController;
+use App\Http\Controllers\Mahasiswa\PresensiController;
 use App\Http\Controllers\Mahasiswa\ReportController;
 use App\Http\Controllers\Opd\DashboardController as OpdDashboardController;
 use App\Http\Controllers\Opd\SubmissionController as OpdSubmissionController;
 use App\Http\Controllers\OpdQuotaController;
 use App\Http\Controllers\ProfileAvatarController;
 use App\Http\Controllers\SharedPageController;
+use App\Http\Controllers\Verifikator\AdminController;
 use App\Http\Controllers\Verifikator\DashboardController as VerifikatorDashboardController;
 use App\Http\Controllers\Verifikator\FaqController;
 use App\Http\Controllers\Verifikator\OpdController;
 use App\Http\Controllers\Verifikator\PengajuanController;
 use App\Http\Controllers\Verifikator\ReportController as VerifikatorReportController;
+use App\Http\Controllers\Verifikator\SkCounterController;
+use App\Http\Controllers\Verifikator\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
@@ -52,11 +57,23 @@ Route::post('pengajuan', [ApplicationController::class, 'store'])->name('pengaju
 //   POST admin/login -> AuthenticatedSessionController@store   [name: login.store]
 // Logika role/is_active/single-session ada di FortifyServiceProvider.
 
+// Ganti password wajib (R10): akun admin auto-generate (must_change_password)
+// dipaksa ke sini oleh middleware password.changed sebelum membuka dasbor.
+Route::middleware(['auth', 'role:admin_verifikator,admin_opd'])->group(function () {
+    Route::get('admin/password-baru', [ForcePasswordController::class, 'show'])->name('password.force.show');
+    Route::post('admin/password-baru', [ForcePasswordController::class, 'store'])->name('password.force.store');
+});
+
 // --- Dasbor Mahasiswa (tersambung: auth + role) ---
 Route::middleware(['auth', 'role:mahasiswa'])->group(function () {
     Route::get('dashboard', [MahasiswaDashboardController::class, 'index'])->name('dashboard');
     Route::get('pengajuan', [MahasiswaDashboardController::class, 'pengajuan'])->name('mahasiswa.pengajuan');
     Route::get('penyelesaian', [MahasiswaDashboardController::class, 'penyelesaian'])->name('mahasiswa.penyelesaian');
+    // Log Presensi Harian (revisi #22): riwayat + simpan + lampiran privat.
+    Route::get('presensi', [PresensiController::class, 'index'])->name('presensi.index');
+    Route::post('presensi', [PresensiController::class, 'store'])->name('presensi.store');
+    Route::get('presensi/{log}/lampiran/{attachment}', [PresensiController::class, 'attachment'])->name('presensi.lampiran');
+    Route::delete('presensi/{log}', [PresensiController::class, 'destroy'])->name('presensi.destroy');
 });
 
 // --- Dasbor Verifikator (tersambung: auth + role) ---
@@ -115,6 +132,11 @@ Route::middleware(['auth', 'role:mahasiswa'])
     ->post('mahasiswa/pengajuan/{application}/laporan', [ReportController::class, 'store'])
     ->name('mahasiswa.pengajuan.laporan');
 
+// Mahasiswa: Ajukan Ulang tiket rejected (R15) — tiket baru, data ter-copy.
+Route::middleware(['auth', 'role:mahasiswa'])
+    ->post('mahasiswa/pengajuan/{application}/ajukan-ulang', [ApplicationController::class, 'resubmit'])
+    ->name('mahasiswa.pengajuan.ajukan-ulang');
+
 // Kuota OPD: Admin OPD ubah kuota sendiri, Admin Verifikator ubah semua.
 // Cek kepemilikan (403) ada di UpdateQuotaRequest::authorize().
 Route::middleware(['auth', 'role:admin_opd,admin_verifikator'])
@@ -157,6 +179,10 @@ Route::middleware(['auth', 'role:admin_verifikator'])
         Route::get('{report}/berkas', [VerifikatorReportController::class, 'downloadReport'])->name('berkas');
         Route::post('{report}/approve', [VerifikatorReportController::class, 'approve'])->name('approve');
         Route::post('{report}/sertifikat', [VerifikatorReportController::class, 'uploadCertificate'])->name('sertifikat');
+        // R9: Surat Penyelesaian Magang ber-kop Kominfo — generate sekali
+        // (nomor & tanggal SK statis), unduh dari arsip disk privat.
+        Route::post('{report}/surat-penyelesaian', [VerifikatorReportController::class, 'generateCompletionLetter'])->name('surat-penyelesaian');
+        Route::get('{report}/surat-penyelesaian', [VerifikatorReportController::class, 'downloadCompletionLetter'])->name('surat-penyelesaian.download');
     });
 
 // Mahasiswa: kirim survei wajib (buka kunci) + unduh sertifikat.
@@ -167,6 +193,12 @@ Route::middleware(['auth', 'role:mahasiswa'])
         Route::post('{certificate}/survei', [CertificateController::class, 'submitSurvey'])->name('survei');
         Route::get('{certificate}/download', [CertificateController::class, 'download'])->name('download');
     });
+
+// Verifikator: atur start number counter Nomor SK (R5), mis. mulai dari 40.
+// Body: { key: 'acceptance'|'completion', start_number: int }.
+Route::middleware(['auth', 'role:admin_verifikator'])
+    ->patch('verifikator/sk-counter', [SkCounterController::class, 'update'])
+    ->name('verifikator.sk-counter.update');
 
 // Verifikator: kelola FAQ (tampil di landing page publik).
 Route::middleware(['auth', 'role:admin_verifikator'])
@@ -192,6 +224,28 @@ Route::middleware(['auth', 'role:admin_verifikator'])
         Route::get('{opd}/edit', [OpdController::class, 'edit'])->name('edit');
         Route::put('{opd}', [OpdController::class, 'update'])->name('update');
         Route::delete('{opd}', [OpdController::class, 'destroy'])->name('destroy');
+        // R10: reset password akun Admin OPD (kredensial via flash, tampil sekali).
+        Route::post('{opd}/reset-password', [OpdController::class, 'resetPassword'])->name('reset-password');
+    });
+
+// Verifikator: Kelola User (R12) — akun mahasiswa, status aktif, last_login.
+Route::middleware(['auth', 'role:admin_verifikator'])
+    ->prefix('verifikator/users')
+    ->name('verifikator.users.')
+    ->group(function () {
+        Route::get('/', [UserController::class, 'index'])->name('index');
+        Route::patch('{user}/toggle-active', [UserController::class, 'toggleActive'])->name('toggle-active');
+    });
+
+// Verifikator: Kelola Admin (R13) — sesama verifikator, password auto-generate.
+Route::middleware(['auth', 'role:admin_verifikator'])
+    ->prefix('verifikator/admins')
+    ->name('verifikator.admins.')
+    ->group(function () {
+        Route::get('/', [AdminController::class, 'index'])->name('index');
+        Route::post('/', [AdminController::class, 'store'])->name('store');
+        Route::post('{user}/reset-password', [AdminController::class, 'resetPassword'])->name('reset-password');
+        Route::delete('{user}', [AdminController::class, 'destroy'])->name('destroy');
     });
 
 require __DIR__.'/settings.php';

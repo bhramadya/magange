@@ -58,8 +58,6 @@ class InternshipApplicationResource extends JsonResource
             'nis' => $this->nis,
             'address' => $this->address,
             'campus_supervisor_whatsapp' => $this->campus_supervisor_whatsapp,
-            'guardian_name' => $this->guardian_name,
-            'guardian_whatsapp' => $this->guardian_whatsapp,
             'major' => $this->major,
             'skills' => $this->skills,
 
@@ -71,11 +69,25 @@ class InternshipApplicationResource extends JsonResource
             'division' => $this->division,
             'field_supervisor' => $this->field_supervisor,
             'person_in_charge' => $this->person_in_charge,
+            // Nomor SK surat penerimaan (R5): di-set sekali saat approve.
+            'sk_number' => $this->sk_number,
+            'sk_issued_at' => $this->sk_issued_at?->toDateString(),
 
             'rejection_reason' => $this->rejection_reason,
             'forwarded_at' => $this->forwarded_at?->toISOString(),
             'opd_decision_at' => $this->opd_decision_at?->toISOString(),
             'created_at' => $this->created_at?->toISOString(),
+
+            // Rekam jejak progres tiket (R6) — hanya bila relasi dimuat.
+            'status_logs' => $this->whenLoaded(
+                'statusLogs',
+                fn () => $this->statusLogs->map(fn ($log): array => [
+                    'status' => $log->to_status,
+                    'note' => $log->notes,
+                    'actor_name' => $log->changedBy?->name,
+                    'created_at' => $log->created_at?->toISOString(),
+                ])->values()->all(),
+            ),
 
             // Tahap penyelesaian (Fase 4).
             'final_report' => $this->whenLoaded('finalReport', fn () => $this->finalReport ? [

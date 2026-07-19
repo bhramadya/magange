@@ -11,6 +11,8 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $name
  * @property string $code
+ * @property int|null $kode_opd Kode internal angka (R11)
+ * @property string|null $inisial_opd Inisial publik, mis. KOMINFO (R11)
  * @property string|null $description
  * @property bool $is_active
  * @property int $quota_total
@@ -18,7 +20,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'code', 'description', 'is_active', 'quota_total', 'quota_used'])]
+#[Fillable(['name', 'code', 'kode_opd', 'inisial_opd', 'description', 'is_active', 'quota_total', 'quota_used'])]
 class Opd extends Model
 {
     /**

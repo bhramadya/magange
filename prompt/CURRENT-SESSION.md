@@ -83,3 +83,59 @@ murni backend). Ringkasan yang dikerjakan:
   direktori tooling OpenCode ber-error lint pre-existing; fitur landing
   features.tsx unused import Building2 dibersihkan), prettier ✅.
 - Kontrak prop-path HANDOFF-BACKEND.md tetap utuh (penambahan aditif saja).
+
+## Batch 2026-07-19 — BACKEND new_revisi (R1-R15) + revisi tertinggal #16-23
+Dikerjakan Claude Code. Semua kontrak catatan_backend_newrevisi.txt dipenuhi
+persis (nama route/prop/kolom). Ringkasan:
+- [x] #16 — guardian_name/guardian_whatsapp DI-DROP (migration 000100) dari DB,
+  request, service, resource, email, seeder, 6 halaman React, types/magang.ts.
+  PENTING: form pendaftaran sebelumnya RUSAK (backend wajibkan guardian yang
+  tak lagi dikirim frontend) — kini sinkron.
+- [x] R1 — nis alfanumerik max:15 + regex + pesan Indonesia.
+- [x] R2/R8/#20 — Recaptcha v3 (score >= services.recaptcha.min_score, action
+  match opsional) di pendaftaran/otp-send/admin-login; kunci hanya via config.
+- [x] R4/R5 — sk_number+sk_issued_at (set SEKALI di approve, idempoten),
+  SkNumberService + tabel sk_counters (lockForUpdate, format
+  503.11/N/401.106/TAHUN), PATCH verifikator/sk-counter (start number),
+  PDF acceptance_letter kop Kominfo + logo (skip logo bila GD absen).
+- [x] R9 — completion_sk_* + completion_letter_path di final_reports,
+  POST/GET verifikator/laporan/{report}/surat-penyelesaian (idempoten),
+  view pdf/completion_letter.blade.php.
+- [x] R10 — AdminAccountService (Str::password(12), must_change_password),
+  OpdController@store buat akun admin_opd + flash generatedCredentials
+  (shared prop baru di HandleInertiaRequests: success/error/
+  generatedCredentials), POST verifikator/opd/{opd}/reset-password,
+  middleware password.changed (global web) + Auth\ForcePasswordController
+  (GET/POST admin/password-baru), last_login_at di Fortify + OTP login.
+- [x] R12 — Verifikator\UserController (?search= ilike nama/email, paginate,
+  applications_count) + PATCH toggle-active; akun nonaktif ditolak di OTP
+  send DAN verify.
+- [x] R13 — Verifikator\AdminController (store tanpa input password,
+  reset-password, destroy dengan guard hapus-diri-sendiri).
+- [x] R11 — opds.kode_opd (int unique) + inisial_opd; code lama tetap.
+- [x] R15/#23 — SubmissionService::resubmit (guard rejected+milik, tiket baru,
+  replicate + copy fisik berkas ke applications/resubmit/{tiket}/, opd_id
+  dikosongkan, log "Diajukan ulang dari X", email konfirmasi) + route
+  POST mahasiswa/pengajuan/{application}/ajukan-ulang.
+- [x] R6 — opd/peserta: status_logs (whenLoaded statusLogs+changedBy di
+  InternshipApplicationResource) + semua field resource terkirim.
+- [x] R14 — reports index ?search= (tiket/nama/instansi) + filters.search.
+- [x] #22 — presensi_logs + presensi_attachments (multiple, disk privat),
+  Mahasiswa\PresensiController (index prop entries/store/attachment/destroy),
+  presensi.tsx disambungkan (riwayat + export semua entri + kirim lampiran
+  via transform), nav "Presensi Harian".
+- [x] R7 — middleware global SanitizeInput (script/on*=/javascript: dibuang,
+  password dikecualikan, strip & tanda baca lolos). Tes: script bersih,
+  "D-3 Teknik" utuh.
+- [x] #17/#18/#19/#21 — diverifikasi SUDAH ada sebelumnya (teks antispam tak
+  ditemukan; testimoni HomeController+welcome; foto via route ter-auth; label
+  "Tag/tambahkan tag" di form OPD; kuota.update sudah 2 role).
+- Perbaikan test-harness: phpunit.xml APP_URL=http://localhost (APP_URL .env
+  tanpa skema merusak URL test → 404 massal PRE-EXISTING), TestCase
+  withoutVite() (tak butuh manifest build).
+- Tes baru: Verifikator/{AccountManagementTest(10),SkNumberTest(4)},
+  Mahasiswa/{ResubmitTest(3),PresensiTest(5)}, Security/SanitizeInputTest(2).
+- Gate penuh: Pint ✅ PHPStan ✅ Pest 159 lulus/10 skip ✅ tsc ✅ eslint ✅
+  prettier ✅ vite build ✅.
+- BELUM: bug dasbor masalah.txt (filter verifikator tak konsisten, card OPD
+  kurang "Selesai Magang").

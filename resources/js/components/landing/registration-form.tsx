@@ -328,7 +328,6 @@ export function RegistrationForm() {
                                     label: 'No. WA Dosen/Guru Pembimbing',
                                     required: true,
                                 },
-
                             ].map(
                                 ({
                                     field,

@@ -23,8 +23,6 @@ interface PengajuanServiceContract
      *     institution_name: string,
      *     campus_supervisor: string,
      *     campus_supervisor_whatsapp?: string|null,
-     *     guardian_name?: string|null,
-     *     guardian_whatsapp?: string|null,
      *     major?: string|null,
      *     skills?: string|null,
      * }  $validatedData
@@ -71,4 +69,10 @@ interface PengajuanServiceContract
      * status ongoing atau completion_submitted.
      */
     public function complete(InternshipApplication $app, ?User $actor = null, ?string $note = null): void;
+
+    /**
+     * Ajukan Ulang (R15): buat pengajuan BARU (tiket baru) dari tiket rejected
+     * milik $actor — data form + berkas di-copy, tiket lama tetap read-only.
+     */
+    public function resubmit(InternshipApplication $old, User $actor): InternshipApplication;
 }

@@ -70,7 +70,12 @@ class DashboardController extends Controller
         $user = $request->user();
 
         $applications = InternshipApplication::query()
-            ->with(['user', 'opd', 'finalReport', 'survey', 'certificate'])
+            ->with([
+                'user', 'opd', 'finalReport', 'survey', 'certificate',
+                // R6: rekam jejak progres tiket, urut kronologis + pelakunya.
+                'statusLogs' => fn ($q) => $q->oldest('created_at'),
+                'statusLogs.changedBy',
+            ])
             ->where('opd_id', $user->opd_id)
             ->whereIn('status', [
                 ApplicationStatus::Approved,

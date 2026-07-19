@@ -24,11 +24,13 @@ use Illuminate\Support\Carbon;
  * @property UserRole $role
  * @property int|null $opd_id
  * @property bool $is_active
+ * @property bool $must_change_password Wajib ganti password saat login pertama (akun admin auto-generate)
+ * @property Carbon|null $last_login_at Waktu login sukses terakhir
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Opd|null $opd
  */
-#[Fillable(['name', 'email', 'username', 'whatsapp_number', 'avatar_path', 'password', 'role', 'opd_id', 'is_active'])]
+#[Fillable(['name', 'email', 'username', 'whatsapp_number', 'avatar_path', 'password', 'role', 'opd_id', 'is_active', 'must_change_password', 'last_login_at'])]
 #[Hidden(['password'])]
 class User extends Authenticatable
 {
@@ -46,6 +48,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'role' => UserRole::class,
             'is_active' => 'boolean',
+            'must_change_password' => 'boolean',
+            'last_login_at' => 'datetime',
         ];
     }
 

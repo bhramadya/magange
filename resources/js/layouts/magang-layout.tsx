@@ -15,6 +15,7 @@ import {
     ShieldCheck,
     GraduationCap,
     UserCog,
+    CalendarCheck,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -69,6 +70,13 @@ export const mahasiswaNav: MagangNavItem[] = [
         title: 'Penyelesaian',
         href: '/penyelesaian',
         icon: Award,
+    },
+    // Log Presensi Harian (revisi #22).
+    {
+        key: 'presensi',
+        title: 'Presensi Harian',
+        href: '/presensi',
+        icon: CalendarCheck,
     },
     // `?role=` menandai peran saat pratinjau (belum ada auth) supaya halaman
     // Bantuan bersama menampilkan sidebar peran yang benar — lihat bantuan.tsx.

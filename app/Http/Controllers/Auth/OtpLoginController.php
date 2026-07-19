@@ -13,6 +13,7 @@ use App\Services\OtpLockoutService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Date;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -42,6 +43,13 @@ class OtpLoginController extends Controller
         $validated = $request->validated();
 
         $user = User::where('email', $validated['email'])->firstOrFail();
+
+        // R12: akun yang dinonaktifkan Admin Verifikator ditolak login.
+        if (! $user->is_active) {
+            return back()->withErrors([
+                'email' => 'Akun Anda dinonaktifkan. Hubungi admin untuk informasi lebih lanjut.',
+            ]);
+        }
 
         // Lockout progresif: setelah 3x salah input, kirim ulang diblokir
         // selama jeda deret Fibonacci sesuai tingkat lockout.
@@ -107,8 +115,18 @@ class OtpLoginController extends Controller
             abort(403, 'Browser ini sudah login dengan akun lain. Silakan logout terlebih dahulu.');
         }
 
+        // R12: akun nonaktif tidak boleh masuk meski OTP-nya benar.
+        if (! $user->is_active) {
+            return back()->withErrors([
+                'email' => 'Akun Anda dinonaktifkan. Hubungi admin untuk informasi lebih lanjut.',
+            ]);
+        }
+
         // Login sukses → reset lockout.
         $this->lockout->reset($user);
+
+        // Audit login (R12): catat waktu login sukses terakhir.
+        $user->forceFill(['last_login_at' => Date::now()])->save();
 
         Auth::login($user, remember: true);
 

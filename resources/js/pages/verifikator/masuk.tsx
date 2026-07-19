@@ -91,8 +91,6 @@ function makeApp(
         nis: '2026001234',
         address: 'Jl. Pahlawan No. 1, Madiun',
         campus_supervisor_whatsapp: '6281234500001',
-        guardian_name: 'Slamet Riyadi',
-        guardian_whatsapp: '6281234500002',
         verifikator_note: null,
         opd: null,
         division: null,
@@ -283,14 +281,6 @@ function ReviewPanel({
                 <DetailRow
                     label="No. WA Pembimbing"
                     value={app.campus_supervisor_whatsapp || '—'}
-                />
-                <DetailRow
-                    label="Penanggung Jawab"
-                    value={app.guardian_name || '—'}
-                />
-                <DetailRow
-                    label="No. WA Penanggung Jawab"
-                    value={app.guardian_whatsapp || '—'}
                 />
                 <DetailRow
                     label="No. WhatsApp"

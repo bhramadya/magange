@@ -35,8 +35,6 @@ function e2ePengajuan(array $overrides = []): array
         'address' => 'Jl. Merdeka No. 1, Madiun',
         'campus_supervisor' => 'Dr. Andi',
         'campus_supervisor_whatsapp' => '081311112222',
-        'guardian_name' => 'Slamet Santoso',
-        'guardian_whatsapp' => '081333334444',
         'major' => 'Teknik Informatika',
         'skills' => 'React, Laravel',
     ], $overrides);

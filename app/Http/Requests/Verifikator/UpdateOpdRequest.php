@@ -29,6 +29,8 @@ class UpdateOpdRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required', 'string', 'max:50', Rule::unique('opds', 'code')->ignore($opdId)],
+            'kode_opd' => ['nullable', 'integer', 'min:0', Rule::unique('opds', 'kode_opd')->ignore($opdId)],
+            'inisial_opd' => ['nullable', 'string', 'max:30'],
             'description' => ['nullable', 'string', 'max:1000'],
             'quota_total' => ['required', 'integer', "min:{$minimal}", 'max:1000'],
             'is_active' => ['nullable', 'boolean'],
@@ -44,6 +46,8 @@ class UpdateOpdRequest extends FormRequest
             'name.required' => 'Nama OPD wajib diisi.',
             'code.required' => 'Kode OPD wajib diisi.',
             'code.unique' => 'Kode OPD sudah digunakan.',
+            'kode_opd.integer' => 'Kode OPD internal harus berupa angka.',
+            'kode_opd.unique' => 'Kode OPD internal sudah digunakan.',
             'quota_total.required' => 'Kuota wajib diisi.',
             'quota_total.integer' => 'Kuota harus berupa angka.',
             'quota_total.min' => 'Kuota tidak boleh lebih kecil dari kuota yang sudah terpakai.',

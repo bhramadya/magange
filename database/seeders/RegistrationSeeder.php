@@ -55,8 +55,6 @@ class RegistrationSeeder extends Seeder
             'address' => 'Jl. Merdeka No. 45 RT 03 RW 02, Kel. Taman, Kec. Taman, Kota Madiun',
             'campus_supervisor' => 'Dr. Siti Aminah, M.Kom',
             'campus_supervisor_whatsapp' => '081234567890',
-            'guardian_name' => 'H. Slamet Widodo',
-            'guardian_whatsapp' => '081298765432',
             'photo_path' => 'applications/photos/budi-santoso-pasfoto.png',
             'status' => ApplicationStatus::PendingVerifikator,
             'opd_id' => $opd?->id,

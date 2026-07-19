@@ -35,10 +35,13 @@ return [
         ],
     ],
 
-    // Google reCAPTCHA v2 (checkbox) — gerbang anti-bot form pendaftaran publik.
+    // Google reCAPTCHA v3 (invisible, score-based) — gerbang anti-bot form
+    // pendaftaran publik, kirim OTP, dan login admin. Konfigurasi HANYA lewat
+    // file ini (jangan panggil env() di luar config — aman untuk config:cache).
     'recaptcha' => [
         'site_key' => env('RECAPTCHA_SITE_KEY'),
         'secret' => env('RECAPTCHA_SECRET_KEY'),
+        'min_score' => env('RECAPTCHA_MIN_SCORE', 0.5),
     ],
 
 ];

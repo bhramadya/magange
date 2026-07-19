@@ -30,8 +30,6 @@ function pengajuanFormPayload(array $overrides = []): array
         'address' => 'Jl. Merdeka No. 1, Madiun',
         'campus_supervisor' => 'Dr. Andi',
         'campus_supervisor_whatsapp' => '081311112222',
-        'guardian_name' => 'Slamet Santoso',
-        'guardian_whatsapp' => '081333334444',
     ], $overrides);
 }
 
@@ -73,7 +71,6 @@ test('application submission creates user if not exists', function () {
         'duration_months' => 2,
         'end_date' => now()->addMonths(3)->toDateString(),
         'institution_name' => 'Test University',
-        'guardian_name' => 'Wali Test',
     ]));
 
     expect(User::where('email', 'newuser@example.com')->exists())->toBeTrue();
@@ -91,7 +88,6 @@ test('application submission reuses existing user', function () {
         'duration_months' => 2,
         'end_date' => now()->addMonths(3)->toDateString(),
         'institution_name' => 'Test University',
-        'guardian_name' => 'Wali Test',
     ]));
 
     expect(User::where('email', 'existing@example.com')->count())->toBe(1);

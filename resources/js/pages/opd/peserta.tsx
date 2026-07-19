@@ -526,14 +526,6 @@ function DetailDialog({
                                 icon={UserCog}
                             />
                             <DetailRow
-                                label="Penanggung Jawab / Wali"
-                                value={app.guardian_name || '—'}
-                            />
-                            <DetailRow
-                                label="No. WA Wali"
-                                value={app.guardian_whatsapp || '—'}
-                            />
-                            <DetailRow
                                 label="No. SK Penerimaan"
                                 value={app.sk_number ?? '—'}
                             />

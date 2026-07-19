@@ -92,8 +92,6 @@ export interface InternshipApplication {
     nis?: string | null;
     address?: string | null;
     campus_supervisor_whatsapp?: string | null; // no. WA dosen/guru pembimbing
-    guardian_name?: string | null; // nama penanggung jawab
-    guardian_whatsapp?: string | null; // no. WA penanggung jawab
     photo_url?: string | null; // URL pas foto (disk privat, route terproteksi)
 
     // Berkas pendukung opsional ("jika ada") — disk privat, route terproteksi

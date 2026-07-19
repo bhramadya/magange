@@ -1,13 +1,12 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import {
     Calendar,
     Clock,
     FileText,
     Plus,
     Trash2,
-    Download,
     FileSpreadsheet,
-    FileWord,
+    FileType2,
     Upload,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -20,8 +19,24 @@ import type { MagangUser } from '@/types/magang';
  *  Export: Excel (CSV) & Word (HTML) dengan nama file dinamis.
  * ========================================================================= */
 
+interface PresensiAttachmentRow {
+    id: number;
+    name: string;
+    url: string;
+}
+
+interface PresensiEntry {
+    id: number;
+    activity_date: string;
+    start_time: string;
+    end_time: string;
+    details: string;
+    attachments: PresensiAttachmentRow[];
+}
+
 interface PresensiProps {
     user?: MagangUser;
+    entries?: PresensiEntry[];
 }
 
 const MOCK_USER: MagangUser = {
@@ -43,7 +58,10 @@ function generateId() {
 }
 
 function formatDateID(iso: string) {
-    if (!iso) return '';
+    if (!iso) {
+        return '';
+    }
+
     return new Intl.DateTimeFormat('id-ID', {
         day: 'numeric',
         month: 'long',
@@ -55,27 +73,35 @@ function sanitizeFilename(name: string) {
     return name.replace(/[^a-zA-Z0-9\s_-]/g, '').trim() || 'Peserta';
 }
 
-export default function PresensiHarian({ user = MOCK_USER }: PresensiProps) {
-    const pageUser = (usePage().props as { auth?: { user?: MagangUser } }).auth
-        ?.user;
+export default function PresensiHarian({
+    user = MOCK_USER,
+    entries = [],
+}: PresensiProps) {
+    const pageUser = (
+        usePage().props as unknown as { auth?: { user?: MagangUser } }
+    ).auth?.user;
     const currentUser = pageUser ?? user;
 
-    const { data, setData, post, processing, errors, reset } = useForm<{
-        activity_date: string;
-        start_time: string;
-        end_time: string;
-        details: string;
-    }>({
-        activity_date: '',
-        start_time: '',
-        end_time: '',
-        details: '',
-    });
+    const { data, setData, post, processing, errors, reset, transform } =
+        useForm<{
+            activity_date: string;
+            start_time: string;
+            end_time: string;
+            details: string;
+        }>({
+            activity_date: '',
+            start_time: '',
+            end_time: '',
+            details: '',
+        });
 
     const [attachments, setAttachments] = useState<Attachment[]>([]);
 
     const addAttachment = () => {
-        setAttachments((prev) => [...prev, { id: generateId(), file: null, name: '' }]);
+        setAttachments((prev) => [
+            ...prev,
+            { id: generateId(), file: null, name: '' },
+        ]);
     };
 
     const removeAttachment = (id: string) => {
@@ -92,7 +118,13 @@ export default function PresensiHarian({ user = MOCK_USER }: PresensiProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Lampiran multiple dikirim sebagai array files melalui FormData.
+        // Lampiran multiple dikirim sebagai array `attachments[]` (FormData).
+        transform((formData) => ({
+            ...formData,
+            attachments: attachments
+                .map((a) => a.file)
+                .filter((f): f is File => f !== null),
+        }));
         post('/presensi', {
             forceFormData: true,
             preserveScroll: true,
@@ -107,10 +139,24 @@ export default function PresensiHarian({ user = MOCK_USER }: PresensiProps) {
         currentUser.name,
     )}`;
 
+    // Export mencakup SELURUH riwayat presensi; bila belum ada riwayat,
+    // gunakan isian form saat ini agar tombol tetap berguna.
+    const exportRows: Array<
+        Pick<
+            PresensiEntry,
+            'activity_date' | 'start_time' | 'end_time' | 'details'
+        >
+    > = entries.length > 0 ? entries : [data];
+
     const exportExcel = () => {
         const rows = [
             ['Tanggal', 'Jam Mulai', 'Jam Selesai', 'Rincian Aktivitas'],
-            [data.activity_date, data.start_time, data.end_time, data.details],
+            ...exportRows.map((row) => [
+                row.activity_date,
+                row.start_time,
+                row.end_time,
+                row.details,
+            ]),
         ];
         const csv = rows
             .map((row) =>
@@ -131,18 +177,20 @@ export default function PresensiHarian({ user = MOCK_USER }: PresensiProps) {
     };
 
     const exportWord = () => {
+        const bodyRows = exportRows
+            .map(
+                (row) =>
+                    `<tr><td>${formatDateID(row.activity_date)}</td><td>${row.start_time}</td><td>${row.end_time}</td><td>${row.details}</td></tr>`,
+            )
+            .join('');
         const html = `
             <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
             <head><meta charset='utf-8'><title>${exportBaseName}</title></head>
             <body>
                 <h2>${exportBaseName}</h2>
                 <table border='1' cellspacing='0' cellpadding='6'>
-                    <tr><td><b>Tanggal</b></td><td>${formatDateID(
-                        data.activity_date,
-                    )}</td></tr>
-                    <tr><td><b>Jam Mulai</b></td><td>${data.start_time}</td></tr>
-                    <tr><td><b>Jam Selesai</b></td><td>${data.end_time}</td></tr>
-                    <tr><td><b>Rincian Aktivitas</b></td><td>${data.details}</td></tr>
+                    <tr><th>Tanggal</th><th>Jam Mulai</th><th>Jam Selesai</th><th>Rincian Aktivitas</th></tr>
+                    ${bodyRows}
                 </table>
             </body>
             </html>`;
@@ -163,7 +211,11 @@ export default function PresensiHarian({ user = MOCK_USER }: PresensiProps) {
         'w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[15px] text-[#12213e] transition-all placeholder:text-slate-400 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none';
 
     return (
-        <MagangLayout user={currentUser} title="Presensi Harian" active="presensi">
+        <MagangLayout
+            user={currentUser}
+            title="Presensi Harian"
+            active="presensi"
+        >
             <Head title="Presensi Harian" />
 
             <div className="space-y-6">
@@ -184,8 +236,7 @@ export default function PresensiHarian({ user = MOCK_USER }: PresensiProps) {
                     <div className="grid gap-5 md:grid-cols-3">
                         <div>
                             <label className="text-sm font-semibold text-[#12213e]">
-                                Tanggal{' '}
-                                <span className="text-rose-500">*</span>
+                                Tanggal <span className="text-rose-500">*</span>
                             </label>
                             <div className="relative mt-1.5">
                                 <Calendar className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
@@ -262,9 +313,7 @@ export default function PresensiHarian({ user = MOCK_USER }: PresensiProps) {
                         </label>
                         <textarea
                             value={data.details}
-                            onChange={(e) =>
-                                setData('details', e.target.value)
-                            }
+                            onChange={(e) => setData('details', e.target.value)}
                             rows={4}
                             className={`${inputClass} mt-1.5 resize-none`}
                             placeholder="Jelaskan aktivitas yang dilakukan hari ini..."
@@ -314,17 +363,14 @@ export default function PresensiHarian({ user = MOCK_USER }: PresensiProps) {
                                             onChange={(e) =>
                                                 updateAttachment(
                                                     att.id,
-                                                    e.target.files?.[0] ??
-                                                        null,
+                                                    e.target.files?.[0] ?? null,
                                                 )
                                             }
                                         />
                                     </label>
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            removeAttachment(att.id)
-                                        }
+                                        onClick={() => removeAttachment(att.id)}
                                         className="rounded-lg p-1.5 text-rose-500 transition hover:bg-rose-50"
                                     >
                                         <Trash2 className="size-4" />
@@ -358,12 +404,75 @@ export default function PresensiHarian({ user = MOCK_USER }: PresensiProps) {
                                 onClick={exportWord}
                                 className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                             >
-                                <FileWord className="size-4 text-blue-600" />
+                                <FileType2 className="size-4 text-blue-600" />
                                 Export Word
                             </button>
                         </div>
                     </div>
                 </form>
+
+                {/* Riwayat presensi — sumber data tombol Export di atas. */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <h3 className="text-base font-bold text-[#12213e]">
+                        Riwayat Presensi
+                    </h3>
+                    {entries.length === 0 ? (
+                        <p className="mt-3 text-sm text-slate-400">
+                            Belum ada presensi tercatat.
+                        </p>
+                    ) : (
+                        <ul className="mt-4 space-y-3">
+                            {entries.map((entry) => (
+                                <li
+                                    key={entry.id}
+                                    className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                                >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <p className="text-sm font-semibold text-[#12213e]">
+                                            {formatDateID(entry.activity_date)}{' '}
+                                            <span className="font-normal text-slate-500">
+                                                · {entry.start_time}–
+                                                {entry.end_time}
+                                            </span>
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                router.delete(
+                                                    `/presensi/${entry.id}`,
+                                                    { preserveScroll: true },
+                                                )
+                                            }
+                                            className="rounded-lg p-1.5 text-rose-500 transition hover:bg-rose-50"
+                                            aria-label="Hapus presensi"
+                                        >
+                                            <Trash2 className="size-4" />
+                                        </button>
+                                    </div>
+                                    <p className="mt-1 text-sm whitespace-pre-line text-slate-600">
+                                        {entry.details}
+                                    </p>
+                                    {entry.attachments.length > 0 && (
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                            {entry.attachments.map((file) => (
+                                                <a
+                                                    key={file.id}
+                                                    href={file.url}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#106feb]/10 px-2.5 py-1 text-xs font-semibold text-[#106feb] transition hover:bg-[#106feb]/20"
+                                                >
+                                                    <FileText className="size-3.5" />
+                                                    {file.name}
+                                                </a>
+                                            ))}
+                                        </div>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </div>
             </div>
         </MagangLayout>
     );

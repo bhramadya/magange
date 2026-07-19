@@ -27,8 +27,6 @@ function validPengajuan(array $overrides = []): array
         'address' => 'Jl. Merdeka No. 1, Madiun',
         'campus_supervisor' => 'Dr. Andi',
         'campus_supervisor_whatsapp' => '081311112222',
-        'guardian_name' => 'Slamet Santoso',
-        'guardian_whatsapp' => '081333334444',
         'recaptcha_token' => 'test-token',
     ], $overrides);
 }
@@ -68,8 +66,6 @@ test('field pendaftaran tambahan tersimpan termasuk pas foto', function () {
     expect($app->nis)->toBe('2021001')
         ->and($app->address)->toBe('Jl. Merdeka No. 1, Madiun')
         ->and($app->campus_supervisor_whatsapp)->toBe('081311112222')
-        ->and($app->guardian_name)->toBe('Slamet Santoso')
-        ->and($app->guardian_whatsapp)->toBe('081333334444')
         ->and($app->photo_path)->not->toBeNull();
     Storage::disk('local')->assertExists($app->photo_path);
 });

@@ -690,18 +690,6 @@ export default function Pengajuan({
                                     }
                                 />
                             )}
-                            {application.guardian_name && (
-                                <DetailRow
-                                    label="Penanggung Jawab / Wali"
-                                    value={application.guardian_name}
-                                />
-                            )}
-                            {application.guardian_whatsapp && (
-                                <DetailRow
-                                    label="No. WA Penanggung Jawab"
-                                    value={application.guardian_whatsapp}
-                                />
-                            )}
                             <DetailRow
                                 label="Durasi"
                                 value={`${application.duration_months} Bulan`}

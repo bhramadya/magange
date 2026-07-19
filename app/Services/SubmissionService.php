@@ -16,6 +16,8 @@ use App\Models\User;
 use DomainException;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class SubmissionService implements PengajuanServiceContract
 {
@@ -24,6 +26,7 @@ class SubmissionService implements PengajuanServiceContract
     public function __construct(
         private RateLimitService $rateLimit,
         private OtpServiceContract $otpService,
+        private SkNumberService $skNumbers,
     ) {}
 
     /**
@@ -43,8 +46,6 @@ class SubmissionService implements PengajuanServiceContract
      *     address?: string|null,
      *     campus_supervisor: string,
      *     campus_supervisor_whatsapp?: string|null,
-     *     guardian_name?: string|null,
-     *     guardian_whatsapp?: string|null,
      *     major?: string|null,
      *     skills?: string|null,
      *     photo_path?: string|null,
@@ -88,8 +89,6 @@ class SubmissionService implements PengajuanServiceContract
                 'address' => $validatedData['address'] ?? null,
                 'campus_supervisor' => $validatedData['campus_supervisor'],
                 'campus_supervisor_whatsapp' => $validatedData['campus_supervisor_whatsapp'] ?? null,
-                'guardian_name' => $validatedData['guardian_name'] ?? null,
-                'guardian_whatsapp' => $validatedData['guardian_whatsapp'] ?? null,
                 'major' => $validatedData['major'] ?? null,
                 'skills' => $validatedData['skills'] ?? null,
                 'photo_path' => $validatedData['photo_path'] ?? null,
@@ -182,10 +181,22 @@ class SubmissionService implements PengajuanServiceContract
                 $opd->increment('quota_used');
             }
 
+            // Nomor SK surat penerimaan (R4/R5): auto-increment dari counter,
+            // di-set SEKALI — cetak ulang TIDAK mengubah nomor/tanggal terbit.
+            $skNumber = $app->sk_number;
+            $skIssuedAt = $app->sk_issued_at;
+
+            if ($skNumber === null) {
+                $skNumber = $this->skNumbers->next(SkNumberService::KEY_ACCEPTANCE);
+                $skIssuedAt = Date::today();
+            }
+
             $app->update([
                 'division' => $data['division'],
                 'field_supervisor' => $data['field_supervisor'],
                 'person_in_charge' => $data['person_in_charge'],
+                'sk_number' => $skNumber,
+                'sk_issued_at' => $skIssuedAt,
                 'status' => ApplicationStatus::Approved,
                 'opd_decision_by' => $actor->id,
                 'opd_decision_at' => Date::now(),
@@ -273,6 +284,84 @@ class SubmissionService implements PengajuanServiceContract
                 $note ?? ($actor === null ? 'Selesai magang (otomatis oleh sistem)' : 'Magang diselesaikan'),
             );
         });
+    }
+
+    /**
+     * Ajukan Ulang (R15): tiket rejected tidak bisa diedit — buat pengajuan
+     * BARU dengan nomor tiket baru, seluruh data form + berkas di-copy dari
+     * tiket lama agar pemohon tidak mengetik ulang. Tiket lama tetap rejected
+     * (read-only). Berkas fisik ikut disalin agar path tiap tiket unik.
+     */
+    public function resubmit(InternshipApplication $old, User $actor): InternshipApplication
+    {
+        $this->guardStatus($old, ApplicationStatus::Rejected);
+
+        if ($old->user_id !== $actor->id) {
+            throw new DomainException('Hanya pemilik pengajuan yang dapat mengajukan ulang.');
+        }
+
+        $application = DB::transaction(function () use ($old, $actor): InternshipApplication {
+            $new = $old->replicate([
+                'ticket_number',
+                'status',
+                'opd_id',
+                'division',
+                'field_supervisor',
+                'person_in_charge',
+                'sk_number',
+                'sk_issued_at',
+                'forwarded_by',
+                'forwarded_at',
+                'verifikator_note',
+                'opd_decision_by',
+                'opd_decision_at',
+                'rejection_reason',
+                'surat_penerimaan_path',
+            ]);
+
+            $new->ticket_number = $this->generateTicketNumber();
+            $new->status = ApplicationStatus::PendingVerifikator;
+            // opd_id sengaja dikosongkan — akan diisi verifikator saat forward
+            // (tujuan tetap terbaca dari kolom tujuan_magang).
+            $new->opd_id = null;
+
+            // Copy fisik berkas agar tiap tiket punya arsip sendiri.
+            foreach (['photo_path', 'surat_pengantar_path', 'cv_path', 'portfolio_path'] as $column) {
+                $new->{$column} = $this->copyFile($old->{$column}, $new->ticket_number);
+            }
+
+            $new->save();
+
+            $this->logStatus(
+                $new,
+                null,
+                ApplicationStatus::PendingVerifikator,
+                $actor,
+                "Diajukan ulang dari {$old->ticket_number}",
+            );
+
+            return $new;
+        });
+
+        SendApplicationConfirmationJob::dispatch($application);
+
+        return $application;
+    }
+
+    /**
+     * Salin berkas disk privat ke path baru milik tiket pengganti.
+     * Mengembalikan path baru, atau path lama bila penyalinan tidak mungkin.
+     */
+    private function copyFile(?string $path, string $ticketNumber): ?string
+    {
+        if ($path === null || ! Storage::disk('local')->exists($path)) {
+            return $path;
+        }
+
+        $newPath = 'applications/resubmit/'.Str::lower($ticketNumber).'/'.basename($path);
+        Storage::disk('local')->copy($path, $newPath);
+
+        return $newPath;
     }
 
     /**

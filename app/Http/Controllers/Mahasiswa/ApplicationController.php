@@ -87,6 +87,23 @@ class ApplicationController extends Controller
     }
 
     /**
+     * Ajukan Ulang (R15): tiket rejected milik sendiri diduplikasi menjadi
+     * pengajuan baru (tiket baru, data & berkas ter-copy). Guard status +
+     * kepemilikan ada di SubmissionService::resubmit.
+     */
+    public function resubmit(Request $request, InternshipApplication $application): RedirectResponse
+    {
+        try {
+            $new = $this->submissionService->resubmit($application, $request->user());
+        } catch (\DomainException $e) {
+            return back()->withErrors(['resubmit' => $e->getMessage()]);
+        }
+
+        return redirect()->route('mahasiswa.pengajuan')
+            ->with('success', "Pengajuan ulang berhasil dibuat (tiket baru: {$new->ticket_number}).");
+    }
+
+    /**
      * Lacak status publik (tanpa login) berdasarkan NOMOR TIKET (`?tiket=`).
      * Kontrak props selaras HANDOFF-BACKEND.md: { application, ticket }.
      * `user` (MagangUserResource) disuntik bila login agar header dasbor
