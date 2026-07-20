@@ -41,7 +41,15 @@ Prompt yang sedang dikerjakan: lihat `claude-prompts/QUEUE/2026-07-16-batch.md`
 - Perbaikan PHPStan pre-existing ikut dibereskan: nullsafe pada start_date/end_date (NOT NULL di DB) dan guard null file_path di Verifikator\ReportController.
 
 ## Next step
-- Semua item batch 2026-07-16 (termasuk #6 lockout Fibonacci) selesai. Menunggu batch berikutnya.
+- BATCH BERIKUTNYA (belum dikerjakan, rencana sudah disetujui user 2026-07-20):
+  `prompt/QUEUE/2026-07-20-batch-5-revisi.md` — 5 revisi: (1) tag OPD sinkron
+  (landing render dari description + TagEditor di dasbor OPD), (2+4) menu
+  Laporan verifikator pindah TOTAL ke OPD "Kelola Peserta" (opd/laporan/*,
+  ownership guard) + audit alur penyelesaian, (3) dialog detail user di
+  Kelola User, (5) presensi jadi absen harian (status hadir/izin/sakit,
+  tanggal otomatis, 1x/hari, Dokumentasi Foto wajib 1-3 @2MB, export di
+  header riwayat + search + dialog detail, admin lihat presensi di dialog
+  detail Kelola Peserta/Kelola User). Keputusan user sudah final di file itu.
 
 ## Blocker
 - (belum ada)
