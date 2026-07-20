@@ -80,6 +80,11 @@ class DashboardController extends Controller
     }
 
     /**
+     * Seluruh pengajuan untuk dasbor. TANPA limit: kartu statistik & chip
+     * filter dihitung frontend dari koleksi ini — bila dipotong (dulu
+     * limit 50), hitungan dasbor tidak cocok dengan halaman Pengajuan
+     * Masuk/Riwayat yang mengambil semua baris (bug masalah.txt #1).
+     *
      * @return Collection<int, InternshipApplication>
      */
     private function recentApplications()
@@ -87,7 +92,6 @@ class DashboardController extends Controller
         return InternshipApplication::query()
             ->with(['user', 'opd'])
             ->latest()
-            ->limit(50)
             ->get();
     }
 

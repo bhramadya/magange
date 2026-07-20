@@ -917,7 +917,18 @@ export default function VerifikatorDashboard({
                                             onClick={() => setActive(app)}
                                             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-[#106feb] transition hover:bg-[#cddcef]/40"
                                         >
-                                            Tinjau
+                                            {/* Label aksi mengikuti status (bug masalah.txt #1):
+                                                pending → Tinjau (form forward/tolak),
+                                                ongoing/completion_submitted → Selesaikan,
+                                                lainnya → Detail (read-only). */}
+                                            {app.status ===
+                                            'pending_verifikator'
+                                                ? 'Tinjau'
+                                                : app.status === 'ongoing' ||
+                                                    app.status ===
+                                                        'completion_submitted'
+                                                  ? 'Selesaikan'
+                                                  : 'Detail'}
                                             <ArrowRight className="size-3.5" />
                                         </button>
                                     </td>

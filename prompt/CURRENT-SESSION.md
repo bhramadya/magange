@@ -137,5 +137,8 @@ persis (nama route/prop/kolom). Ringkasan:
   Mahasiswa/{ResubmitTest(3),PresensiTest(5)}, Security/SanitizeInputTest(2).
 - Gate penuh: Pint ✅ PHPStan ✅ Pest 159 lulus/10 skip ✅ tsc ✅ eslint ✅
   prettier ✅ vite build ✅.
-- BELUM: bug dasbor masalah.txt (filter verifikator tak konsisten, card OPD
-  kurang "Selesai Magang").
+- [x] Bug masalah.txt (2026-07-20): #1 hitungan dasbor verifikator ≠ halaman
+  masuk → akar: recentApplications limit(50), dihapus; tombol aksi tabel kini
+  ikut status (Tinjau/Selesaikan/Detail). #2 card OPD sudah beres di batch
+  frontend sebelumnya (5 card seurutan filter) — diverifikasi saja.
+  Gate ulang: Pint/PHPStan/Pest 159 ✅ tsc/eslint/prettier ✅.
