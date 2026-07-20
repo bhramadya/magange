@@ -31,6 +31,7 @@ import {
     Quote,
     X,
     Ticket,
+    Lock,
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView, animate } from 'motion/react';
 import { useState, useEffect, useRef } from 'react';
@@ -243,89 +244,6 @@ const bentoItem = {
         transition: { duration: 0.55, ease: 'circOut' as const },
     },
 };
-
-/* =========================================================================
- *  ORBIT IMAGE — aset gambar asli (webild) yang mengorbit mengelilingi H1.
- *  Mekanika 4 lapis agar gambar tetap TEGAK (upright) saat berputar:
- *   1. ring   : motion.div di titik pusat, ukuran 0, berputar 360° (linear).
- *   2. radius : div statis dengan translateX(r) → menempatkan gambar di tepi
- *               orbit; ikut berputar karena induknya (ring) berputar.
- *   3. upright: motion.div counter-rotate -360° (durasi & easing identik)
- *               sehingga rotasi bersih = 0 → gambar tidak ikut miring.
- *   4. float  : osilasi y halus di dalam frame yang sudah tegak → gerak
- *               organik "melayang".
- *  Arah (reverse) & sudut awal (startAngle) berbeda tiap gambar agar sebaran
- *  merata dan tidak seragam.
- * ========================================================================= */
-function OrbitImage({
-    src,
-    alt,
-    radius,
-    size,
-    duration,
-    startAngle = 0,
-    reverse = false,
-    delay = 0,
-}: {
-    src: string;
-    alt: string;
-    radius: number;
-    size: number;
-    duration: number;
-    startAngle?: number;
-    reverse?: boolean;
-    delay?: number;
-}) {
-    const dir = reverse ? -1 : 1;
-
-    return (
-        <motion.div
-            aria-hidden
-            className="absolute top-1/2 left-1/2 h-0 w-0"
-            initial={{ rotate: startAngle, opacity: 0 }}
-            animate={{ rotate: startAngle + dir * 360, opacity: 1 }}
-            transition={{
-                rotate: { duration, repeat: Infinity, ease: 'linear' },
-                opacity: { duration: 0.8, delay },
-            }}
-        >
-            {/* Lapis radius: dorong gambar ke tepi orbit */}
-            <div style={{ transform: `translateX(${radius}px)` }}>
-                {/* Lapis upright: counter-rotate agar gambar selalu tegak */}
-                <motion.div
-                    initial={{ rotate: -startAngle }}
-                    animate={{ rotate: -startAngle - dir * 360 }}
-                    transition={{ duration, repeat: Infinity, ease: 'linear' }}
-                    style={{
-                        width: size,
-                        height: size,
-                        marginLeft: -size / 2,
-                        marginTop: -size / 2,
-                    }}
-                >
-                    {/* Lapis float: melayang lembut dalam frame tegak */}
-                    <motion.div
-                        animate={{ y: [0, -10, 0] }}
-                        transition={{
-                            duration: 3.5,
-                            repeat: Infinity,
-                            ease: 'easeInOut',
-                            delay,
-                        }}
-                        className="h-full w-full overflow-hidden rounded-2xl border border-white/60 bg-white/80 shadow-[0_12px_30px_-8px_rgba(8,71,156,0.35)] backdrop-blur-sm"
-                    >
-                        <img
-                            src={src}
-                            alt={alt}
-                            loading="lazy"
-                            className="h-full w-full object-cover"
-                        />
-                    </motion.div>
-                </motion.div>
-            </div>
-        </motion.div>
-    );
-}
 
 /* =========================================================================
  *  DATE PICKER — kalender popover kustom.
@@ -1116,71 +1034,40 @@ export default function Welcome({
 
                     {/* Wadah relatif: jadi titik acuan orbit yang mengelilingi heading */}
                     <div className="relative flex w-full flex-col items-center">
-                        {/* Lapisan ORBIT — aset asli webild mengorbit di sekitar H1.
-                            Hanya tampil di layar lebar (lg+) agar tidak menutupi teks
-                            pada perangkat sempit. Dipusatkan pada blok heading. */}
-                        <div
-                            aria-hidden
-                            className="pointer-events-none absolute inset-x-0 top-[44%] -z-[5] hidden -translate-y-1/2 xl:block"
-                        >
-                            <div className="relative mx-auto h-0 w-0">
-                                <OrbitImage
-                                    src="/images/orbit/avatar-1.webp"
-                                    alt=""
-                                    radius={430}
-                                    size={64}
-                                    duration={26}
-                                    startAngle={0}
-                                />
-                                <OrbitImage
-                                    src="/images/orbit/brand-2.webp"
-                                    alt=""
-                                    radius={470}
-                                    size={56}
-                                    duration={32}
-                                    startAngle={70}
-                                    reverse
-                                    delay={0.2}
-                                />
-                                <OrbitImage
-                                    src="/images/orbit/avatar-3.webp"
-                                    alt=""
-                                    radius={400}
-                                    size={60}
-                                    duration={24}
-                                    startAngle={150}
-                                    delay={0.35}
-                                />
-                                <OrbitImage
-                                    src="/images/orbit/brand-4.webp"
-                                    alt=""
-                                    radius={500}
-                                    size={52}
-                                    duration={36}
-                                    startAngle={210}
-                                    reverse
-                                    delay={0.15}
-                                />
-                                <OrbitImage
-                                    src="/images/orbit/avatar-2.webp"
-                                    alt=""
-                                    radius={360}
-                                    size={58}
-                                    duration={22}
-                                    startAngle={285}
-                                    delay={0.5}
-                                />
-                                <OrbitImage
-                                    src="/images/orbit/brand-1.webp"
-                                    alt=""
-                                    radius={520}
-                                    size={54}
-                                    duration={40}
-                                    startAngle={330}
-                                    reverse
-                                    delay={0.3}
-                                />
-                            </div>
+                        {/* 4 ikon melayang di sekitar heading — 2 kiri, 2 kanan */}
+                        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-[44%] -z-[5] hidden -translate-y-1/2 xl:block">
+                            {/* Kiri atas */}
+                            <motion.div
+                                animate={{ y: [0, -12, 0] }}
+                                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                                className="absolute -left-8 -top-16 flex size-16 items-center justify-center rounded-2xl border border-[#cddcef]/60 bg-white/80 shadow-[0_8px_32px_rgba(16,111,235,0.12)] backdrop-blur-md"
+                            >
+                                <FileText className="size-7 text-[#106feb]" />
+                            </motion.div>
+                            {/* Kiri bawah */}
+                            <motion.div
+                                animate={{ y: [0, 10, 0] }}
+                                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
+                                className="absolute -left-20 top-20 flex size-14 items-center justify-center rounded-2xl border border-[#cddcef]/60 bg-white/80 shadow-[0_8px_32px_rgba(16,111,235,0.12)] backdrop-blur-md"
+                            >
+                                <ShieldCheck className="size-6 text-[#0b4fb0]" />
+                            </motion.div>
+                            {/* Kanan atas */}
+                            <motion.div
+                                animate={{ y: [0, -10, 0] }}
+                                transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
+                                className="absolute -right-8 -top-16 flex size-16 items-center justify-center rounded-2xl border border-[#cddcef]/60 bg-white/80 shadow-[0_8px_32px_rgba(16,111,235,0.12)] backdrop-blur-md"
+                            >
+                                <Building2 className="size-7 text-[#106feb]" />
+                            </motion.div>
+                            {/* Kanan bawah */}
+                            <motion.div
+                                animate={{ y: [0, 12, 0] }}
+                                transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
+                                className="absolute -right-20 top-20 flex size-14 items-center justify-center rounded-2xl border border-[#cddcef]/60 bg-white/80 shadow-[0_8px_32px_rgba(16,111,235,0.12)] backdrop-blur-md"
+                            >
+                                <Award className="size-6 text-[#0b4fb0]" />
+                            </motion.div>
                         </div>
 
                         {/* Konten teks Hero dengan staggerChildren (judul → sub → tombol) */}
@@ -1190,16 +1077,17 @@ export default function Welcome({
                             animate="show"
                             className="relative z-10 flex flex-col items-center"
                         >
-                            {/* Badge Pengumuman (Pill) — dot gradien + cincin ping */}
-                            <motion.div
-                                variants={heroItem}
-                                className="mb-8 inline-flex items-center gap-2.5 rounded-full border border-[#106feb]/15 bg-white/70 px-4 py-2 text-[13px] font-semibold tracking-wide text-[#0a1628]/70 shadow-[0_4px_20px_rgba(16,111,235,0.08)] backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-[#106feb]/30 hover:bg-white"
-                            >
-                                <span className="relative flex size-2">
-                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#106feb] opacity-60" />
-                                    <span className="relative inline-flex size-2 rounded-full bg-gradient-to-br from-[#106feb] to-[#0b4fb0]" />
+                            {/* Badge Pengumuman — gradient border ring */}
+                            <motion.div variants={heroItem} className="mb-8">
+                                <span className="inline-flex rounded-full bg-gradient-to-r from-[#106feb] via-[#0b4fb0] to-[#cddcef] p-[1.5px] shadow-[0_4px_20px_rgba(16,111,235,0.18)]">
+                                    <span className="inline-flex items-center gap-2.5 rounded-full bg-white/90 px-4 py-2 text-[13px] font-semibold tracking-wide text-[#0a1628]/75 backdrop-blur-md">
+                                        <span className="relative flex size-2">
+                                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#106feb] opacity-60" />
+                                            <span className="relative inline-flex size-2 rounded-full bg-gradient-to-br from-[#106feb] to-[#0b4fb0]" />
+                                        </span>
+                                        Portal Resmi Kota Madiun
+                                    </span>
                                 </span>
-                                Portal Resmi Kota Madiun
                             </motion.div>
 
                             {/* Headline Utama — Inter Bold, gradien #0a1628 → #0b4fb0 */}
@@ -1274,28 +1162,26 @@ export default function Welcome({
                                 </Link>
                             </motion.div>
 
-                            {/* Baris penanda kepercayaan — chip pill konsisten dgn badge, hover naik */}
+                            {/* Baris penanda kepercayaan — panel kaca terhubung */}
                             <motion.div
                                 variants={heroItem}
-                                className="mt-10 flex flex-wrap items-center justify-center gap-3 text-[13px] font-medium text-[#0a1628]/70"
+                                className="mt-10 inline-flex items-center divide-x divide-[#cddcef]/60 overflow-hidden rounded-2xl border border-[#cddcef]/60 bg-white/70 shadow-[0_4px_24px_rgba(16,111,235,0.08)] backdrop-blur-md"
                             >
-                                <span className="inline-flex items-center gap-2 rounded-full border border-slate-100 bg-white/60 px-4 py-2 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-[#cddcef] hover:bg-white">
-                                    <CheckCircle2 className="h-4 w-4 text-[#106feb]" />
-                                    100% Gratis Tanpa Biaya
-                                </span>
-                                <span className="inline-flex items-center gap-2 rounded-full border border-slate-100 bg-white/60 px-4 py-2 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-[#cddcef] hover:bg-white">
-                                    <ShieldCheck className="h-4 w-4 text-[#106feb]" />
-                                    Data Terlindungi
-                                </span>
-                                <span className="inline-flex items-center gap-2 rounded-full border border-slate-100 bg-white/60 px-4 py-2 shadow-sm backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-[#cddcef] hover:bg-white">
-                                    <Building2 className="h-4 w-4 text-[#106feb]" />
-                                    35 Instansi Resmi
-                                </span>
+                                {[
+                                    { icon: CheckCircle2, label: '100% Gratis' },
+                                    { icon: ShieldCheck, label: 'Data Terlindungi' },
+                                    { icon: Building2, label: '35 Instansi Resmi' },
+                                ].map(({ icon: Icon, label }) => (
+                                    <span key={label} className="inline-flex items-center gap-2 px-5 py-2.5 text-[13px] font-medium text-[#0a1628]/70 transition-colors duration-200 hover:bg-[#f0f6ff] hover:text-[#0b4fb0]">
+                                        <Icon className="h-4 w-4 text-[#106feb]" />
+                                        {label}
+                                    </span>
+                                ))}
                             </motion.div>
                         </motion.div>
                     </div>
 
-                    {/* 3. VISUAL UTAMA — Foto Gedung (scale 0.95 → 1 saat scroll) */}
+                    {/* VISUAL UTAMA — Browser chrome frame + floating cards */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.95, y: 40 }}
                         whileInView={{ opacity: 1, scale: 1, y: 0 }}
@@ -1303,36 +1189,45 @@ export default function Welcome({
                         transition={{ duration: 0.9, ease: 'circOut' }}
                         className="group relative mt-24 w-full max-w-md md:max-w-2xl lg:max-w-4xl"
                     >
-                        {/* Soft Layered Shadow (efek kedalaman 3D) */}
                         <div className="absolute -inset-4 -z-10 rounded-[40px] bg-[#0b4fb0]/20 blur-[80px]"></div>
 
+                        {/* Browser chrome */}
                         <div className="relative overflow-hidden rounded-3xl border border-white/40 bg-white shadow-[0_20px_40px_-12px_rgba(8,71,156,0.25),0_40px_80px_-20px_rgba(20,99,208,0.3)] transition-transform duration-700 hover:-translate-y-2">
+                            {/* Title bar */}
+                            <div className="flex items-center gap-3 border-b border-slate-100 bg-[#f5faff] px-4 py-3">
+                                <span className="flex gap-1.5">
+                                    <span className="size-3 rounded-full bg-[#ff5f57]" />
+                                    <span className="size-3 rounded-full bg-[#febc2e]" />
+                                    <span className="size-3 rounded-full bg-[#28c840]" />
+                                </span>
+                                <span className="flex flex-1 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[12px] text-[#0a1628]/40">
+                                    <Lock className="h-3 w-3 text-[#106feb]" />
+                                    magang.madiunkota.go.id
+                                </span>
+                            </div>
                             <img
                                 src="/images/dasbor.png"
-                                alt="Gedung Pemerintah Kota Madiun"
+                                alt="Tampilan dasbor E-Magang Kota Madiun"
                                 loading="lazy"
                                 onError={(e) => {
-                                    // Fallback elegan bila foto belum tersedia di /public/images.
                                     const img = e.currentTarget;
                                     img.style.display = 'none';
                                     const fallback = img.nextElementSibling;
 
                                     if (fallback) {
-                                        fallback.classList.remove('hidden');
-                                    }
+fallback.classList.remove('hidden');
+}
                                 }}
                                 className="aspect-[4/3] w-full object-cover lg:aspect-[16/9]"
                             />
-                            {/* Placeholder gradien (di-unhide oleh onError bila gambar gagal dimuat) */}
                             <div className="hidden aspect-[4/3] w-full flex-col items-center justify-center bg-gradient-to-br from-[#0a1628] via-[#0b4fb0] to-[#cddcef] lg:aspect-[16/9]">
                                 <div className="flex flex-col items-center gap-3 text-white/90">
                                     <Building2 className="h-12 w-12" />
-                                    <span className="text-[15px] font-medium">
-                                        Gedung Pemerintah Kota Madiun
-                                    </span>
+                                    <span className="text-[15px] font-medium">Gedung Pemerintah Kota Madiun</span>
                                 </div>
                             </div>
                         </div>
+
                     </motion.div>
 
                     {/* 2.5. STRIP STATISTIK — angka count-up saat masuk viewport */}
@@ -1347,8 +1242,9 @@ export default function Welcome({
                             <motion.div
                                 key={s.label}
                                 variants={staggerItem}
-                                className="group flex flex-col items-center gap-2 rounded-3xl border border-slate-100 bg-white/70 p-6 text-center shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#cddcef] hover:shadow-lg"
+                                className="group relative flex flex-col items-center gap-2 overflow-hidden rounded-3xl border border-slate-100 bg-white/70 p-6 text-center shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#cddcef] hover:shadow-lg"
                             >
+                                <span className="absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 rounded-full bg-gradient-to-r from-[#106feb] to-[#0b4fb0] transition-transform duration-300 group-hover:scale-x-100" aria-hidden />
                                 <span className="flex size-11 items-center justify-center rounded-2xl bg-[#cddcef]/50 text-[#106feb] transition-all duration-300 group-hover:-rotate-3 group-hover:bg-[#106feb] group-hover:text-white group-hover:shadow-lg group-hover:shadow-[#106feb]/30">
                                     <s.icon className="size-5" />
                                 </span>
