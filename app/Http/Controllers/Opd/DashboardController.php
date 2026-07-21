@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Opd;
 
 use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mahasiswa\PresensiController;
 use App\Http\Resources\InternshipApplicationResource;
 use App\Http\Resources\MagangUserResource;
 use App\Http\Resources\OpdResource;
 use App\Models\InternshipApplication;
+use App\Models\PresensiLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Date;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -89,6 +92,17 @@ class DashboardController extends Controller
         $participants = $applications->map(fn (InternshipApplication $app): array => [
             'student_name' => $app->user->name,
             'application' => (new InternshipApplicationResource($app))->resolve($request),
+            // Batch 5 (#5): admin OPD melihat riwayat presensi peserta —
+            // ringkasan 31 hari terakhir milik user pemilik pengajuan.
+            'presensi' => PresensiLog::query()
+                ->where('user_id', $app->user_id)
+                ->where('activity_date', '>=', Date::today()->subDays(31))
+                ->with('attachments')
+                ->orderByDesc('activity_date')
+                ->get()
+                ->map(fn (PresensiLog $log): array => PresensiController::entryPayload($log))
+                ->values()
+                ->all(),
         ])->all();
 
         return Inertia::render('opd/peserta', [

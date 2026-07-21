@@ -1,42 +1,39 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import {
-    Calendar,
-    Clock,
+    CheckCircle2,
     FileText,
+    Image as ImageIcon,
     Plus,
+    Search,
     Trash2,
     FileSpreadsheet,
     FileType2,
-    Upload,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import MagangLayout from '@/layouts/magang-layout';
-import type { MagangUser } from '@/types/magang';
+import { cn } from '@/lib/utils';
+import type { MagangUser, PresensiEntry } from '@/types/magang';
 
 /* =========================================================================
- *  PRESENSI HARIAN PESERTA MAGANG (R22)
- *  Input: Tanggal, Jam Mulai, Jam Selesai, Rincian Aktivitas, Lampiran.
- *  Export: Excel (CSV) & Word (HTML) dengan nama file dinamis.
+ *  ABSEN HARIAN PESERTA MAGANG (R22, dirombak batch 5)
+ *  Absen 1x per hari: Status Kehadiran (Hadir/Izin/Sakit), Rincian
+ *  Aktivitas, dan Dokumentasi Foto wajib 1–3 (maks 2MB/foto). Tanggal
+ *  otomatis hari ini; jam absen dicatat backend dari created_at.
+ *  Riwayat: search client-side + dialog detail; export Excel (CSV) & Word
+ *  (HTML) di header card riwayat, kolom Tanggal/Status/Jam Absen/Rincian.
  * ========================================================================= */
-
-interface PresensiAttachmentRow {
-    id: number;
-    name: string;
-    url: string;
-}
-
-interface PresensiEntry {
-    id: number;
-    activity_date: string;
-    start_time: string;
-    end_time: string;
-    details: string;
-    attachments: PresensiAttachmentRow[];
-}
 
 interface PresensiProps {
     user?: MagangUser;
     entries?: PresensiEntry[];
+    hasToday?: boolean;
 }
 
 const MOCK_USER: MagangUser = {
@@ -47,14 +44,33 @@ const MOCK_USER: MagangUser = {
     role: 'mahasiswa',
 };
 
+const STATUS_OPTIONS = [
+    { value: 'hadir', label: 'Hadir' },
+    { value: 'izin', label: 'Izin' },
+    { value: 'sakit', label: 'Sakit' },
+] as const;
+
+const PRESENSI_META: Record<
+    PresensiEntry['status'],
+    { label: string; badge: string }
+> = {
+    hadir: { label: 'Hadir', badge: 'bg-emerald-100 text-emerald-700' },
+    izin: { label: 'Izin', badge: 'bg-amber-100 text-amber-700' },
+    sakit: { label: 'Sakit', badge: 'bg-rose-100 text-rose-700' },
+};
+
 interface Attachment {
     id: string;
     file: File | null;
     name: string;
 }
 
+let attachmentSeq = 0;
+
 function generateId() {
-    return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    attachmentSeq += 1;
+
+    return `att-${attachmentSeq}`;
 }
 
 function formatDateID(iso: string) {
@@ -69,13 +85,99 @@ function formatDateID(iso: string) {
     }).format(new Date(iso));
 }
 
+function formatTimeID(iso: string | null) {
+    if (!iso) {
+        return '—';
+    }
+
+    return new Intl.DateTimeFormat('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(new Date(iso));
+}
+
 function sanitizeFilename(name: string) {
     return name.replace(/[^a-zA-Z0-9\s_-]/g, '').trim() || 'Peserta';
+}
+
+/* ---- dialog detail entri --------------------------------------------- */
+function EntryDetailDialog({
+    entry,
+    onClose,
+}: {
+    entry: PresensiEntry | null;
+    onClose: () => void;
+}) {
+    const meta = entry ? PRESENSI_META[entry.status] : null;
+
+    return (
+        <Dialog open={!!entry} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="max-h-[90vh] overflow-y-auto bg-white text-[#0a1628] sm:max-w-md">
+                {entry && meta && (
+                    <>
+                        <DialogHeader>
+                            <DialogTitle className="flex flex-wrap items-center gap-2 text-[#0a1628]">
+                                {formatDateID(entry.activity_date)}
+                                <span
+                                    className={cn(
+                                        'rounded-full px-2.5 py-0.5 text-xs font-semibold',
+                                        meta.badge,
+                                    )}
+                                >
+                                    {meta.label}
+                                </span>
+                            </DialogTitle>
+                            <DialogDescription className="text-slate-500">
+                                Absen pukul {formatTimeID(entry.checked_in_at)}
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-xs font-semibold text-slate-500 uppercase">
+                                Rincian Aktivitas
+                            </p>
+                            <p className="mt-1.5 text-sm whitespace-pre-line text-slate-700">
+                                {entry.details}
+                            </p>
+                        </div>
+
+                        {entry.attachments.length > 0 && (
+                            <div>
+                                <p className="text-xs font-semibold text-slate-500 uppercase">
+                                    Dokumentasi Foto
+                                </p>
+                                <div className="mt-2 grid grid-cols-2 gap-2">
+                                    {entry.attachments.map((file) => (
+                                        <a
+                                            key={file.id}
+                                            href={file.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="group overflow-hidden rounded-xl border border-slate-200"
+                                            title={file.name}
+                                        >
+                                            <img
+                                                src={file.url}
+                                                alt={file.name}
+                                                loading="lazy"
+                                                className="aspect-square w-full object-cover transition group-hover:scale-105"
+                                            />
+                                        </a>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
+            </DialogContent>
+        </Dialog>
+    );
 }
 
 export default function PresensiHarian({
     user = MOCK_USER,
     entries = [],
+    hasToday = false,
 }: PresensiProps) {
     const pageUser = (
         usePage().props as unknown as { auth?: { user?: MagangUser } }
@@ -84,24 +186,27 @@ export default function PresensiHarian({
 
     const { data, setData, post, processing, errors, reset, transform } =
         useForm<{
-            activity_date: string;
-            start_time: string;
-            end_time: string;
+            status: 'hadir' | 'izin' | 'sakit';
             details: string;
         }>({
-            activity_date: '',
-            start_time: '',
-            end_time: '',
+            status: 'hadir',
             details: '',
         });
+    // Error validasi `attachments` datang dari field yang di-inject transform()
+    // sehingga tidak ada di tipe data form — baca lewat indeks longgar.
+    const attachmentsError = (errors as Record<string, string | undefined>)
+        .attachments;
 
     const [attachments, setAttachments] = useState<Attachment[]>([]);
+    const [query, setQuery] = useState('');
+    const [activeEntry, setActiveEntry] = useState<PresensiEntry | null>(null);
 
     const addAttachment = () => {
-        setAttachments((prev) => [
-            ...prev,
-            { id: generateId(), file: null, name: '' },
-        ]);
+        setAttachments((prev) =>
+            prev.length >= 3
+                ? prev
+                : [...prev, { id: generateId(), file: null, name: '' }],
+        );
     };
 
     const removeAttachment = (id: string) => {
@@ -116,14 +221,16 @@ export default function PresensiHarian({
         );
     };
 
+    const pickedFiles = attachments
+        .map((a) => a.file)
+        .filter((f): f is File => f !== null);
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Lampiran multiple dikirim sebagai array `attachments[]` (FormData).
+        // Foto dikirim sebagai array `attachments[]` (FormData) — wajib 1–3.
         transform((formData) => ({
             ...formData,
-            attachments: attachments
-                .map((a) => a.file)
-                .filter((f): f is File => f !== null),
+            attachments: pickedFiles,
         }));
         post('/presensi', {
             forceFormData: true,
@@ -135,26 +242,35 @@ export default function PresensiHarian({
         });
     };
 
+    // Search client-side pada tanggal / status / rincian.
+    const filteredEntries = useMemo(() => {
+        const q = query.trim().toLowerCase();
+
+        if (!q) {
+            return entries;
+        }
+
+        return entries.filter(
+            (entry) =>
+                entry.activity_date.includes(q) ||
+                formatDateID(entry.activity_date).toLowerCase().includes(q) ||
+                PRESENSI_META[entry.status].label.toLowerCase().includes(q) ||
+                entry.details.toLowerCase().includes(q),
+        );
+    }, [entries, query]);
+
     const exportBaseName = `Aktivitas kegiatan magang ${sanitizeFilename(
         currentUser.name,
     )}`;
 
-    // Export mencakup SELURUH riwayat presensi; bila belum ada riwayat,
-    // gunakan isian form saat ini agar tombol tetap berguna.
-    const exportRows: Array<
-        Pick<
-            PresensiEntry,
-            'activity_date' | 'start_time' | 'end_time' | 'details'
-        >
-    > = entries.length > 0 ? entries : [data];
-
+    // Export mencakup SELURUH riwayat presensi (bukan hasil filter search).
     const exportExcel = () => {
         const rows = [
-            ['Tanggal', 'Jam Mulai', 'Jam Selesai', 'Rincian Aktivitas'],
-            ...exportRows.map((row) => [
+            ['Tanggal', 'Status', 'Jam Absen', 'Rincian Aktivitas'],
+            ...entries.map((row) => [
                 row.activity_date,
-                row.start_time,
-                row.end_time,
+                PRESENSI_META[row.status].label,
+                formatTimeID(row.checked_in_at),
                 row.details,
             ]),
         ];
@@ -177,10 +293,10 @@ export default function PresensiHarian({
     };
 
     const exportWord = () => {
-        const bodyRows = exportRows
+        const bodyRows = entries
             .map(
                 (row) =>
-                    `<tr><td>${formatDateID(row.activity_date)}</td><td>${row.start_time}</td><td>${row.end_time}</td><td>${row.details}</td></tr>`,
+                    `<tr><td>${formatDateID(row.activity_date)}</td><td>${PRESENSI_META[row.status].label}</td><td>${formatTimeID(row.checked_in_at)}</td><td>${row.details}</td></tr>`,
             )
             .join('');
         const html = `
@@ -189,7 +305,7 @@ export default function PresensiHarian({
             <body>
                 <h2>${exportBaseName}</h2>
                 <table border='1' cellspacing='0' cellpadding='6'>
-                    <tr><th>Tanggal</th><th>Jam Mulai</th><th>Jam Selesai</th><th>Rincian Aktivitas</th></tr>
+                    <tr><th>Tanggal</th><th>Status</th><th>Jam Absen</th><th>Rincian Aktivitas</th></tr>
                     ${bodyRows}
                 </table>
             </body>
@@ -221,180 +337,178 @@ export default function PresensiHarian({
             <div className="space-y-6">
                 <div>
                     <h2 className="text-xl font-black text-[#12213e]">
-                        Log Presensi Harian
+                        Absen Harian
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
-                        Catat aktivitas magang harian Anda beserta lampiran
-                        pendukung.
+                        Absen sekali setiap hari — pilih status kehadiran, catat
+                        aktivitas, dan unggah dokumentasi foto.
                     </p>
                 </div>
 
-                <form
-                    onSubmit={handleSubmit}
-                    className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-                >
-                    <div className="grid gap-5 md:grid-cols-3">
+                {hasToday ? (
+                    <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                        <CheckCircle2 className="size-6 shrink-0 text-emerald-600" />
                         <div>
-                            <label className="text-sm font-semibold text-[#12213e]">
-                                Tanggal <span className="text-rose-500">*</span>
-                            </label>
-                            <div className="relative mt-1.5">
-                                <Calendar className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
-                                <input
-                                    type="date"
-                                    value={data.activity_date}
-                                    onChange={(e) =>
-                                        setData('activity_date', e.target.value)
-                                    }
-                                    className={`${inputClass} pl-10`}
-                                    required
-                                />
-                            </div>
-                            {errors.activity_date && (
-                                <p className="mt-1 text-xs text-rose-600">
-                                    {errors.activity_date}
-                                </p>
-                            )}
-                        </div>
-
-                        <div>
-                            <label className="text-sm font-semibold text-[#12213e]">
-                                Jam Mulai{' '}
-                                <span className="text-rose-500">*</span>
-                            </label>
-                            <div className="relative mt-1.5">
-                                <Clock className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
-                                <input
-                                    type="time"
-                                    value={data.start_time}
-                                    onChange={(e) =>
-                                        setData('start_time', e.target.value)
-                                    }
-                                    className={`${inputClass} pl-10`}
-                                    required
-                                />
-                            </div>
-                            {errors.start_time && (
-                                <p className="mt-1 text-xs text-rose-600">
-                                    {errors.start_time}
-                                </p>
-                            )}
-                        </div>
-
-                        <div>
-                            <label className="text-sm font-semibold text-[#12213e]">
-                                Jam Selesai{' '}
-                                <span className="text-rose-500">*</span>
-                            </label>
-                            <div className="relative mt-1.5">
-                                <Clock className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
-                                <input
-                                    type="time"
-                                    value={data.end_time}
-                                    onChange={(e) =>
-                                        setData('end_time', e.target.value)
-                                    }
-                                    className={`${inputClass} pl-10`}
-                                    required
-                                />
-                            </div>
-                            {errors.end_time && (
-                                <p className="mt-1 text-xs text-rose-600">
-                                    {errors.end_time}
-                                </p>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="mt-5">
-                        <label className="text-sm font-semibold text-[#12213e]">
-                            Rincian Aktivitas{' '}
-                            <span className="text-rose-500">*</span>
-                        </label>
-                        <textarea
-                            value={data.details}
-                            onChange={(e) => setData('details', e.target.value)}
-                            rows={4}
-                            className={`${inputClass} mt-1.5 resize-none`}
-                            placeholder="Jelaskan aktivitas yang dilakukan hari ini..."
-                            required
-                        />
-                        {errors.details && (
-                            <p className="mt-1 text-xs text-rose-600">
-                                {errors.details}
+                            <p className="text-sm font-bold text-emerald-800">
+                                Anda sudah presensi hari ini ✓
                             </p>
-                        )}
+                            <p className="text-xs text-emerald-700">
+                                Presensi berikutnya dapat dilakukan besok.
+                            </p>
+                        </div>
                     </div>
-
-                    {/* Lampiran multiple */}
-                    <div className="mt-5">
-                        <div className="flex items-center justify-between">
+                ) : (
+                    <form
+                        onSubmit={handleSubmit}
+                        className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
+                    >
+                        <div>
                             <label className="text-sm font-semibold text-[#12213e]">
-                                Lampiran File
+                                Status Kehadiran{' '}
+                                <span className="text-rose-500">*</span>
                             </label>
-                            <button
-                                type="button"
-                                onClick={addAttachment}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-[#106feb]/10 px-3 py-1.5 text-xs font-semibold text-[#106feb] transition hover:bg-[#106feb]/20"
+                            <select
+                                value={data.status}
+                                onChange={(e) =>
+                                    setData(
+                                        'status',
+                                        e.target.value as typeof data.status,
+                                    )
+                                }
+                                className={`${inputClass} mt-1.5`}
+                                required
                             >
-                                <Plus className="size-3.5" /> Tambah Lampiran
+                                {STATUS_OPTIONS.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>
+                                        {opt.label}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.status && (
+                                <p className="mt-1 text-xs text-rose-600">
+                                    {errors.status}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="mt-5">
+                            <label className="text-sm font-semibold text-[#12213e]">
+                                Rincian Aktivitas{' '}
+                                <span className="text-rose-500">*</span>
+                            </label>
+                            <textarea
+                                value={data.details}
+                                onChange={(e) =>
+                                    setData('details', e.target.value)
+                                }
+                                rows={4}
+                                className={`${inputClass} mt-1.5 resize-none`}
+                                placeholder="Jelaskan aktivitas yang dilakukan hari ini..."
+                                required
+                            />
+                            {errors.details && (
+                                <p className="mt-1 text-xs text-rose-600">
+                                    {errors.details}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Dokumentasi Foto wajib 1–3 */}
+                        <div className="mt-5">
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-semibold text-[#12213e]">
+                                    Dokumentasi Foto{' '}
+                                    <span className="text-rose-500">*</span>
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={addAttachment}
+                                    disabled={attachments.length >= 3}
+                                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#106feb]/10 px-3 py-1.5 text-xs font-semibold text-[#106feb] transition hover:bg-[#106feb]/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <Plus className="size-3.5" /> Tambah Foto
+                                </button>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-400">
+                                1–3 foto (JPG/PNG), maks 2MB/foto.
+                            </p>
+                            <div className="mt-3 space-y-3">
+                                {attachments.length === 0 && (
+                                    <p className="text-sm text-slate-400">
+                                        Belum ada foto — minimal 1 foto wajib
+                                        diunggah.
+                                    </p>
+                                )}
+                                {attachments.map((att) => (
+                                    <div
+                                        key={att.id}
+                                        className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"
+                                    >
+                                        <label className="flex flex-1 cursor-pointer items-center gap-3 overflow-hidden">
+                                            <ImageIcon className="size-4 shrink-0 text-slate-400" />
+                                            <span className="truncate text-sm text-slate-600">
+                                                {att.name || 'Pilih foto...'}
+                                            </span>
+                                            <input
+                                                type="file"
+                                                accept="image/jpeg,image/png"
+                                                className="hidden"
+                                                onChange={(e) =>
+                                                    updateAttachment(
+                                                        att.id,
+                                                        e.target.files?.[0] ??
+                                                            null,
+                                                    )
+                                                }
+                                            />
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                removeAttachment(att.id)
+                                            }
+                                            className="rounded-lg p-1.5 text-rose-500 transition hover:bg-rose-50"
+                                        >
+                                            <Trash2 className="size-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                            {attachmentsError && (
+                                <p className="mt-1 text-xs text-rose-600">
+                                    {attachmentsError}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="mt-6">
+                            <button
+                                type="submit"
+                                disabled={
+                                    processing || pickedFiles.length === 0
+                                }
+                                className="inline-flex items-center gap-2 rounded-xl bg-[#106feb] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0b4fb0] disabled:opacity-50"
+                            >
+                                <FileText className="size-4" />
+                                {processing
+                                    ? 'Menyimpan...'
+                                    : 'Simpan Presensi'}
                             </button>
                         </div>
-                        <div className="mt-3 space-y-3">
-                            {attachments.length === 0 && (
-                                <p className="text-sm text-slate-400">
-                                    Belum ada lampiran.
-                                </p>
-                            )}
-                            {attachments.map((att) => (
-                                <div
-                                    key={att.id}
-                                    className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3"
-                                >
-                                    <label className="flex flex-1 cursor-pointer items-center gap-3 overflow-hidden">
-                                        <Upload className="size-4 shrink-0 text-slate-400" />
-                                        <span className="truncate text-sm text-slate-600">
-                                            {att.name || 'Pilih file...'}
-                                        </span>
-                                        <input
-                                            type="file"
-                                            name={`attachments[${att.id}]`}
-                                            className="hidden"
-                                            onChange={(e) =>
-                                                updateAttachment(
-                                                    att.id,
-                                                    e.target.files?.[0] ?? null,
-                                                )
-                                            }
-                                        />
-                                    </label>
-                                    <button
-                                        type="button"
-                                        onClick={() => removeAttachment(att.id)}
-                                        className="rounded-lg p-1.5 text-rose-500 transition hover:bg-rose-50"
-                                    >
-                                        <Trash2 className="size-4" />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    </form>
+                )}
 
-                    <div className="mt-6 flex flex-wrap items-center gap-3">
-                        <button
-                            type="submit"
-                            disabled={processing}
-                            className="inline-flex items-center gap-2 rounded-xl bg-[#106feb] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0b4fb0] disabled:opacity-50"
-                        >
-                            <FileText className="size-4" />
-                            {processing ? 'Menyimpan...' : 'Simpan Presensi'}
-                        </button>
-
+                {/* Riwayat presensi — sumber data tombol Export di header. */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h3 className="text-base font-bold text-[#12213e]">
+                            Riwayat Presensi
+                        </h3>
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
                                 onClick={exportExcel}
-                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                             >
                                 <FileSpreadsheet className="size-4 text-emerald-600" />
                                 Export Excel
@@ -402,78 +516,116 @@ export default function PresensiHarian({
                             <button
                                 type="button"
                                 onClick={exportWord}
-                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                             >
                                 <FileType2 className="size-4 text-blue-600" />
                                 Export Word
                             </button>
                         </div>
                     </div>
-                </form>
 
-                {/* Riwayat presensi — sumber data tombol Export di atas. */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <h3 className="text-base font-bold text-[#12213e]">
-                        Riwayat Presensi
-                    </h3>
-                    {entries.length === 0 ? (
-                        <p className="mt-3 text-sm text-slate-400">
-                            Belum ada presensi tercatat.
+                    {/* Search client-side: tanggal / status / rincian */}
+                    <div className="relative mt-4 sm:w-72">
+                        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                            type="search"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder="Cari tanggal / status / rincian…"
+                            className="h-10 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-sm transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                        />
+                    </div>
+
+                    {filteredEntries.length === 0 ? (
+                        <p className="mt-4 text-sm text-slate-400">
+                            {entries.length === 0
+                                ? 'Belum ada presensi tercatat.'
+                                : 'Tidak ada presensi yang cocok.'}
                         </p>
                     ) : (
                         <ul className="mt-4 space-y-3">
-                            {entries.map((entry) => (
-                                <li
-                                    key={entry.id}
-                                    className="rounded-xl border border-slate-200 bg-slate-50 p-4"
-                                >
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <p className="text-sm font-semibold text-[#12213e]">
-                                            {formatDateID(entry.activity_date)}{' '}
-                                            <span className="font-normal text-slate-500">
-                                                · {entry.start_time}–
-                                                {entry.end_time}
-                                            </span>
-                                        </p>
-                                        <button
-                                            type="button"
+                            {filteredEntries.map((entry) => {
+                                const meta = PRESENSI_META[entry.status];
+
+                                return (
+                                    <li key={entry.id}>
+                                        <div
+                                            role="button"
+                                            tabIndex={0}
                                             onClick={() =>
-                                                router.delete(
-                                                    `/presensi/${entry.id}`,
-                                                    { preserveScroll: true },
-                                                )
+                                                setActiveEntry(entry)
                                             }
-                                            className="rounded-lg p-1.5 text-rose-500 transition hover:bg-rose-50"
-                                            aria-label="Hapus presensi"
+                                            onKeyDown={(e) => {
+                                                if (
+                                                    e.key === 'Enter' ||
+                                                    e.key === ' '
+                                                ) {
+                                                    e.preventDefault();
+                                                    setActiveEntry(entry);
+                                                }
+                                            }}
+                                            className="cursor-pointer rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-[#106feb]/40 hover:bg-white"
                                         >
-                                            <Trash2 className="size-4" />
-                                        </button>
-                                    </div>
-                                    <p className="mt-1 text-sm whitespace-pre-line text-slate-600">
-                                        {entry.details}
-                                    </p>
-                                    {entry.attachments.length > 0 && (
-                                        <div className="mt-2 flex flex-wrap gap-2">
-                                            {entry.attachments.map((file) => (
-                                                <a
-                                                    key={file.id}
-                                                    href={file.url}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#106feb]/10 px-2.5 py-1 text-xs font-semibold text-[#106feb] transition hover:bg-[#106feb]/20"
+                                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                                <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-[#12213e]">
+                                                    {formatDateID(
+                                                        entry.activity_date,
+                                                    )}
+                                                    <span
+                                                        className={cn(
+                                                            'rounded-full px-2 py-0.5 text-xs font-semibold',
+                                                            meta.badge,
+                                                        )}
+                                                    >
+                                                        {meta.label}
+                                                    </span>
+                                                    <span className="text-xs font-normal text-slate-500">
+                                                        Absen pukul{' '}
+                                                        {formatTimeID(
+                                                            entry.checked_in_at,
+                                                        )}
+                                                    </span>
+                                                </p>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        router.delete(
+                                                            `/presensi/${entry.id}`,
+                                                            {
+                                                                preserveScroll: true,
+                                                            },
+                                                        );
+                                                    }}
+                                                    className="rounded-lg p-1.5 text-rose-500 transition hover:bg-rose-50"
+                                                    aria-label="Hapus presensi"
                                                 >
-                                                    <FileText className="size-3.5" />
-                                                    {file.name}
-                                                </a>
-                                            ))}
+                                                    <Trash2 className="size-4" />
+                                                </button>
+                                            </div>
+                                            <p className="mt-1 line-clamp-2 text-sm whitespace-pre-line text-slate-600">
+                                                {entry.details}
+                                            </p>
+                                            {entry.attachments.length > 0 && (
+                                                <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-[#106feb]">
+                                                    <ImageIcon className="size-3.5" />
+                                                    {entry.attachments.length}{' '}
+                                                    foto dokumentasi
+                                                </p>
+                                            )}
                                         </div>
-                                    )}
-                                </li>
-                            ))}
+                                    </li>
+                                );
+                            })}
                         </ul>
                     )}
                 </div>
             </div>
+
+            <EntryDetailDialog
+                entry={activeEntry}
+                onClose={() => setActiveEntry(null)}
+            />
         </MagangLayout>
     );
 }

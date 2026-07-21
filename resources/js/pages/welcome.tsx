@@ -544,6 +544,8 @@ interface WelcomeOpd {
     id: number;
     name: string;
     code: string;
+    // Tag kompetensi: kolom opds.description (dipisah koma) — batch 5.
+    description?: string | null;
     quota: number;
     quota_used: number;
 }
@@ -868,20 +870,33 @@ export default function Welcome({
 
     // Sumber tunggal daftar OPD = prop `opds` (OpdResource → tabel opds), agar
     // OPD baru yang ditambahkan Verifikator LANGSUNG tampil di halaman utama.
-    // Daftar statis di atas hanya dipakai sebagai kamus Tag Kompetensi
-    // (di-join berdasarkan nama) dan sebagai fallback pratinjau tanpa backend.
+    // Tag Kompetensi dirender dari kolom `description` (dipisah koma) yang
+    // dikelola Verifikator/Admin OPD; kamus statis tagsByName hanya fallback
+    // saat description kosong (dan daftar statis = pratinjau tanpa backend).
     const tagsByName = new Map(daftarOPD.map((o) => [o.name, o.tags]));
+    const tagsFromDescription = (description?: string | null): string[] =>
+        (description ?? '')
+            .split(',')
+            .map((tag) => tag.trim())
+            .filter((tag) => tag !== '');
     const opdWithQuota =
         opds.length > 0
-            ? opds.map((real) => ({
-                  name: real.name,
-                  tags: tagsByName.get(real.name) ?? [
-                      'Administrasi',
-                      'Pelayanan Publik',
-                  ],
-                  quota: real.quota ?? 0,
-                  quotaUsed: real.quota_used ?? 0,
-              }))
+            ? opds.map((real) => {
+                  const dynamicTags = tagsFromDescription(real.description);
+
+                  return {
+                      name: real.name,
+                      tags:
+                          dynamicTags.length > 0
+                              ? dynamicTags
+                              : (tagsByName.get(real.name) ?? [
+                                    'Administrasi',
+                                    'Pelayanan Publik',
+                                ]),
+                      quota: real.quota ?? 0,
+                      quotaUsed: real.quota_used ?? 0,
+                  };
+              })
             : daftarOPD.map((opd) => ({ ...opd, quota: 0, quotaUsed: 0 }));
 
     const filteredOPD = opdWithQuota.filter((opd) =>

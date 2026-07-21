@@ -80,14 +80,17 @@ test('endpoint sk-counter mengatur start number (hanya verifikator)', function (
 
 // ---------------------------------------------------------------------------
 // R9 — Surat Penyelesaian Magang (nomor & tanggal statis, idempoten)
+// Batch 5: aksinya kini milik Admin OPD di /opd/laporan/*.
 // ---------------------------------------------------------------------------
 
 test('generate surat penyelesaian: nomor statis walau diklik ulang', function () {
     Storage::fake('local');
-    $verifikator = User::factory()->verifikator()->create();
+    $opd = Opd::create(['name' => 'Dinas Kominfo', 'code' => 'DKI', 'is_active' => true, 'quota_total' => 5]);
+    $adminOpd = User::factory()->opdAdmin($opd->id)->create();
     $mahasiswa = User::factory()->create();
     $app = InternshipApplication::factory()->create([
         'user_id' => $mahasiswa->id,
+        'opd_id' => $opd->id,
         'status' => ApplicationStatus::Completed,
     ]);
     $report = FinalReport::create([
@@ -99,8 +102,8 @@ test('generate surat penyelesaian: nomor statis walau diklik ulang', function ()
         'submitted_at' => now(),
     ]);
 
-    $this->actingAs($verifikator)
-        ->post("/verifikator/laporan/{$report->id}/surat-penyelesaian")
+    $this->actingAs($adminOpd)
+        ->post("/opd/laporan/{$report->id}/surat-penyelesaian")
         ->assertRedirect();
 
     $report->refresh();
@@ -110,13 +113,13 @@ test('generate surat penyelesaian: nomor statis walau diklik ulang', function ()
     Storage::disk('local')->assertExists($report->completion_letter_path);
 
     // Klik ulang → nomor & tanggal TIDAK berubah.
-    $this->actingAs($verifikator)
-        ->post("/verifikator/laporan/{$report->id}/surat-penyelesaian");
+    $this->actingAs($adminOpd)
+        ->post("/opd/laporan/{$report->id}/surat-penyelesaian");
 
     expect($report->refresh()->completion_sk_number)->toBe($firstNumber);
 
     // Unduhan tersedia.
-    $this->actingAs($verifikator)
-        ->get("/verifikator/laporan/{$report->id}/surat-penyelesaian")
+    $this->actingAs($adminOpd)
+        ->get("/opd/laporan/{$report->id}/surat-penyelesaian")
         ->assertOk();
 });
