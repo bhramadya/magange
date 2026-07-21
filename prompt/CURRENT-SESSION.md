@@ -4,7 +4,7 @@
 **Status:** 🟡 In Progress
 
 ## Batch aktif
-Prompt yang sedang dikerjakan: lihat `claude-prompts/QUEUE/2026-07-16-batch.md`
+- (tidak ada — terakhir selesai: `prompt/QUEUE/2026-07-20-batch-5-revisi.md`, lihat blok ✅ di bawah)
 
 ## Sudah selesai
 - [x] 01 — OTP expiry 10 menit → 5 menit (OtpService TTL_MINUTES, mail otp.blade.php, OtpServiceTest — 6 tes lulus)
@@ -30,8 +30,7 @@ Prompt yang sedang dikerjakan: lihat `claude-prompts/QUEUE/2026-07-16-batch.md`
   - Gate penuh: Pint ✅, PHPStan ✅ (perlu `--memory-limit=1G`, limit default 128M di php.ini lokal kurang), Pest 135 lulus / 10 skip (721 assertion), tsc/eslint/prettier ✅, vite build ✅.
 
 ## Sedang dikerjakan
-- (kosong — semua item batch 2026-07-16 selesai)
-- [ ] NEW — Progressive Fibonacci lockout OTP: 3x salah input → wajib kirim ulang, jeda kirim ulang naik deret Fibonacci (1,1,2,3,5,8... menit), reset counter kalau login sukses ATAU 24 jam tanpa percobaan (mana duluan)
+- (kosong — batch 2026-07-16, new_revisi 2026-07-18/19, dan batch 5 2026-07-20 semua selesai)
 
 
 ## Keputusan / catatan penting
@@ -41,10 +40,73 @@ Prompt yang sedang dikerjakan: lihat `claude-prompts/QUEUE/2026-07-16-batch.md`
 - Perbaikan PHPStan pre-existing ikut dibereskan: nullsafe pada start_date/end_date (NOT NULL di DB) dan guard null file_path di Verifikator\ReportController.
 
 ## Next step
-- Semua item batch 2026-07-16 (termasuk #6 lockout Fibonacci) selesai. Menunggu batch berikutnya.
+- (kosong — batch 5 selesai, menunggu batch berikutnya)
 
 ## Blocker
 - (belum ada)
+
+## ✅ Batch 2026-07-20 — batch-5-revisi.md — SELESAI (2026-07-20)
+Kelima revisi `prompt/QUEUE/2026-07-20-batch-5-revisi.md` selesai diimplementasikan
+dan lolos gate penuh. Rincian per poin:
+- [x] **1 — Tag OPD sinkron:** welcome.tsx merender Tag Kompetensi dari
+  `opds.description` (split koma, trim, buang kosong); kamus statis
+  `tagsByName` tinggal fallback saat description kosong. Endpoint baru
+  `PATCH opd-tag/{opd}` → `OpdQuotaController@updateDescription` +
+  `UpdateOpdTagRequest` (otorisasi = kuota: OPD miliknya, verifikator semua,
+  rules description nullable max:1000). `TagEditor` inline di
+  `opd/dashboard.tsx` (pola persis QuotaEditor). Label form OPD
+  create/edit sudah "Tag" sejak batch sebelumnya.
+  Catatan: `components/landing/opd-directory.tsx` TIDAK diubah — seluruh
+  `components/landing/*` ternyata dead code (welcome.tsx self-contained,
+  tidak mengimpornya).
+- [x] **2+4 — Laporan pindah TOTAL verifikator → OPD + audit penyelesaian:**
+  `Verifikator\ReportController` + `verifikator/reports/index.tsx` + blok
+  route `verifikator/laporan/*` DIHAPUS; pengganti `opd/laporan/*`
+  (role:admin_opd): GET {report}/berkas, POST approve, POST sertifikat,
+  POST+GET surat-penyelesaian — semua lewat `Opd\ReportController` dengan
+  guard kepemilikan `authorizeReport()` (403 utk OPD lain). Tanpa GET index —
+  UI-nya panel aksi di DetailDialog `opd/peserta.tsx` ("Kelola Peserta"):
+  link berkas, Setujui Laporan, UploadCertificate, CompletionLetter.
+  Nav: item "Laporan" hilang dari verifikatorNav; "Peserta Aktif" →
+  "Kelola Peserta". PATCH verifikator/sk-counter TETAP verifikator;
+  verifikator tetap bisa complete via POST verifikator/pengajuan/{id}/complete.
+  Payload: `final_report` di InternshipApplicationResource ditambah aditif
+  id/report_url/completion_sk_*/completion_letter_available (+ tipe
+  FinalReport di magang.ts). Audit alur ongoing → completion_submitted →
+  completed diverifikasi utuh end-to-end (4 aktor complete, survei wajib
+  buka kunci sertifikat, mahasiswa/penyelesaian.tsx tak menyentuh route
+  yang pindah). `route:list`: 0 route verifikator/laporan*, 6 route
+  opd/laporan* + opd-tag.
+- [x] **3 — Dialog detail user (Kelola User):** payload
+  `Verifikator\UserController@index` per user ditambah aditif: avatar,
+  `applications` (maks 5 terakhir, + OPD), ringkasan `presensi` 31 hari.
+  Kartu user clickable → `UserDetailDialog` (identitas, daftar pengajuan,
+  riwayat presensi dengan link lampiran). Tanpa endpoint tambahan.
+- [x] **5 — Presensi → absen harian:** migration
+  `2026_07_20_000100_convert_presensi_logs_to_daily_attendance` — kolom
+  `status` (hadir|izin|sakit, default hadir), start_time/end_time jadi
+  nullable (data lama utuh), **unique(user_id, activity_date)** = 1x/hari.
+  StorePresensiRequest: status required in:hadir,izin,sakit; attachments
+  **required 1–3 @2MB** (jpeg/jpg/png). Tanggal di-set today() oleh
+  controller (bukan input); duplikat → error "Anda sudah presensi hari ini."
+  di field status; jam absen dari created_at; prop `hasToday`.
+  presensi.tsx dirombak: select Status Kehadiran, blok "Dokumentasi Foto",
+  banner bila sudah absen, export Excel/Word pindah ke header card riwayat,
+  search client-side, dialog detail per entri.
+  Route lampiran `presensi/{log}/lampiran/{attachment}` dilonggarkan ke
+  3 role — otorisasi `canViewLog()`: pemilik ATAU verifikator ATAU admin
+  OPD yang punya pengajuan user tsb; admin melihat riwayat presensi di
+  DetailDialog Kelola Peserta (payload peserta menyertakan `presensi`)
+  dan UserDetailDialog Kelola User.
+- [x] **Tes:** CompletionFlowTest/EndToEndFlowTest/SkNumberTest diarahkan ke
+  aktor OPD (termasuk assert 404 route lama verifikator/laporan + 403 OPD
+  lain); tes baru Opd/OpdTagTest; PresensiTest disesuaikan bentuk absen
+  harian (1x/hari, foto wajib, akses lampiran admin).
+- [x] **Dokumentasi:** CLAUDE.md diperbarui (Fase 4 → opd/laporan, SK,
+  presensi absen harian, ringkasan batch 5).
+- **Gate penuh (2026-07-20):** Pint ✅, PHPStan ✅ (--memory-limit=1G),
+  Pest **167 lulus / 10 skip (850 assertion)** ✅, tsc ✅, eslint ✅,
+  prettier ✅ (2 file dirapikan --write), vite build ✅.
 ## Batch 2026-07-18 — new_revisi.txt (15 revisi, FRONTEND ONLY)
 Backend dikerjakan rekan; prompt/kontrak lengkap di
 `resources/js/pages/catatan_backend_newrevisi.txt`. Checklist di bawah 15

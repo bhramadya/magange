@@ -89,12 +89,19 @@ class InternshipApplicationResource extends JsonResource
                 ])->values()->all(),
             ),
 
-            // Tahap penyelesaian (Fase 4).
+            // Tahap penyelesaian (Fase 4; field aksi OPD ditambah batch 5 —
+            // report_url menunjuk route opd.laporan.berkas, hanya bisa
+            // dibuka Admin OPD pemilik penempatan).
             'final_report' => $this->whenLoaded('finalReport', fn () => $this->finalReport ? [
+                'id' => $this->finalReport->id,
                 'status' => $this->finalReport->status->value,
                 'file_name' => $this->finalReport->file_name,
                 'submitted_at' => $this->finalReport->submitted_at->toISOString(),
                 'is_confirmed' => $this->finalReport->is_confirmed,
+                'report_url' => route('opd.laporan.berkas', $this->finalReport),
+                'completion_sk_number' => $this->finalReport->completion_sk_number,
+                'completion_sk_issued_at' => $this->finalReport->completion_sk_issued_at?->toDateString(),
+                'completion_letter_available' => $this->finalReport->completion_letter_path !== null,
             ] : null, null),
             'survey_submitted' => $this->whenLoaded('survey', fn () => $this->survey !== null, false),
             'certificate' => $this->whenLoaded('certificate', fn () => $this->certificate ? [

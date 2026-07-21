@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import {
     Search,
     Users,
@@ -8,12 +8,18 @@ import {
     UserCog,
     CalendarDays,
     FileCheck2,
+    FileBadge2,
     Award,
+    CalendarCheck,
     CheckCircle2,
+    ClipboardCheck,
+    ExternalLink,
     Loader2,
+    Upload,
     History,
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import type { ChangeEvent, FormEvent } from 'react';
 import { useMemo, useState } from 'react';
 import { ApplicationDocuments } from '@/components/application-documents';
 import { StatusBadge } from '@/components/status-badge';
@@ -27,23 +33,27 @@ import {
 import MagangLayout, { opdNav } from '@/layouts/magang-layout';
 import { cn } from '@/lib/utils';
 import { STATUS_META } from '@/types/magang';
-import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
+import type {
+    InternshipApplication,
+    MagangUser,
+    Opd,
+    PresensiEntry,
+} from '@/types/magang';
 
 /* =========================================================================
- *  OPD — PESERTA AKTIF (opd/peserta)
+ *  OPD — KELOLA PESERTA (opd/peserta)
  *  Roster peserta magang di OPD ini yang sudah disetujui (sedang magang /
- *  mengajukan penyelesaian / selesai). Read-only — pemantauan, bukan aksi.
- *
- *  FRONTEND ONLY. Nama peserta tidak ada di InternshipApplication, jadi
- *  dikirim via prop terpisah `participants` (pola sama seperti `documents`
- *  di halaman Pengajuan Saya). Rekan backend kirim dari
- *  Inertia::render('opd/peserta', ['participants' => ...]).
+ *  mengajukan penyelesaian / selesai). Batch 5: menu Laporan pindah total
+ *  ke sini — dialog detail memuat panel aksi laporan akhir (buka berkas,
+ *  setujui, terbitkan sertifikat & surat penyelesaian via /opd/laporan/*)
+ *  plus riwayat presensi peserta.
  * ========================================================================= */
 
 // Pasangan data peserta: identitas (dari relasi user) + pengajuannya.
 export interface Participant {
     student_name: string;
     application: InternshipApplication;
+    presensi?: PresensiEntry[];
 }
 
 /* ---- util ------------------------------------------------------------ */
@@ -331,6 +341,265 @@ function CompleteAction({
     );
 }
 
+/* ---- panel aksi laporan akhir (batch 5: pindahan dari verifikator) ---- */
+// Semua aksi menembak prefix /opd/laporan/{report} (Opd\ReportController);
+// backend menolak 403 bila laporan bukan milik pengajuan OPD ini.
+
+function ApproveReportButton({ reportId }: { reportId: number }) {
+    const [processing, setProcessing] = useState(false);
+
+    function submit() {
+        setProcessing(true);
+        router.post(
+            `/opd/laporan/${reportId}/approve`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setProcessing(false),
+            },
+        );
+    }
+
+    return (
+        <button
+            type="button"
+            onClick={submit}
+            disabled={processing}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+        >
+            {processing ? (
+                <Loader2 className="size-4 animate-spin" />
+            ) : (
+                <ClipboardCheck className="size-4" />
+            )}
+            Setujui Laporan
+        </button>
+    );
+}
+
+function UploadCertificate({ reportId }: { reportId: number }) {
+    const { setData, post, processing, reset } = useForm<{ file: File | null }>(
+        { file: null },
+    );
+    const [fileName, setFileName] = useState<string | null>(null);
+
+    function onFile(e: ChangeEvent<HTMLInputElement>) {
+        const f = e.target.files?.[0] ?? null;
+        setData('file', f);
+        setFileName(f?.name ?? null);
+    }
+
+    function submit(e: FormEvent) {
+        e.preventDefault();
+
+        if (!fileName) {
+            return;
+        }
+
+        post(`/opd/laporan/${reportId}/sertifikat`, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                reset('file');
+                setFileName(null);
+            },
+        });
+    }
+
+    return (
+        <form
+            onSubmit={submit}
+            className="flex flex-col gap-2 sm:flex-row sm:items-center"
+        >
+            <label
+                htmlFor={`cert-${reportId}`}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:border-[#106feb] hover:bg-[#cddcef]/20"
+            >
+                <Upload className="size-4 text-[#106feb]" />
+                {fileName ?? 'Pilih PDF sertifikat'}
+                <input
+                    id={`cert-${reportId}`}
+                    type="file"
+                    accept="application/pdf"
+                    className="hidden"
+                    onChange={onFile}
+                />
+            </label>
+            <button
+                type="submit"
+                disabled={!fileName || processing}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#106feb] px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-[#0b4fb0] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+                {processing ? (
+                    <Loader2 className="size-4 animate-spin" />
+                ) : (
+                    <Award className="size-4" />
+                )}
+                Terbitkan Sertifikat
+            </button>
+        </form>
+    );
+}
+
+/**
+ * Generate/unduh Surat Penyelesaian Magang. Nomor SK auto-increment dan
+ * tanggal terbit ditetapkan SEKALI saat generate pertama; cetak/unduh ulang
+ * tidak mengubah nomor maupun tanggal (idempoten di backend).
+ */
+function CompletionLetter({
+    report,
+}: {
+    report: NonNullable<InternshipApplication['final_report']> & {
+        id: number;
+    };
+}) {
+    const [processing, setProcessing] = useState(false);
+    const generated = Boolean(
+        report.completion_sk_number ?? report.completion_letter_available,
+    );
+
+    function generate() {
+        setProcessing(true);
+        router.post(
+            `/opd/laporan/${report.id}/surat-penyelesaian`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setProcessing(false),
+            },
+        );
+    }
+
+    if (!generated) {
+        return (
+            <button
+                type="button"
+                onClick={generate}
+                disabled={processing}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#106feb] bg-white px-3.5 py-2 text-sm font-semibold text-[#106feb] transition hover:bg-[#e8f2fe] disabled:opacity-50"
+                title="Terbitkan Surat Penyelesaian Magang (kop Dinas Kominfo)"
+            >
+                {processing ? (
+                    <Loader2 className="size-4 animate-spin" />
+                ) : (
+                    <FileBadge2 className="size-4" />
+                )}
+                Terbitkan Surat Penyelesaian
+            </button>
+        );
+    }
+
+    return (
+        <div className="flex flex-col gap-1.5">
+            <a
+                href={`/opd/laporan/${report.id}/surat-penyelesaian`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#106feb] px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-[#0b4fb0]"
+                title="Unduh ulang — nomor & tanggal terbit tidak berubah"
+            >
+                <FileBadge2 className="size-4" /> Unduh Surat Penyelesaian
+            </a>
+            <p className="text-center text-[11px] text-slate-400">
+                No. {report.completion_sk_number ?? '—'}
+                {report.completion_sk_issued_at
+                    ? ` · terbit ${formatDate(report.completion_sk_issued_at)}`
+                    : ''}
+            </p>
+        </div>
+    );
+}
+
+/* ---- riwayat presensi peserta (batch 5) ------------------------------- */
+const PRESENSI_META: Record<
+    PresensiEntry['status'],
+    { label: string; badge: string }
+> = {
+    hadir: { label: 'Hadir', badge: 'bg-emerald-100 text-emerald-700' },
+    izin: { label: 'Izin', badge: 'bg-amber-100 text-amber-700' },
+    sakit: { label: 'Sakit', badge: 'bg-rose-100 text-rose-700' },
+};
+
+function formatTime(iso: string | null): string {
+    if (!iso) {
+        return '—';
+    }
+
+    return new Intl.DateTimeFormat('id-ID', {
+        hour: '2-digit',
+        minute: '2-digit',
+    }).format(new Date(iso));
+}
+
+function PresensiHistory({ entries }: { entries: PresensiEntry[] }) {
+    return (
+        <div className="rounded-xl border border-slate-200 bg-white p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-[#12213e]">
+                <CalendarCheck className="size-4 text-[#106feb]" /> Riwayat
+                Presensi
+                <span className="text-xs font-normal text-slate-400">
+                    (31 hari terakhir)
+                </span>
+            </p>
+            {entries.length === 0 ? (
+                <p className="mt-2 text-sm text-slate-500">
+                    Belum ada presensi.
+                </p>
+            ) : (
+                <ul className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
+                    {entries.map((entry) => {
+                        const meta = PRESENSI_META[entry.status];
+
+                        return (
+                            <li
+                                key={entry.id}
+                                className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5"
+                            >
+                                <div className="flex flex-wrap items-center gap-2 text-xs">
+                                    <span className="font-semibold text-[#12213e]">
+                                        {formatDate(entry.activity_date)}
+                                    </span>
+                                    <span
+                                        className={cn(
+                                            'rounded-full px-2 py-0.5 font-semibold',
+                                            meta.badge,
+                                        )}
+                                    >
+                                        {meta.label}
+                                    </span>
+                                    <span className="text-slate-400">
+                                        Absen pukul{' '}
+                                        {formatTime(entry.checked_in_at)}
+                                    </span>
+                                </div>
+                                <p className="mt-1 line-clamp-2 text-xs text-slate-600">
+                                    {entry.details}
+                                </p>
+                                {entry.attachments.length > 0 && (
+                                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                        {entry.attachments.map((file) => (
+                                            <a
+                                                key={file.id}
+                                                href={file.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-[#106feb] ring-1 ring-slate-200 transition hover:bg-[#e8f2fe]"
+                                            >
+                                                <ExternalLink className="size-3" />
+                                                {file.name}
+                                            </a>
+                                        ))}
+                                    </div>
+                                )}
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+        </div>
+    );
+}
+
 /* ---- rekam jejak progres tiket (audit ApplicationStatusLog) ----------- */
 function StatusTimeline({ app }: { app: InternshipApplication }) {
     // Utamakan status_logs dari backend; bila belum ada, susun garis waktu
@@ -545,25 +814,71 @@ function DetailDialog({
                         {/* Rekam jejak progres tiket */}
                         <StatusTimeline app={app} />
 
+                        {/* Riwayat presensi peserta (batch 5) */}
+                        <PresensiHistory entries={participant.presensi ?? []} />
+
                         {app.final_report && (
-                            <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
                                 <p className="flex items-center gap-2 text-sm font-semibold text-[#12213e]">
                                     <FileCheck2 className="size-4 text-[#106feb]" />{' '}
                                     Laporan Akhir
                                 </p>
-                                <p className="mt-1.5 text-sm text-slate-600">
-                                    {app.final_report.file_name}
-                                </p>
-                                <p className="mt-1 text-xs text-slate-400">
-                                    Diunggah{' '}
-                                    {formatDate(app.final_report.submitted_at)}{' '}
-                                    ·{' '}
-                                    {app.final_report.status === 'approved'
-                                        ? 'Tervalidasi'
-                                        : app.final_report.status === 'rejected'
-                                          ? 'Ditolak'
-                                          : 'Menunggu validasi'}
-                                </p>
+                                <div>
+                                    <p className="text-sm text-slate-600">
+                                        {app.final_report.file_name}
+                                    </p>
+                                    <p className="mt-1 text-xs text-slate-400">
+                                        Diunggah{' '}
+                                        {formatDate(
+                                            app.final_report.submitted_at,
+                                        )}{' '}
+                                        ·{' '}
+                                        {app.final_report.status === 'approved'
+                                            ? 'Tervalidasi'
+                                            : app.final_report.status ===
+                                                'rejected'
+                                              ? 'Ditolak'
+                                              : 'Menunggu validasi'}
+                                    </p>
+                                </div>
+
+                                {/* Panel aksi (batch 5: pindahan menu Laporan
+                                    verifikator). Tombol tampil sesuai status. */}
+                                {app.final_report.id != null && (
+                                    <div className="space-y-3 border-t border-slate-100 pt-3">
+                                        {app.final_report.report_url && (
+                                            <a
+                                                href={
+                                                    app.final_report.report_url
+                                                }
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-2 text-sm font-semibold text-[#106feb] transition hover:underline"
+                                            >
+                                                <ExternalLink className="size-4" />{' '}
+                                                Buka Berkas Laporan
+                                            </a>
+                                        )}
+                                        {app.final_report.status ===
+                                            'pending' && (
+                                            <ApproveReportButton
+                                                reportId={app.final_report.id}
+                                            />
+                                        )}
+                                        {app.final_report.status ===
+                                            'approved' && (
+                                            <UploadCertificate
+                                                reportId={app.final_report.id}
+                                            />
+                                        )}
+                                        <CompletionLetter
+                                            report={{
+                                                ...app.final_report,
+                                                id: app.final_report.id,
+                                            }}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -692,11 +1007,11 @@ export default function OpdPeserta({
     return (
         <MagangLayout
             user={user}
-            title="Peserta Aktif"
+            title="Kelola Peserta"
             active="peserta"
             navItems={opdNav}
         >
-            <Head title="Peserta Aktif — OPD" />
+            <Head title="Kelola Peserta — OPD" />
 
             <div className="space-y-6">
                 <div className="flex flex-wrap items-end justify-between gap-3">

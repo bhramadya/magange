@@ -109,12 +109,7 @@ export const verifikatorNav: MagangNavItem[] = [
         href: '/verifikator/masuk',
         icon: Inbox,
     },
-    {
-        key: 'laporan',
-        title: 'Laporan',
-        href: '/verifikator/laporan',
-        icon: FileText,
-    },
+    // Batch 5: menu "Laporan" pindah total ke Admin OPD (Kelola Peserta).
     {
         key: 'riwayat',
         title: 'Riwayat',
@@ -170,7 +165,7 @@ export const opdNav: MagangNavItem[] = [
     },
     {
         key: 'peserta',
-        title: 'Peserta Aktif',
+        title: 'Kelola Peserta',
         href: '/opd/peserta',
         icon: Users,
     },

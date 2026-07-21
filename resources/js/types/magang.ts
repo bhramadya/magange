@@ -47,6 +47,22 @@ export interface FinalReport {
     file_name: string;
     submitted_at: string;
     is_confirmed: boolean;
+    // Batch 5: panel aksi laporan pindah ke Admin OPD (Kelola Peserta).
+    id?: number;
+    report_url?: string | null; // buka berkas laporan (route opd.laporan.berkas)
+    completion_sk_number?: string | null;
+    completion_sk_issued_at?: string | null; // ISO date
+    completion_letter_available?: boolean; // surat penyelesaian sudah diterbitkan
+}
+
+// Satu entri Absen Harian (batch 5) — jam absen dari created_at backend.
+export interface PresensiEntry {
+    id: number;
+    activity_date: string; // ISO date (YYYY-MM-DD)
+    status: 'hadir' | 'izin' | 'sakit';
+    checked_in_at: string | null; // ISO datetime — jam absen
+    details: string;
+    attachments: { id: number; name: string; url: string }[];
 }
 
 // Sertifikat selesai magang — id dipakai untuk URL survei & unduh (Fase 4).

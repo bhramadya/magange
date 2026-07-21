@@ -11,6 +11,7 @@ use App\Http\Controllers\Mahasiswa\DashboardController as MahasiswaDashboardCont
 use App\Http\Controllers\Mahasiswa\PresensiController;
 use App\Http\Controllers\Mahasiswa\ReportController;
 use App\Http\Controllers\Opd\DashboardController as OpdDashboardController;
+use App\Http\Controllers\Opd\ReportController as OpdReportController;
 use App\Http\Controllers\Opd\SubmissionController as OpdSubmissionController;
 use App\Http\Controllers\OpdQuotaController;
 use App\Http\Controllers\ProfileAvatarController;
@@ -20,7 +21,6 @@ use App\Http\Controllers\Verifikator\DashboardController as VerifikatorDashboard
 use App\Http\Controllers\Verifikator\FaqController;
 use App\Http\Controllers\Verifikator\OpdController;
 use App\Http\Controllers\Verifikator\PengajuanController;
-use App\Http\Controllers\Verifikator\ReportController as VerifikatorReportController;
 use App\Http\Controllers\Verifikator\SkCounterController;
 use App\Http\Controllers\Verifikator\UserController;
 use Illuminate\Support\Facades\Route;
@@ -69,12 +69,18 @@ Route::middleware(['auth', 'role:mahasiswa'])->group(function () {
     Route::get('dashboard', [MahasiswaDashboardController::class, 'index'])->name('dashboard');
     Route::get('pengajuan', [MahasiswaDashboardController::class, 'pengajuan'])->name('mahasiswa.pengajuan');
     Route::get('penyelesaian', [MahasiswaDashboardController::class, 'penyelesaian'])->name('mahasiswa.penyelesaian');
-    // Log Presensi Harian (revisi #22): riwayat + simpan + lampiran privat.
+    // Absen Harian (revisi #22, dirombak batch 5): riwayat + absen 1x/hari.
     Route::get('presensi', [PresensiController::class, 'index'])->name('presensi.index');
     Route::post('presensi', [PresensiController::class, 'store'])->name('presensi.store');
-    Route::get('presensi/{log}/lampiran/{attachment}', [PresensiController::class, 'attachment'])->name('presensi.lampiran');
     Route::delete('presensi/{log}', [PresensiController::class, 'destroy'])->name('presensi.destroy');
 });
+
+// Lampiran presensi (disk privat): pemilik ATAU admin (verifikator semua;
+// admin OPD hanya bila user tsb punya pengajuan di OPD-nya) — otorisasi
+// detailnya di PresensiController::attachment.
+Route::middleware(['auth', 'role:mahasiswa,admin_verifikator,admin_opd'])
+    ->get('presensi/{log}/lampiran/{attachment}', [PresensiController::class, 'attachment'])
+    ->name('presensi.lampiran');
 
 // --- Dasbor Verifikator (tersambung: auth + role) ---
 Route::middleware(['auth', 'role:admin_verifikator'])->group(function () {
@@ -143,6 +149,13 @@ Route::middleware(['auth', 'role:admin_opd,admin_verifikator'])
     ->patch('kuota/{opd}', [OpdQuotaController::class, 'update'])
     ->name('kuota.update');
 
+// Tag kompetensi OPD (kolom description, dipisah koma) — sumber tag pada
+// landing page. Otorisasi sama dengan kuota: OPD miliknya, Verifikator semua
+// (UpdateOpdTagRequest::authorize()).
+Route::middleware(['auth', 'role:admin_opd,admin_verifikator'])
+    ->patch('opd-tag/{opd}', [OpdQuotaController::class, 'updateDescription'])
+    ->name('opd-tag.update');
+
 // Pas foto pemohon (disk privat) untuk pemilik/admin. Otorisasi via
 // policy view: Mahasiswa pemilik, Verifikator semua, OPD hanya pengajuan miliknya.
 Route::middleware(['auth', 'role:mahasiswa,admin_opd,admin_verifikator'])
@@ -170,19 +183,21 @@ Route::middleware('auth')
 | kunci unduhan, lalu mengunduh e-sertifikat.
 */
 
-// Verifikator: tinjau laporan akhir + unggah sertifikat selesai.
-Route::middleware(['auth', 'role:admin_verifikator'])
-    ->prefix('verifikator/laporan')
-    ->name('verifikator.laporan.')
+// Admin OPD: tinjau laporan akhir + unggah sertifikat + surat penyelesaian.
+// (Batch 5: pindahan total dari verifikator/laporan/* — tanpa GET index,
+// datanya lewat halaman Kelola Peserta. Kepemilikan report di-guard 403
+// di Opd\ReportController::authorizeReport.)
+Route::middleware(['auth', 'role:admin_opd'])
+    ->prefix('opd/laporan')
+    ->name('opd.laporan.')
     ->group(function () {
-        Route::get('/', [VerifikatorReportController::class, 'index'])->name('index');
-        Route::get('{report}/berkas', [VerifikatorReportController::class, 'downloadReport'])->name('berkas');
-        Route::post('{report}/approve', [VerifikatorReportController::class, 'approve'])->name('approve');
-        Route::post('{report}/sertifikat', [VerifikatorReportController::class, 'uploadCertificate'])->name('sertifikat');
+        Route::get('{report}/berkas', [OpdReportController::class, 'downloadReport'])->name('berkas');
+        Route::post('{report}/approve', [OpdReportController::class, 'approve'])->name('approve');
+        Route::post('{report}/sertifikat', [OpdReportController::class, 'uploadCertificate'])->name('sertifikat');
         // R9: Surat Penyelesaian Magang ber-kop Kominfo — generate sekali
         // (nomor & tanggal SK statis), unduh dari arsip disk privat.
-        Route::post('{report}/surat-penyelesaian', [VerifikatorReportController::class, 'generateCompletionLetter'])->name('surat-penyelesaian');
-        Route::get('{report}/surat-penyelesaian', [VerifikatorReportController::class, 'downloadCompletionLetter'])->name('surat-penyelesaian.download');
+        Route::post('{report}/surat-penyelesaian', [OpdReportController::class, 'generateCompletionLetter'])->name('surat-penyelesaian');
+        Route::get('{report}/surat-penyelesaian', [OpdReportController::class, 'downloadCompletionLetter'])->name('surat-penyelesaian.download');
     });
 
 // Mahasiswa: kirim survei wajib (buka kunci) + unduh sertifikat.

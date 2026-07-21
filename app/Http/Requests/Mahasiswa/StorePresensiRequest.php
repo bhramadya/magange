@@ -5,8 +5,9 @@ namespace App\Http\Requests\Mahasiswa;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Simpan Log Presensi Harian (revisi #22). Lampiran boleh lebih dari satu
- * (attachments[]), masing-masing maks 5MB — PDF/Word/gambar/ZIP.
+ * Absen Harian (batch 5): status hadir/izin/sakit, rincian aktivitas, dan
+ * Dokumentasi Foto wajib 1–3 gambar @2MB. Tanggal TIDAK dari input —
+ * controller men-set today(); duplikat hari yang sama ditolak di controller.
  */
 class StorePresensiRequest extends FormRequest
 {
@@ -21,12 +22,10 @@ class StorePresensiRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'activity_date' => ['required', 'date'],
-            'start_time' => ['required', 'date_format:H:i'],
-            'end_time' => ['required', 'date_format:H:i', 'after:start_time'],
+            'status' => ['required', 'in:hadir,izin,sakit'],
             'details' => ['required', 'string', 'max:5000'],
-            'attachments' => ['nullable', 'array', 'max:10'],
-            'attachments.*' => ['file', 'mimes:pdf,doc,docx,xls,xlsx,jpeg,jpg,png,zip', 'max:5120'],
+            'attachments' => ['required', 'array', 'min:1', 'max:3'],
+            'attachments.*' => ['file', 'image', 'mimes:jpeg,jpg,png', 'max:2048'],
         ];
     }
 
@@ -36,16 +35,15 @@ class StorePresensiRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'activity_date.required' => 'Tanggal wajib diisi.',
-            'start_time.required' => 'Jam mulai wajib diisi.',
-            'start_time.date_format' => 'Format jam mulai tidak valid.',
-            'end_time.required' => 'Jam selesai wajib diisi.',
-            'end_time.date_format' => 'Format jam selesai tidak valid.',
-            'end_time.after' => 'Jam selesai harus setelah jam mulai.',
+            'status.required' => 'Status kehadiran wajib dipilih.',
+            'status.in' => 'Status kehadiran harus Hadir, Izin, atau Sakit.',
             'details.required' => 'Rincian aktivitas wajib diisi.',
-            'attachments.max' => 'Lampiran maksimal 10 berkas.',
-            'attachments.*.mimes' => 'Lampiran harus PDF, Word, Excel, gambar, atau ZIP.',
-            'attachments.*.max' => 'Ukuran tiap lampiran maksimal 5MB.',
+            'attachments.required' => 'Dokumentasi foto wajib diunggah (minimal 1).',
+            'attachments.min' => 'Dokumentasi foto minimal 1 berkas.',
+            'attachments.max' => 'Dokumentasi foto maksimal 3 berkas.',
+            'attachments.*.image' => 'Dokumentasi harus berupa gambar.',
+            'attachments.*.mimes' => 'Dokumentasi harus JPG atau PNG.',
+            'attachments.*.max' => 'Ukuran tiap foto maksimal 2MB.',
         ];
     }
 }
