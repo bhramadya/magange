@@ -1,20 +1,29 @@
+/* =========================================================================
+ *  E-MAGANG KOTA MADIUN — Tema email markdown (selaras tampilan website).
+ *  Token diambil dari DEISIGN.txt + BLUEPRINT-REDESIGN.md:
+ *    latar #f5faff · ink #0a1628 · brand #106feb / #0b4fb0 / #cddcef.
+ *  Catatan email-client: hindari flex/grid, andalkan tabel; Inter dgn
+ *  fallback sistem (webfont kerap di-strip Gmail/Outlook).
+ * ========================================================================= */
+
 /* Base */
 
 body,
 body *:not(html):not(style):not(br):not(tr):not(code) {
     box-sizing: border-box;
     font-family:
-        -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
-        sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+        'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+        Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol';
     position: relative;
 }
 
 body {
     -webkit-text-size-adjust: none;
-    background-color: #ffffff;
-    color: #52525b;
+    background-color: #f5faff;
+    color: #475569;
     height: 100%;
-    line-height: 1.4;
+    line-height: 1.6;
     margin: 0;
     padding: 0;
     width: 100% !important;
@@ -24,12 +33,13 @@ p,
 ul,
 ol,
 blockquote {
-    line-height: 1.4;
+    line-height: 1.6;
     text-align: start;
 }
 
 a {
-    color: #18181b;
+    color: #106feb;
+    text-decoration: none;
 }
 
 a img {
@@ -39,30 +49,34 @@ a img {
 /* Typography */
 
 h1 {
-    color: #18181b;
-    font-size: 18px;
-    font-weight: bold;
+    color: #0a1628;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
     margin-top: 0;
     text-align: start;
 }
 
 h2 {
-    font-size: 16px;
-    font-weight: bold;
+    color: #0a1628;
+    font-size: 18px;
+    font-weight: 700;
     margin-top: 0;
     text-align: start;
 }
 
 h3 {
-    font-size: 14px;
-    font-weight: bold;
+    color: #0a1628;
+    font-size: 15px;
+    font-weight: 600;
     margin-top: 0;
     text-align: left;
 }
 
 p {
-    font-size: 16px;
-    line-height: 1.5em;
+    color: #475569;
+    font-size: 15px;
+    line-height: 1.65em;
     margin-top: 0;
     text-align: left;
 }
@@ -81,7 +95,7 @@ img {
     -premailer-cellpadding: 0;
     -premailer-cellspacing: 0;
     -premailer-width: 100%;
-    background-color: #fafafa;
+    background-color: #f5faff;
     margin: 0;
     padding: 0;
     width: 100%;
@@ -99,25 +113,23 @@ img {
 /* Header */
 
 .header {
-    padding: 25px 0;
+    padding: 28px 0 8px;
     text-align: center;
 }
 
 .header a {
     color: #106feb;
     font-size: 19px;
-    font-weight: bold;
+    font-weight: 700;
     text-decoration: none;
 }
 
 /* Logo */
 
 .logo {
-    height: 75px;
-    margin-top: 15px;
-    margin-bottom: 10px;
-    max-height: 75px;
-    width: 75px;
+    height: 64px;
+    max-height: 64px;
+    width: auto;
 }
 
 /* Body */
@@ -126,9 +138,9 @@ img {
     -premailer-cellpadding: 0;
     -premailer-cellspacing: 0;
     -premailer-width: 100%;
-    background-color: #fafafa;
-    border-bottom: 1px solid #fafafa;
-    border-top: 1px solid #fafafa;
+    background-color: #f5faff;
+    border-bottom: 1px solid #f5faff;
+    border-top: 1px solid #f5faff;
     margin: 0;
     padding: 0;
     width: 100%;
@@ -137,17 +149,18 @@ img {
 .inner-body {
     -premailer-cellpadding: 0;
     -premailer-cellspacing: 0;
-    -premailer-width: 570px;
+    -premailer-width: 600px;
     background-color: #ffffff;
-    border-color: #e4e4e7;
-    border-radius: 4px;
+    border-color: #e2e8f0;
+    border-style: solid;
     border-width: 1px;
+    border-radius: 20px;
     box-shadow:
-        0 1px 3px 0 rgba(0, 0, 0, 0.1),
-        0 1px 2px -1px rgba(0, 0, 0, 0.1);
+        0 1px 3px rgba(11, 79, 176, 0.06),
+        0 12px 32px -8px rgba(11, 79, 176, 0.12);
     margin: 0 auto;
     padding: 0;
-    width: 570px;
+    width: 600px;
 }
 
 .inner-body a {
@@ -157,13 +170,14 @@ img {
 /* Subcopy */
 
 .subcopy {
-    border-top: 1px solid #e4e4e7;
-    margin-top: 25px;
-    padding-top: 25px;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 28px;
+    padding-top: 22px;
 }
 
 .subcopy p {
-    font-size: 14px;
+    color: #94a3b8;
+    font-size: 13px;
 }
 
 /* Footer */
@@ -171,22 +185,23 @@ img {
 .footer {
     -premailer-cellpadding: 0;
     -premailer-cellspacing: 0;
-    -premailer-width: 570px;
+    -premailer-width: 600px;
     margin: 0 auto;
     padding: 0;
     text-align: center;
-    width: 570px;
+    width: 600px;
 }
 
 .footer p {
-    color: #a1a1aa;
+    color: #94a3b8;
     font-size: 12px;
+    line-height: 1.6;
     text-align: center;
 }
 
 .footer a {
-    color: #a1a1aa;
-    text-decoration: underline;
+    color: #106feb;
+    text-decoration: none;
 }
 
 /* Tables */
@@ -195,27 +210,33 @@ img {
     -premailer-cellpadding: 0;
     -premailer-cellspacing: 0;
     -premailer-width: 100%;
-    margin: 30px auto;
+    margin: 24px auto;
     width: 100%;
 }
 
 .table th {
-    border-bottom: 1px solid #e4e4e7;
+    border-bottom: 2px solid #e2e8f0;
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
     margin: 0;
-    padding-bottom: 8px;
+    padding-bottom: 10px;
+    text-transform: uppercase;
 }
 
 .table td {
-    color: #52525b;
-    font-size: 15px;
-    line-height: 18px;
+    border-bottom: 1px solid #eef2f7;
+    color: #334155;
+    font-size: 14px;
+    line-height: 20px;
     margin: 0;
-    padding: 10px 0;
+    padding: 12px 0;
 }
 
 .content-cell {
     max-width: 100vw;
-    padding: 32px;
+    padding: 40px;
 }
 
 /* Buttons */
@@ -224,7 +245,7 @@ img {
     -premailer-cellpadding: 0;
     -premailer-cellspacing: 0;
     -premailer-width: 100%;
-    margin: 30px auto;
+    margin: 28px auto;
     padding: 0;
     text-align: center;
     width: 100%;
@@ -233,9 +254,10 @@ img {
 
 .button {
     -webkit-text-size-adjust: none;
-    border-radius: 4px;
+    border-radius: 10px;
     color: #fff;
     display: inline-block;
+    font-weight: 600;
     overflow: hidden;
     text-decoration: none;
 }
@@ -243,45 +265,47 @@ img {
 .button-blue,
 .button-primary {
     background-color: #106feb;
-    border-bottom: 8px solid #106feb;
-    border-left: 18px solid #106feb;
-    border-right: 18px solid #106feb;
-    border-top: 8px solid #106feb;
+    border-bottom: 10px solid #106feb;
+    border-left: 20px solid #106feb;
+    border-right: 20px solid #106feb;
+    border-top: 10px solid #106feb;
 }
 
 .button-green,
 .button-success {
-    background-color: #16a34a;
-    border-bottom: 8px solid #16a34a;
-    border-left: 18px solid #16a34a;
-    border-right: 18px solid #16a34a;
-    border-top: 8px solid #16a34a;
+    background-color: #10b981;
+    border-bottom: 10px solid #10b981;
+    border-left: 20px solid #10b981;
+    border-right: 20px solid #10b981;
+    border-top: 10px solid #10b981;
 }
 
 .button-red,
 .button-error {
-    background-color: #dc2626;
-    border-bottom: 8px solid #dc2626;
-    border-left: 18px solid #dc2626;
-    border-right: 18px solid #dc2626;
-    border-top: 8px solid #dc2626;
+    background-color: #f43f5e;
+    border-bottom: 10px solid #f43f5e;
+    border-left: 20px solid #f43f5e;
+    border-right: 20px solid #f43f5e;
+    border-top: 10px solid #f43f5e;
 }
 
 /* Panels */
 
 .panel {
-    border-left: #18181b solid 4px;
-    margin: 21px 0;
+    border-left: #106feb solid 4px;
+    border-radius: 12px;
+    margin: 22px 0;
+    overflow: hidden;
 }
 
 .panel-content {
-    background-color: #fafafa;
-    color: #52525b;
-    padding: 16px;
+    background-color: #e8f2fe;
+    color: #0a1628;
+    padding: 18px 20px;
 }
 
 .panel-content p {
-    color: #52525b;
+    color: #0a1628;
 }
 
 .panel-item {

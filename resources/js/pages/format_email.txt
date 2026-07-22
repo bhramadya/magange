@@ -1,0 +1,21 @@
+Format dan tampilan email yang dikirimkan oleh sistem E-Magang telah distandarisasi untuk memiliki identitas visual yang seragam, baik untuk email persetujuan maupun penolakan.
+
+Berikut adalah rincian tampilan dan format yang diwajibkan:
+
+**1. Desain Visual dan Identitas (Berlaku untuk Semua Email)**
+*   **Header Utama:** Email diwajibkan memiliki *header* teks berukuran besar, dicetak tebal, dan berwarna biru dengan tulisan **"magang kota Madiun"**.
+*   **Logo Pengenal:** Logo *default* (seperti logo Laravel) tidak boleh digunakan. Email harus menampilkan **Logo Pemerintah Kota Madiun** yang posisinya diletakkan berdampingan dengan logo **E-Magang**.
+
+**2. Format Email Persetujuan (ACC)**
+Jika pengajuan diterima oleh Admin OPD, email yang masuk ke peserta akan memiliki format berikut:
+*   **Sub-teks:** Di bawah *header* biru, terdapat tulisan **"disetujui"**.
+*   **Isi Konten:** Email memuat rincian informasi penempatan peserta, meliputi: asal sekolah/kampus, durasi waktu magang, nama divisi/bidang, nama pembimbing lapangan, nama penanggung jawab, dan **catatan khusus dari admin** (jika ada).
+*   **Instruksi Kedatangan:** Email wajib ditutup dengan instruksi kedatangan ke kantor, misalnya dengan kalimat: *"Anda diharapkan hadir di kantor OPD terkait dengan menemui perwakilan dari bidang [Nama Bidang]. Koordinasi tugas dan orientasi lapangan selanjutnya akan dipandu oleh [Nama Pembimbing]."*.
+*   **Lampiran Dokumen:** Email persetujuan **wajib melampirkan file PDF Surat Penerimaan Magang** yang berfungsi seperti *invoice* bukti penerimaan.
+
+**3. Format Email Penolakan**
+Jika pengajuan ditolak (baik oleh Admin Verifikator maupun Admin OPD), email akan berformat:
+*   **Sub-teks:** Terdapat tulisan **"ditolak"**.
+*   **Isi Konten:** Memuat data diri peserta secara lengkap mulai dari NIS/NIM, Nama Lengkap, Asal Instansi, Tujuan OPD, hingga keahlian peserta.
+*   **Kalimat Penutup Standar:** Email ditutup dengan paragraf: *"Kami menghargai pengajuan magang yang Anda kirimkan. Namun, setelah melalui proses seleksi, kami menginformasikan bahwa pengajuan Anda belum dapat disetujui. Terima kasih atas partisipasi Anda dan semoga sukses di kesempatan lain."*.
+*   **Tanda Tangan Penolak:** Bagian penutup email harus mengindikasikan siapa pihak yang menolak, ditulis dengan **"Hormat kami, admin verifikator"** atau **"Hormat kami admin OPD"**.

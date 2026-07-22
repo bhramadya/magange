@@ -1,14 +1,16 @@
 <x-mail::message>
 @include('mail.partials.header', ['badge' => 'Sertifikat Terbit', 'badgeBg' => '#dcfce7', 'badgeText' => '#15803d'])
 
-Halo {{ $certificate->application->user->name }},
+Halo **{{ $certificate->application->user->name }}**,
 
-Kabar baik! **Sertifikat magang** Anda untuk tiket **{{ $certificate->application->ticket_number }}** telah tersedia dan dapat diunduh melalui portal.
+Selamat! **Sertifikat magang** Anda untuk tiket **{{ $certificate->application->ticket_number }}** telah diterbitkan dan siap diunduh melalui portal.
 
-Silakan masuk ke akun Anda dan buka halaman **Penyelesaian** untuk mengunduh sertifikat.
+<x-mail::panel>
+Silakan masuk ke akun Anda, buka halaman **Penyelesaian**, lalu klik tombol **Unduh Sertifikat** untuk mendapatkan sertifikat resmi Anda.
+</x-mail::panel>
 
-Terima kasih atas dedikasi Anda selama menjalani magang di lingkungan Pemerintah Kota Madiun.
+Terima kasih atas dedikasi Anda selama menjalani magang di lingkungan Pemerintah Kota Madiun. Semoga pengalaman ini bermanfaat untuk karir Anda ke depan.
 
 Terima kasih,<br>
-Pemerintah Kota Madiun
+**E-Magang Kota Madiun**
 </x-mail::message>
