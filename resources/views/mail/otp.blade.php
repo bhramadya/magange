@@ -5,11 +5,11 @@ Halo **{{ $user->name }}**,
 
 Gunakan kode berikut untuk masuk ke portal **E-Magang Kota Madiun**. Kode berlaku selama **5 menit** dan hanya dapat digunakan satu kali.
 
-{{-- Kartu kode OTP — tampil menonjol, selaras tema biru website. --}}
+{{-- Kartu kode OTP — responsif, menonjol, selaras tema biru website. --}}
 <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin:26px 0;">
 <tr><td align="center">
-<table cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate; border:1px solid #cddcef; border-radius:16px; background-color:#e8f2fe;">
-<tr><td align="center" style="padding:26px 40px;">
+<table class="otp-card" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate; border:1px solid #cddcef; border-radius:16px; background-color:#e8f2fe; max-width:380px;">
+<tr><td align="center" style="padding:24px 16px;">
 <span style="display:block; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1.2px; color:#0b4fb0; padding-bottom:12px;">
 Kode OTP Anda
 </span>
