@@ -349,8 +349,16 @@ function UserDetailDialog({
                             ) : (
                                 <ul className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
                                     {(row.presensi ?? []).map((entry) => {
+                                        // Fallback bila status tak dikenal /
+                                        // null (data presensi lama) — jangan
+                                        // biarkan 1 baris rusak me-crash dialog.
                                         const meta =
-                                            PRESENSI_META[entry.status];
+                                            PRESENSI_META[entry.status] ?? {
+                                                label:
+                                                    entry.status ||
+                                                    'Tidak diketahui',
+                                                badge: 'bg-slate-100 text-slate-700',
+                                            };
 
                                         return (
                                             <li
