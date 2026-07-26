@@ -18,6 +18,9 @@ use Illuminate\Support\Carbon;
  * @property int|null $reviewed_by
  * @property Carbon|null $reviewed_at
  * @property Carbon $submitted_at
+ * @property string|null $completion_sk_number Nomor SK surat penyelesaian (set sekali)
+ * @property Carbon|null $completion_sk_issued_at Tanggal terbit SK penyelesaian (statis)
+ * @property string|null $completion_letter_path Arsip PDF surat penyelesaian (disk privat)
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -30,6 +33,9 @@ use Illuminate\Support\Carbon;
     'reviewed_by',
     'reviewed_at',
     'submitted_at',
+    'completion_sk_number',
+    'completion_sk_issued_at',
+    'completion_letter_path',
 ])]
 class FinalReport extends Model
 {
@@ -43,6 +49,7 @@ class FinalReport extends Model
             'is_confirmed' => 'boolean',
             'reviewed_at' => 'datetime',
             'submitted_at' => 'datetime',
+            'completion_sk_issued_at' => 'date',
         ];
     }
 

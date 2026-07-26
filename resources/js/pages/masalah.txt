@@ -1,2 +1,17 @@
 1. dasbor verifikator terdapat banyak masalah contohnya pada menu dasbor filter menunggu verifikasi terapat 3 pengajuan sedangkan pada menu pengajuan masuk terdapat 4 pengajuan, dan setiap filter pada menu dasbor memiliki aksi yang sama, berbeda dengan dasbor OPD yang rapi sesuai dengan filternya.
 2. pada dasbor OPD terdapat 6 filter dan diatasnya terdapat 4 card yang berisi informasi jumlah setiap filternya, namun belum ada untuk filter "selesai magang" dan urutannya tidak sama dengan urutan filter dibawahnya.
+
+--- STATUS (2026-07-20, Claude Code) ---
+1. SELESAI — dua akar masalah diperbaiki:
+   a) Backend: Verifikator\DashboardController::recentApplications membatasi
+      limit(50) sehingga hitungan kartu/filter dasbor bisa lebih kecil daripada
+      halaman Pengajuan Masuk/Riwayat (yang mengambil semua baris). Limit
+      dihapus — sumber hitungan kini identik.
+   b) Frontend: tombol aksi tabel dasbor verifikator selalu "Tinjau" untuk
+      semua status. Kini mengikuti status (selaras dialognya & pola dasbor
+      OPD): pending_verifikator → "Tinjau", ongoing/completion_submitted →
+      "Selesaikan", lainnya → "Detail".
+2. SELESAI (sudah diperbaiki batch frontend sebelumnya) — dasbor OPD kini punya
+   5 kartu (Perlu Keputusan, Disetujui, Sedang Magang, Selesai Magang, Ditolak)
+   yang dipetakan 1:1 dan seurutan dengan chip filter; hitungan kartu memakai
+   matchFilter yang sama dengan filter.

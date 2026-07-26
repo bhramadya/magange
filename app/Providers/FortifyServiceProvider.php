@@ -6,8 +6,10 @@ use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
 use App\Enums\UserRole;
 use App\Models\User;
+use App\Rules\Recaptcha;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
@@ -63,10 +65,21 @@ class FortifyServiceProvider extends ServiceProvider
      * Login admin: Username + Password, hanya untuk role admin (verifikator /
      * OPD) yang aktif. Menggantikan AdminLoginController lama; logika role,
      * is_active, dan single-session lintas-perangkat dipindah ke sini.
+     * Dilindungi reCAPTCHA v3 (action 'admin_login') bila secret terpasang.
      */
     private function configureAuthentication(): void
     {
         Fortify::authenticateUsing(function (Request $request) {
+            // Gerbang anti-bot (R8): validasi token reCAPTCHA v3 sebelum
+            // mencocokkan kredensial. Tanpa secret (lokal/test) dilewati.
+            if (! empty(config('services.recaptcha.secret'))) {
+                $request->validate([
+                    'recaptcha_token' => ['required', new Recaptcha($request->ip(), 'admin_login')],
+                ], [
+                    'recaptcha_token.required' => 'Verifikasi captcha wajib diselesaikan.',
+                ]);
+            }
+
             $user = User::query()
                 ->where('username', $request->input('username'))
                 ->whereIn('role', [UserRole::AdminVerifikator, UserRole::AdminOpd])
@@ -79,6 +92,9 @@ class FortifyServiceProvider extends ServiceProvider
             if (! $user->is_active) {
                 return null;
             }
+
+            // Audit login (R12): catat waktu login sukses terakhir.
+            $user->forceFill(['last_login_at' => Date::now()])->save();
 
             // Single session lintas-perangkat: tendang sesi user di perangkat/
             // browser lain (driver sesi database) begitu login berhasil.

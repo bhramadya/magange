@@ -110,3 +110,75 @@ test('admin opd redirects to opd dashboard', function () {
 
     $response->assertRedirect('/opd');
 });
+
+/* ---- Lockout progresif Fibonacci (3x salah → kirim ulang ditunda) ------ */
+
+test('tiga kali salah otp memicu lockout dan menginvalidasi token aktif', function () {
+    $user = User::factory()->create(['email' => 'test@example.com']);
+    $otp = issueOtp($user);
+
+    foreach (range(1, 3) as $ignored) {
+        $this->post('/otp/verify', ['email' => 'test@example.com', 'otp' => '000000'])
+            ->assertSessionHasErrors('otp');
+    }
+
+    // Token asli sudah diinvalidasi — kode benar pun kini ditolak.
+    $this->post('/otp/verify', ['email' => 'test@example.com', 'otp' => $otp])
+        ->assertSessionHasErrors('otp');
+    $this->assertGuest();
+
+    // Kirim ulang juga diblokir selama jeda lockout (tingkat 1 = 1 menit).
+    $this->post('/otp/send', ['email' => 'test@example.com'])
+        ->assertSessionHasErrors('email');
+});
+
+test('setelah jeda lockout habis, kirim ulang dan login kembali normal', function () {
+    $user = User::factory()->create(['email' => 'test@example.com']);
+    issueOtp($user);
+
+    foreach (range(1, 3) as $ignored) {
+        $this->post('/otp/verify', ['email' => 'test@example.com', 'otp' => '000000']);
+    }
+
+    // Lewati jeda lockout tingkat 1 (1 menit) — tapi masih dalam jendela
+    // rate-limit 15 menit (maks 3 permintaan), jadi mundur juga 15 menit.
+    $this->travel(16)->minutes();
+
+    $otp = issueOtp($user->refresh());
+
+    $this->post('/otp/verify', ['email' => 'test@example.com', 'otp' => $otp])
+        ->assertRedirect('/dashboard');
+    $this->assertAuthenticatedAs($user);
+
+    // Login sukses → baris lockout dihapus.
+    $this->assertDatabaseMissing('otp_lockouts', ['user_id' => $user->id]);
+});
+
+test('dua kali salah belum memblokir kode yang benar', function () {
+    $user = User::factory()->create(['email' => 'test@example.com']);
+    $otp = issueOtp($user);
+
+    foreach (range(1, 2) as $ignored) {
+        $this->post('/otp/verify', ['email' => 'test@example.com', 'otp' => '000000'])
+            ->assertSessionHasErrors('otp');
+    }
+
+    $this->post('/otp/verify', ['email' => 'test@example.com', 'otp' => $otp])
+        ->assertRedirect('/dashboard');
+    $this->assertAuthenticatedAs($user);
+});
+
+test('lockout mem-flash sisa detik untuk hitung mundur di halaman login', function () {
+    $user = User::factory()->create(['email' => 'test@example.com']);
+    issueOtp($user);
+
+    foreach (range(1, 3) as $ignored) {
+        $this->post('/otp/verify', ['email' => 'test@example.com', 'otp' => '000000']);
+    }
+
+    // Halaman login menerima prop lockoutSeconds (flash) untuk countdown live.
+    $this->get('/login-otp')->assertInertia(fn ($page) => $page
+        ->component('auth/otp-login')
+        ->where('lockoutSeconds', fn ($v) => is_numeric($v) && $v > 0 && $v <= 60)
+    );
+});

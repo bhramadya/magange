@@ -34,7 +34,7 @@ function e2ePengajuan(array $overrides = []): array
         'institution_name' => 'Universitas Negeri Madiun',
         'address' => 'Jl. Merdeka No. 1, Madiun',
         'campus_supervisor' => 'Dr. Andi',
-        'guardian_name' => 'Slamet Santoso',
+        'campus_supervisor_whatsapp' => '081311112222',
         'major' => 'Teknik Informatika',
         'skills' => 'React, Laravel',
     ], $overrides);
@@ -98,12 +98,13 @@ test('alur lengkap: daftar -> teruskan -> setujui -> cron mulai -> laporan -> se
     expect($app->fresh()->status)->toBe(ApplicationStatus::Completed);
     $report = FinalReport::where('application_id', $app->id)->firstOrFail();
 
-    // 6) Verifikator menyetujui laporan + mengunggah sertifikat (terkunci).
-    $this->actingAs($verifikator)
-        ->post("/verifikator/laporan/{$report->id}/approve")
+    // 6) Admin OPD menyetujui laporan + mengunggah sertifikat (terkunci) —
+    //    batch 5: menu Laporan pindah total dari verifikator ke OPD.
+    $this->actingAs($opdAdmin)
+        ->post("/opd/laporan/{$report->id}/approve")
         ->assertRedirect();
-    $this->actingAs($verifikator)
-        ->post("/verifikator/laporan/{$report->id}/sertifikat", [
+    $this->actingAs($opdAdmin)
+        ->post("/opd/laporan/{$report->id}/sertifikat", [
             'file' => UploadedFile::fake()->create('sertifikat.pdf', 100, 'application/pdf'),
         ])->assertRedirect();
     $certificate = Certificate::where('application_id', $app->id)->firstOrFail();

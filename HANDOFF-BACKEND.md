@@ -75,7 +75,7 @@ Bentuk objek mengacu ke `resources/js/types/magang.ts`. Tiap page sudah punya mo
 **Shared props** (semua page, via `app/Http/Middleware/HandleInertiaRequests.php`): `name`, `auth.user`, `sidebarOpen`.
 
 ### Kepemilikan field form pengajuan (PENTING)
-- **Diisi siswa** (form publik `#daftar`): identitas, `institution_name`, `tujuan_magang`, `campus_supervisor` (pembimbing kampus/sekolah), `start_date`, `duration_months`/`end_date`, dokumen.
+- **Diisi siswa** (form publik `#daftar`): identitas, `institution_name`, `tujuan_magang`, `campus_supervisor` (pembimbing kampus/sekolah), `campus_supervisor_whatsapp` (No. WA dosen/guru pembimbing, wajib), `guardian_name`, `guardian_whatsapp` (No. WA penanggung jawab, wajib), `start_date`, `duration_months`/`end_date`, dokumen.
 - **Diisi Admin Verifikator saat forward** (KELUAR dari form publik): `opd`, `division`, `field_supervisor`, `person_in_charge`.
 
 ---

@@ -309,7 +309,23 @@ function ActionPanel({ application }: { application: InternshipApplication }) {
         );
     }
 
-    // pending_verifikator / forwarded_opd / approved → menunggu
+    if (application.status === 'approved') {
+        return (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                <div className="flex items-center gap-2 text-emerald-700">
+                    <CheckCircle2 className="size-5" />
+                    <p className="text-sm font-bold">Pengajuan Disetujui</p>
+                </div>
+                <p className="mt-2 text-sm text-emerald-700/90">
+                    Selamat! Pengajuan Anda disetujui OPD. Magang dimulai pada{' '}
+                    {formatDate(application.start_date)} — silakan hadir di
+                    kantor OPD penempatan sesuai jadwal.
+                </p>
+            </div>
+        );
+    }
+
+    // pending_verifikator / forwarded_opd → menunggu peninjauan
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <div className="flex items-center gap-2 text-[#106feb]">

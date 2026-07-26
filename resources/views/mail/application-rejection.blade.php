@@ -25,7 +25,6 @@ Pengajuan magang Anda dengan nomor tiket **{{ $application->ticket_number }}** t
 | Alamat Lengkap | {{ $application->address ?? '-' }} |
 | Periode | {{ $application->start_date?->translatedFormat('d M Y') }} – {{ $application->end_date?->translatedFormat('d M Y') }} |
 | Dosen / Guru Pembimbing | {{ $application->campus_supervisor }} |
-| Penanggung Jawab | {{ $application->guardian_name ?? '-' }} |
 | Nomor WhatsApp | {{ $application->user->whatsapp_number ?? '-' }} |
 | Email | {{ $application->user->email }} |
 </x-mail::table>

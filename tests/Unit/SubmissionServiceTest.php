@@ -10,6 +10,7 @@ use App\Models\Opd;
 use App\Models\User;
 use App\Services\OtpService;
 use App\Services\RateLimitService;
+use App\Services\SkNumberService;
 use App\Services\SubmissionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
@@ -19,7 +20,7 @@ uses(TestCase::class, RefreshDatabase::class);
 
 beforeEach(function () {
     $rateLimit = new RateLimitService;
-    $this->service = new SubmissionService($rateLimit, new OtpService($rateLimit));
+    $this->service = new SubmissionService($rateLimit, new OtpService($rateLimit), new SkNumberService);
 });
 
 /**

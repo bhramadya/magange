@@ -4,6 +4,9 @@ use App\Enums\ApplicationStatus;
 use App\Models\InternshipApplication;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -46,6 +49,33 @@ test('pengajuan page includes documents array', function () {
         ->component('mahasiswa/pengajuan')
         ->has('documents')
         ->has('application.ticket_number')
+    );
+});
+
+test('pengajuan page includes pasfoto and supporting document entries', function () {
+    Queue::fake();
+    Storage::fake('local');
+
+    $user = User::factory()->create();
+    $photoPath = UploadedFile::fake()->create('foto.jpg', 50, 'image/jpeg')->storeAs('applications/photos', 'foto.jpg', 'local');
+    $suratPath = UploadedFile::fake()->create('surat.pdf', 50, 'application/pdf')->storeAs('applications/documents', 'surat.pdf', 'local');
+
+    InternshipApplication::factory()->create([
+        'user_id' => $user->id,
+        'photo_path' => $photoPath,
+        'surat_pengantar_path' => $suratPath,
+        'cv_path' => null,
+        'portfolio_path' => null,
+    ]);
+
+    $response = $this->actingAs($user)->get('/pengajuan');
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('mahasiswa/pengajuan')
+        ->where('documents.0.label', 'Pas Foto')
+        ->where('documents.0.kind', 'image')
+        ->where('documents.1.label', 'Surat Pengantar')
     );
 });
 

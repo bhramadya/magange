@@ -1,27 +1,43 @@
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft, Lock, ShieldCheck, User2, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { FormEvent } from 'react';
+import { useRecaptchaV3 } from '@/hooks/use-recaptcha-v3';
 
 /* =========================================================================
  *  LOGIN ADMIN — E-MAGANG (Pemkot Madiun)
  *  Login konvensional Username + Password, TERPISAH dari alur OTP mahasiswa.
- *  Khusus Admin Verifikator & Admin OPD.
+ *  Khusus Admin Verifikator & Admin OPD. Dilindungi reCAPTCHA v3 (invisible).
  *
  *  POST → /admin/login (name: admin.login.attempt)
  * ========================================================================= */
 
 export default function AdminLogin() {
-    const { data, setData, post, processing, errors } = useForm({
+    const recaptchaSiteKey = (
+        usePage().props as {
+            recaptchaSiteKey?: string;
+        }
+    ).recaptchaSiteKey;
+
+    const { data, setData, post, processing, errors, transform } = useForm({
         username: '',
         password: '',
         remember: true,
+        recaptcha_token: '',
     });
+
+    // reCAPTCHA v3: token diambil otomatis saat submit (tanpa checkbox).
+    const executeRecaptcha = useRecaptchaV3(recaptchaSiteKey, 'admin_login');
 
     function submit(e: FormEvent) {
         e.preventDefault();
-        // Dilayani Laravel Fortify (config fortify.paths.login = admin/login).
-        post('/admin/login');
+
+        void executeRecaptcha().then((token) => {
+            transform((current) => ({ ...current, recaptcha_token: token }));
+
+            // Dilayani Laravel Fortify (config fortify.paths.login = admin/login).
+            post('/admin/login');
+        });
     }
 
     return (
@@ -115,6 +131,12 @@ export default function AdminLogin() {
                             )}
                         </div>
 
+                        {errors.recaptcha_token && (
+                            <p className="text-xs font-medium text-rose-600">
+                                {errors.recaptcha_token}
+                            </p>
+                        )}
+
                         <button
                             type="submit"
                             disabled={processing}
@@ -128,6 +150,13 @@ export default function AdminLogin() {
                             Masuk
                         </button>
                     </form>
+
+                    {recaptchaSiteKey && (
+                        <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-400">
+                            Dilindungi reCAPTCHA v3 — verifikasi berjalan
+                            otomatis saat masuk.
+                        </p>
+                    )}
 
                     <p className="mt-6 text-center text-xs text-slate-400">
                         Peserta magang?{' '}

@@ -5,12 +5,12 @@
     "scripts": {
         "build": "vite build",
         "build:ssr": "vite build && vite build --ssr",
-        "dev": "vite",
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix",
         "lint:check": "eslint .",
-        "types:check": "tsc --noEmit"
+        "types:check": "tsc --noEmit",
+        "dev": "php artisan wayfinder:generate --with-form && vite"
     },
     "devDependencies": {
         "@eslint/js": "^9.19.0",

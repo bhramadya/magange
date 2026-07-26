@@ -5,6 +5,7 @@ use App\Enums\ReportStatus;
 use App\Models\Certificate;
 use App\Models\FinalReport;
 use App\Models\InternshipApplication;
+use App\Models\Opd;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -18,13 +19,42 @@ beforeEach(function () {
 });
 
 /**
- * Pengajuan milik $owner pada status Ongoing (siap masuk tahap penyelesaian).
+ * OPD + admin-nya untuk aksi laporan (batch 5: laporan dikelola Admin OPD).
+ *
+ * @return array{0: Opd, 1: User}
  */
-function ongoingApplicationFor(User $owner): InternshipApplication
+function opdWithAdmin(string $code = 'DKI'): array
+{
+    $opd = Opd::create(['name' => "OPD {$code}", 'code' => $code]);
+    $admin = User::factory()->opdAdmin($opd->id)->create();
+
+    return [$opd, $admin];
+}
+
+/**
+ * Pengajuan milik $owner pada status Ongoing di OPD tertentu.
+ */
+function ongoingApplicationFor(User $owner, ?Opd $opd = null): InternshipApplication
 {
     return InternshipApplication::factory()->create([
         'user_id' => $owner->id,
+        'opd_id' => $opd?->id,
         'status' => ApplicationStatus::Ongoing,
+    ]);
+}
+
+/**
+ * Laporan akhir pending untuk sebuah pengajuan.
+ */
+function pendingReportFor(InternshipApplication $app): FinalReport
+{
+    return FinalReport::create([
+        'application_id' => $app->id,
+        'file_name' => 'laporan.pdf',
+        'file_path' => "reports/{$app->id}/laporan.pdf",
+        'is_confirmed' => true,
+        'status' => ReportStatus::Pending,
+        'submitted_at' => now(),
     ]);
 }
 
@@ -46,27 +76,20 @@ test('mahasiswa mengunggah laporan dengan konfirmasi menandai magang selesai', f
     ]);
 });
 
-test('verifikator menyetujui laporan lalu menerbitkan sertifikat terkunci', function () {
+test('admin OPD menyetujui laporan lalu menerbitkan sertifikat terkunci', function () {
     Storage::fake('local');
-    $verifikator = User::factory()->verifikator()->create();
+    [$opd, $adminOpd] = opdWithAdmin();
     $mahasiswa = User::factory()->create();
-    $app = ongoingApplicationFor($mahasiswa);
-    $report = FinalReport::create([
-        'application_id' => $app->id,
-        'file_name' => 'laporan.pdf',
-        'file_path' => "reports/{$app->id}/laporan.pdf",
-        'is_confirmed' => true,
-        'status' => ReportStatus::Pending,
-        'submitted_at' => now(),
-    ]);
+    $app = ongoingApplicationFor($mahasiswa, $opd);
+    $report = pendingReportFor($app);
 
-    $this->actingAs($verifikator)
-        ->post("/verifikator/laporan/{$report->id}/approve")
+    $this->actingAs($adminOpd)
+        ->post("/opd/laporan/{$report->id}/approve")
         ->assertRedirect();
     expect($report->refresh()->status)->toBe(ReportStatus::Approved);
 
-    $this->actingAs($verifikator)
-        ->post("/verifikator/laporan/{$report->id}/sertifikat", [
+    $this->actingAs($adminOpd)
+        ->post("/opd/laporan/{$report->id}/sertifikat", [
             'file' => UploadedFile::fake()->create('sertifikat.pdf', 100, 'application/pdf'),
         ])
         ->assertRedirect();
@@ -147,53 +170,53 @@ test('sertifikat terkunci tidak bisa diunduh', function () {
         ->assertRedirect('/penyelesaian');
 });
 
-test('verifikator dapat membuka berkas laporan akhir peserta', function () {
+test('admin OPD dapat membuka berkas laporan akhir peserta di OPD-nya', function () {
     Storage::fake('local');
-    $verifikator = User::factory()->verifikator()->create();
-    $app = ongoingApplicationFor(User::factory()->create());
+    [$opd, $adminOpd] = opdWithAdmin();
+    $app = ongoingApplicationFor(User::factory()->create(), $opd);
     Storage::disk('local')->put("reports/{$app->id}/laporan.pdf", 'PDF');
-    $report = FinalReport::create([
-        'application_id' => $app->id,
-        'file_name' => 'laporan.pdf',
-        'file_path' => "reports/{$app->id}/laporan.pdf",
-        'is_confirmed' => true,
-        'status' => ReportStatus::Pending,
-        'submitted_at' => now(),
-    ]);
+    $report = pendingReportFor($app);
 
-    $this->actingAs($verifikator)
-        ->get("/verifikator/laporan/{$report->id}/berkas")
+    $this->actingAs($adminOpd)
+        ->get("/opd/laporan/{$report->id}/berkas")
         ->assertOk();
 });
 
-test('mahasiswa dilarang membuka berkas laporan verifikator', function () {
-    $mahasiswa = User::factory()->create();
-    $app = ongoingApplicationFor($mahasiswa);
-    $report = FinalReport::create([
-        'application_id' => $app->id,
-        'file_name' => 'laporan.pdf',
-        'file_path' => "reports/{$app->id}/laporan.pdf",
-        'is_confirmed' => true,
-        'status' => ReportStatus::Pending,
-        'submitted_at' => now(),
-    ]);
+test('admin OPD lain dilarang mengakses laporan bukan miliknya', function () {
+    Storage::fake('local');
+    [$opd] = opdWithAdmin('DKI');
+    [, $adminOpdLain] = opdWithAdmin('DPK');
+    $app = ongoingApplicationFor(User::factory()->create(), $opd);
+    Storage::disk('local')->put("reports/{$app->id}/laporan.pdf", 'PDF');
+    $report = pendingReportFor($app);
 
+    $this->actingAs($adminOpdLain)
+        ->get("/opd/laporan/{$report->id}/berkas")
+        ->assertForbidden();
+    $this->actingAs($adminOpdLain)
+        ->post("/opd/laporan/{$report->id}/approve")
+        ->assertForbidden();
+    expect($report->refresh()->status)->toBe(ReportStatus::Pending);
+});
+
+test('verifikator dan mahasiswa dilarang mengakses aksi laporan OPD', function () {
+    [$opd] = opdWithAdmin();
+    $mahasiswa = User::factory()->create();
+    $verifikator = User::factory()->verifikator()->create();
+    $app = ongoingApplicationFor($mahasiswa, $opd);
+    $report = pendingReportFor($app);
+
+    // Batch 5: menu Laporan pindah TOTAL ke OPD — verifikator kini 403.
+    $this->actingAs($verifikator)
+        ->get("/opd/laporan/{$report->id}/berkas")
+        ->assertForbidden();
     $this->actingAs($mahasiswa)
-        ->get("/verifikator/laporan/{$report->id}/berkas")
+        ->get("/opd/laporan/{$report->id}/berkas")
         ->assertForbidden();
 });
 
-test('halaman review laporan verifikator dapat diakses', function () {
+test('route lama verifikator/laporan sudah tidak ada', function () {
     $verifikator = User::factory()->verifikator()->create();
 
-    $this->actingAs($verifikator)
-        ->get('/verifikator/laporan')
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page->component('verifikator/reports/index'));
-});
-
-test('mahasiswa dilarang mengakses aksi verifikator laporan', function () {
-    $mahasiswa = User::factory()->create();
-
-    $this->actingAs($mahasiswa)->get('/verifikator/laporan')->assertForbidden();
+    $this->actingAs($verifikator)->get('/verifikator/laporan')->assertNotFound();
 });

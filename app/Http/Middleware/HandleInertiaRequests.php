@@ -41,8 +41,13 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
-            // Site key reCAPTCHA v2 — dipakai widget di form pendaftaran publik.
+            // Site key reCAPTCHA v3 — dipakai hook use-recaptcha-v3 (invisible).
             'recaptchaSiteKey' => config('services.recaptcha.site_key'),
+            // Flash antar-request: notifikasi umum + kredensial akun admin
+            // auto-generate (R10, tampil sekali di GeneratedCredentialsDialog).
+            'success' => fn () => $request->session()->get('success'),
+            'error' => fn () => $request->session()->get('error'),
+            'generatedCredentials' => fn () => $request->session()->get('generatedCredentials'),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

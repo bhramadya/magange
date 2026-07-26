@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
+import { ApplicationDocuments } from '@/components/application-documents';
 import { StatusBadge } from '@/components/status-badge';
 import {
     Dialog,
@@ -113,8 +114,9 @@ function makeApp(
         applicant_whatsapp: '6281234567890',
         nis: '2101234567',
         address: 'Jl. Pahlawan No. 10, Madiun',
-        guardian_name: 'Drs. Suparno',
+        campus_supervisor_whatsapp: '6281234500001',
         major: 'Teknik Informatika',
+        skills: 'React, Laravel, REST API, PostgreSQL',
         photo_url: null,
         tujuan_magang: 'Magang kompetensi keahlian',
         duration_months: 3,
@@ -508,8 +510,8 @@ function ReviewDialog({
                                 value={app.campus_supervisor}
                             />
                             <DetailRow
-                                label="Penanggung Jawab"
-                                value={app.guardian_name || '—'}
+                                label="No. WA Pembimbing"
+                                value={app.campus_supervisor_whatsapp || '—'}
                             />
                             <DetailRow
                                 label="No. WhatsApp"
@@ -520,6 +522,9 @@ function ReviewDialog({
                                 value={app.applicant_email || '—'}
                             />
                         </div>
+
+                        {/* Berkas pendukung opsional (surat pengantar / CV / portofolio) */}
+                        <ApplicationDocuments app={app} />
 
                         {reviewable && (
                             <>
@@ -912,7 +917,18 @@ export default function VerifikatorDashboard({
                                             onClick={() => setActive(app)}
                                             className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-[#106feb] transition hover:bg-[#cddcef]/40"
                                         >
-                                            Tinjau
+                                            {/* Label aksi mengikuti status (bug masalah.txt #1):
+                                                pending → Tinjau (form forward/tolak),
+                                                ongoing/completion_submitted → Selesaikan,
+                                                lainnya → Detail (read-only). */}
+                                            {app.status ===
+                                            'pending_verifikator'
+                                                ? 'Tinjau'
+                                                : app.status === 'ongoing' ||
+                                                    app.status ===
+                                                        'completion_submitted'
+                                                  ? 'Selesaikan'
+                                                  : 'Detail'}
                                             <ArrowRight className="size-3.5" />
                                         </button>
                                     </td>

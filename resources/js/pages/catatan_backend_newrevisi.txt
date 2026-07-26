@@ -1,0 +1,264 @@
+================================================================
+CATATAN BACKEND — new_revisi.txt (15 poin revisi)
+Untuk rekan yang mengerjakan backend dengan Claude Code.
+Frontend SUDAH/SEDANG dikerjakan terpisah — kontrak nama prop/field
+di bawah ini WAJIB dipakai persis (jangan diganti nama).
+Baca CLAUDE.md + AGENTS.md dulu; ikuti pola SubmissionService
+(DB::transaction + guardStatus + ApplicationStatusLog + dispatch job).
+================================================================
+
+---------------------------------------------------------------
+R1 — NIM alfanumerik maks 15
+---------------------------------------------------------------
+Frontend sudah mengizinkan huruf+angka maxLength 15 pada field `nis`.
+PROMPT:
+"Di StoreApplicationRequest (app/Http/Requests/Application/), ubah validasi
+`nis` menjadi alfanumerik (huruf+angka) dengan max:15. Pastikan kolom
+`nis` di internship_applications cukup (string). Sesuaikan tes yang ada."
+
+---------------------------------------------------------------
+R2 + R8 — reCAPTCHA v3 (pendaftaran + login user + login admin)
+---------------------------------------------------------------
+Frontend memakai grecaptcha.execute(siteKey, {action}) dan mengirim token:
+- form pendaftaran POST /pengajuan  → field `recaptcha_token`, action 'daftar'
+- OTP send POST /otp/send           → field `recaptcha_token`, action 'otp_send'
+- admin login POST /admin/login     → field `recaptcha_token`, action 'admin_login'
+PROMPT:
+"Ubah App\Rules\Recaptcha dari v2 checkbox menjadi v3: verifikasi ke
+siteverify, terima jika success==true DAN score >= config('services.recaptcha.min_score', 0.5);
+opsional cocokkan `action`. Tetap skip bila secret kosong (dev lokal).
+Terapkan rule tsb pada: (1) StoreApplicationRequest (sudah ada),
+(2) request OTP send di OtpLoginController, (3) Fortify admin login —
+tambahkan validasi recaptcha_token di Fortify::authenticateUsing atau
+FormRequest login. Kunci v3 baru di .env (site key & secret v3 berbeda
+dari v2). Update tes Security/RecaptchaRateLimitTest."
+
+---------------------------------------------------------------
+R3 — Email konfirmasi (teks + logo) [SEBAGIAN FRONTEND/BLADE — sudah saya kerjakan]
+---------------------------------------------------------------
+Saya yang mengubah blade mail (teks "kami terima" → "Sedang menunggu
+verifikasi admin", badge, dan logo vendor/mail/html/header.blade.php →
+/images/Lambang_Kota_Madiun.png). Backend TIDAK perlu aksi, kecuali:
+logo email butuh URL absolut — pastikan APP_URL benar di produksi.
+
+---------------------------------------------------------------
+R4 + R5 — Surat penerimaan: kop surat Kominfo + Nomor SK auto-increment
+---------------------------------------------------------------
+Acuan kop: public/images/acuan_kopsurat.jpeg (format: logo Kota Madiun kiri,
+"PEMERINTAH KOTA MADIUN" + nama dinas, alamat/telepon/pos-el, garis tebal).
+Untuk surat ini gunakan identitas DINAS KOMINFO.
+KONTRAK FIELD (frontend sudah menampilkan ini):
+- internship_applications.sk_number      (string, contoh "503.11/21/401.106/2026")
+- internship_applications.sk_issued_at   (date)
+Keduanya di-set SEKALI saat OPD approve — cetak ulang TIDAK mengubah nilai.
+PROMPT:
+"1) Migration: tambah sk_number (string, nullable, unique) + sk_issued_at
+   (date, nullable) ke internship_applications; buat tabel/setting counter
+   nomor SK (mis. tabel sk_counters atau baris settings) dengan opsi
+   start number yang bisa diisi admin (mis. mulai 40).
+2) SubmissionService::approve — di dalam DB::transaction yang sama:
+   generate nomor SK (auto-increment dari counter, format konsisten
+   NNN/BULAN-ROMAWI/KOMINFO/TAHUN atau sesuaikan acuan), set sk_issued_at
+   = today. Idempoten: bila sudah ada sk_number, JANGAN generate ulang.
+3) GenerateJobAcceptanceLetter / resources/views/pdf/acceptance_letter.blade.php:
+   redesign memakai kop surat Kominfo sesuai acuan_kopsurat.jpeg
+   (pakai public/images/Lambang_Kota_Madiun.png), cantumkan sk_number +
+   sk_issued_at. Simpan tetap di disk privat; kirim sebagai lampiran email
+   penerimaan (sudah ada jalurnya).
+4) Endpoint opsi start number: PATCH verifikator/sk-counter atau sejenis
+   (role:admin_verifikator) — sediakan juga get nilai sekarang.
+5) Expose sk_number + sk_issued_at di InternshipApplicationResource
+   (aditif, jangan ubah nama prop lain)."
+
+---------------------------------------------------------------
+R6 — Peserta aktif OPD: data lengkap + dokumen + rekam jejak
+---------------------------------------------------------------
+Frontend (opd/peserta.tsx) menampilkan detail penuh + dokumen + timeline.
+KONTRAK: pada prop `participants[].application` tambahkan (aditif):
+- seluruh field identitas yang sudah ada di resource (nis, address, dll)
+- photo_url / surat_pengantar_url / cv_url / portfolio_url (sudah ada di resource — pastikan ikut dikirim di halaman peserta)
+- status_logs: [{ status, note?, created_at, actor_name? }] (rekam jejak)
+PROMPT:
+"Di Opd\DashboardController@peserta, lengkapi payload participants agar
+application memuat semua field InternshipApplicationResource termasuk
+document URLs, dan sertakan relasi statusLogs (ApplicationStatusLog)
+sebagai `status_logs` (urut kronologis). Policy view OPD sudah membatasi
+ke pengajuan miliknya — pastikan route dokumen/foto bisa diakses admin OPD
+(sudah role:mahasiswa,admin_opd,admin_verifikator)."
+
+---------------------------------------------------------------
+R7 — Sanitasi input (Clean HTML / anti-XSS)
+---------------------------------------------------------------
+Murni backend. PROMPT:
+"Tambahkan sanitasi global input teks: buat middleware atau mutator/cast
+yang membersihkan tag script/HTML berbahaya (mis. pakai stevebauman/purify
+= HTMLPurifier untuk Laravel, atau strip_tags selektif) pada semua input
+string form publik & admin. Karakter strip (-) dan tanda baca umum HARUS
+tetap lolos. Jangan double-escape: React/Blade sudah escape saat render,
+jadi fokus membersihkan <script>, atribut on*, javascript: URI. Terapkan
+minimal pada StoreApplicationRequest, catatan verifikator, form OPD/FAQ.
+Tambah tes: input berisi <script>alert(1)</script> tersimpan bersih,
+input 'D-3 Teknik' tetap utuh."
+
+---------------------------------------------------------------
+R9 — Surat Penyelesaian Magang (verifikator, menu laporan)
+---------------------------------------------------------------
+Sama seperti R4/R5 tapi untuk penyelesaian. KONTRAK FIELD (frontend):
+- final_reports (atau application) : completion_sk_number (string),
+  completion_sk_issued_at (date), completion_letter_url? (string)
+- Tombol frontend: POST /verifikator/laporan/{report}/surat-penyelesaian
+  (generate sekali; klik ulang = unduh ulang, nomor & tanggal TETAP),
+  GET  /verifikator/laporan/{report}/surat-penyelesaian (download/stream).
+PROMPT:
+"Buat generate Surat Penyelesaian Magang dengan kop Kominfo (pola sama
+dengan acceptance letter): counter auto-increment terpisah, tanggal terbit
+statis (set sekali), idempoten pada cetak ulang. View pdf baru
+resources/views/pdf/completion_letter.blade.php, simpan disk privat,
+route POST generate + GET download di prefix verifikator/laporan
+(role:admin_verifikator). Expose field di resource laporan."
+
+---------------------------------------------------------------
+R10 — Auto-generate akun OPD + paksa ganti password + reset password
+---------------------------------------------------------------
+KONTRAK dengan frontend:
+- POST /verifikator/opd (store) → redirect back dengan flash
+  `generatedCredentials: { username, password }` (password plaintext hanya
+  sekali di flash ini; frontend menampilkan dialog salin).
+- POST /verifikator/opd/{opd}/reset-password → flash sama.
+- users.must_change_password (boolean). Saat admin (OPD/verifikator) login
+  dengan must_change_password=true → redirect ke halaman ganti password:
+  render Inertia 'auth/force-password' (frontend saya buat), form
+  POST /admin/password-baru { password, password_confirmation } →
+  set password, must_change_password=false, lanjut ke dasbor.
+  Middleware guard agar dasbor tidak bisa diakses sebelum ganti password.
+- Welcome page: daftar OPD dirender dari prop `opds` (HomeController@index
+  sudah kirim) — pastikan OPD baru is_active langsung ikut terkirim,
+  sertakan field `inisial_opd` (lihat R11) dan `description`.
+PROMPT:
+"1) Migration: users.must_change_password boolean default false;
+   users.last_login_at timestamp nullable (dipakai R12).
+2) Verifikator\OpdController@store: setelah membuat OPD, buat juga akun
+   User role admin_opd (username dari kode/inisial OPD, password acak
+   Str::password(12)), kirim kembali via flash generatedCredentials.
+3) Route + action reset password OPD (regenerate password acak, set
+   must_change_password=true, flash generatedCredentials).
+4) Middleware EnsureMustChangePassword (alias mis. password.changed):
+   admin dengan must_change_password=true dipaksa ke auth/force-password;
+   endpoint POST admin/password-baru memvalidasi & menyimpan.
+5) Set users.last_login_at = now() pada setiap login sukses (Fortify
+   authenticateUsing + OtpLoginController verify).
+6) Tes: store OPD membuat user + flash kredensial; login pertama dipaksa
+   ganti password; reset password bekerja."
+
+---------------------------------------------------------------
+R11 — kode_opd (integer internal) + inisial_opd (string publik)
+---------------------------------------------------------------
+KONTRAK: OpdResource tambah `kode_opd` (number) + `inisial_opd` (string).
+Form create/edit frontend mengirim field bernama sama.
+PROMPT:
+"Migration: opds.kode_opd (integer, unique) + opds.inisial_opd (string).
+Tambahkan ke Store/UpdateOpdRequest (validasi: kode_opd integer unik,
+inisial_opd string max pendek), model $fillable, dan OpdResource (aditif).
+Kolom `code` lama JANGAN dihapus (masih dipakai banyak halaman)."
+
+---------------------------------------------------------------
+R12 — Kelola User (akun mahasiswa) di dasbor verifikator
+---------------------------------------------------------------
+KONTRAK: halaman Inertia 'verifikator/users/index' dengan prop
+`users: Paginated<{ id, name, email, whatsapp_number?, is_active,
+last_login_at, created_at }>` + `filters: { search? }`.
+Aksi frontend: PATCH /verifikator/users/{user}/toggle-active.
+PROMPT:
+"Buat Verifikator\UserController@index (role:admin_verifikator) di
+GET verifikator/users: daftar user role mahasiswa, server-side search
+(?search= pada nama/email), paginate, render Inertia 'verifikator/users/index'.
+Tambah users.is_active boolean default true (migration) + toggle endpoint.
+last_login_at dari R10 poin 5. User nonaktif ditolak saat OTP login."
+
+---------------------------------------------------------------
+R13 — Kelola Admin (sesama verifikator)
+---------------------------------------------------------------
+KONTRAK: halaman Inertia 'verifikator/admins/index' dengan prop
+`admins: Paginated<{ id, name, username, email?, last_login_at }>`.
+Aksi: POST /verifikator/admins (store → flash generatedCredentials,
+sama seperti R10), POST /verifikator/admins/{user}/reset-password,
+DELETE /verifikator/admins/{user} (tidak boleh hapus diri sendiri).
+PROMPT:
+"Buat Verifikator\AdminController (role:admin_verifikator) CRUD akun
+role admin_verifikator, mekanisme password sama dengan R10 (auto-generate
++ must_change_password). Larang menghapus akun sendiri. Tes lengkap."
+
+---------------------------------------------------------------
+R14 — Search
+---------------------------------------------------------------
+Frontend menambah search client-side pada halaman yang datanya sudah
+full-list (opd index, faq index). Untuk reports (paginated) frontend
+mengirim ?search= — PROMPT:
+"Di Verifikator\ReportController@index tambahkan filter ?search=
+(ticket_number / nama / instansi) pada query laporan, kembalikan juga
+filters.search di props. Halaman baru R12/R13 sudah dispek dengan
+server-side search di atas."
+
+---------------------------------------------------------------
+R15 — Ajukan Ulang tiket ditolak
+---------------------------------------------------------------
+KONTRAK: tombol frontend → POST /mahasiswa/pengajuan/{application}/ajukan-ulang
+(auth mahasiswa, hanya bila status=rejected & milik sendiri). Perilaku:
+buat InternshipApplication BARU dengan tiket baru (MGG-...), copy semua
+field form + path dokumen dari tiket lama, status pending_verifikator,
+log audit "diajukan ulang dari {ticket lama}". Tiket lama tetap rejected
+(read-only). Response: redirect ke /pengajuan dengan flash sukses.
+PROMPT:
+"Implement SubmissionService::resubmit(InternshipApplication $old):
+guard status rejected + kepemilikan (policy), DB::transaction, generate
+ticket baru via generateTicketNumber, replicate() field form + copy path
+dokumen (atau copy file fisik agar path unik), tulis ApplicationStatusLog,
+dispatch email konfirmasi. Controller Mahasiswa\ApplicationController@resubmit
++ route POST mahasiswa/pengajuan/{application}/ajukan-ulang. Tes: hanya
+pemilik & hanya status rejected; data tercopy; tiket baru berbeda."
+
+================================================================
+URUTAN SARAN PENGERJAAN (dependensi):
+R10 poin 1&5 (kolom users) → R12/R13 → R11 → R4/R5 → R9 → R15 → R2/R8 → R7 → R1 → R6 → R14.
+Jalankan `composer ci:check` sebelum serah terima. Jangan mengubah nama
+prop yang sudah ada (kontrak HANDOFF-BACKEND.md tetap berlaku).
+================================================================
+
+================================================================
+STATUS FRONTEND (2026-07-18): SEMUA SELESAI (R1-R3, R5-R6, R8-R15)
+================================================================
+Frontend sudah 100% siap menerima props/endpoint di atas. Gate lulus:
+tsc + eslint + prettier bersih. Ringkasan file yang menunggu backend:
+
+- resources/js/hooks/use-recaptcha-v3.ts — dipakai welcome.tsx,
+  components/landing/registration-form.tsx, auth/otp-login.tsx,
+  auth/admin-login.tsx. Field token tetap `recaptcha_token`.
+- resources/js/components/generated-credentials-dialog.tsx — membaca
+  flash `generatedCredentials: { username, password }`. Dipakai di
+  verifikator/opd/index.tsx dan verifikator/admins/index.tsx.
+- resources/js/pages/auth/force-password.tsx — POST /admin/password-baru
+  { password, password_confirmation }. Terdaftar di app.tsx (layout null).
+- resources/js/pages/verifikator/users/index.tsx — props `users`
+  (paginator: id, name, email, whatsapp_number, is_active, last_login_at,
+  applications_count) + `filters.search` (server-side ?search=), aksi
+  PATCH /verifikator/users/{id}/toggle-active.
+- resources/js/pages/verifikator/admins/index.tsx — props `admins`
+  ({data} atau array: id, name, username, email, is_active, last_login_at),
+  aksi POST /verifikator/admins, POST .../{id}/reset-password,
+  DELETE .../{id} (self-delete di-disable di UI, tetap guard di backend).
+- verifikator/opd/{create,edit}.tsx kirim kode_opd (string angka) +
+  inisial_opd; index menampilkan keduanya + tombol Reset Password →
+  POST /verifikator/opd/{id}/reset-password.
+- verifikator/reports/index.tsx — butuh field baris laporan:
+  completion_sk_number, completion_sk_issued_at; aksi
+  POST /verifikator/laporan/{report}/surat-penyelesaian (generate) dan
+  GET rute yang sama (unduh PDF, idempoten).
+- opd/dashboard.tsx + opd/peserta.tsx menampilkan sk_number/sk_issued_at
+  dan (peserta) status_logs + photo_url + dokumen (sudah di
+  InternshipApplicationResource? pastikan ikut terkirim di halaman ini).
+- welcome.tsx kini merender daftar OPD dari prop `opds` bila non-empty
+  (fallback daftar statis hanya untuk pratinjau) — pastikan HomeController
+  mengirim SEMUA OPD aktif (bukan subset).
+- mahasiswa/pengajuan.tsx — tombol Ajukan Ulang POST
+  /mahasiswa/pengajuan/{application}/ajukan-ulang; onError fallback ke
+  /#daftar selama endpoint belum ada.

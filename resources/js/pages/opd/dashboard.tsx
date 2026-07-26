@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
+import { ApplicationDocuments } from '@/components/application-documents';
 import { StatusBadge } from '@/components/status-badge';
 import {
     Dialog,
@@ -42,8 +43,9 @@ import type {
 /* =========================================================================
  *  DASBOR ADMIN OPD — E-MAGANG (Pemkot Madiun)
  *  OPD menerima pengajuan yang SUDAH DITERUSKAN verifikator (`forwarded_opd`)
- *  beserta divisi, pembimbing lapangan, & penanggung jawab. OPD memutuskan:
- *  MENYETUJUI (→ peserta mulai magang) atau MENOLAK dengan alasan.
+ *  beserta catatan khusus verifikator. OPD memutuskan: MENYETUJUI (mengisi
+ *  divisi, pembimbing lapangan, & penanggung jawab → peserta mulai magang)
+ *  atau MENOLAK dengan alasan.
  *
  *  Aksi form terhubung ke backend nyata (OpdSubmissionController) via Inertia:
  *    router.post(`/opd/pengajuan/${id}/approve`, { division, field_supervisor, person_in_charge })
@@ -88,7 +90,9 @@ function makeApp(
         applicant_whatsapp: '6281234567890',
         nis: '2101234567',
         address: 'Jl. Pahlawan No. 10, Madiun',
-        guardian_name: 'Drs. Suparno',
+        campus_supervisor_whatsapp: '6281234500001',
+        major: 'Teknik Informatika',
+        skills: 'React, Laravel, REST API, PostgreSQL',
         photo_url: null,
         tujuan_magang: 'Magang kompetensi keahlian',
         duration_months: 3,
@@ -448,6 +452,137 @@ function QuotaEditor({ opd }: { opd: Opd }) {
     );
 }
 
+/* ---- Editor tag OPD -------------------------------------------------- */
+// Tag kompetensi (kolom description, dipisah koma) — tampil di landing page.
+// Admin OPD hanya boleh mengubah tag OPD-nya sendiri (403 di UpdateOpdTagRequest).
+// Tersambung ke backend nyata: PATCH /opd-tag/{opd}.
+function TagEditor({ opd }: { opd: Opd }) {
+    const [saved, setSaved] = useState(opd.description ?? '');
+    const [editing, setEditing] = useState(false);
+    const [value, setValue] = useState(opd.description ?? '');
+    const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const tags = saved
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter((tag) => tag !== '');
+
+    function save() {
+        if (processing) {
+            return;
+        }
+
+        setError(null);
+        setProcessing(true);
+        router.patch(
+            `/opd-tag/${opd.id}`,
+            { description: value },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setSaved(value);
+                    setEditing(false);
+                },
+                onError: (errs) =>
+                    setError(errs.description ?? 'Gagal memperbarui tag.'),
+                onFinish: () => setProcessing(false),
+            },
+        );
+    }
+
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <p className="flex items-center gap-1.5 text-sm font-bold text-[#12213e]">
+                        <Sparkles className="size-4 text-[#106feb]" /> Tag
+                        Kompetensi
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                        Tampil di kartu OPD halaman utama — pisahkan dengan
+                        koma.
+                    </p>
+                </div>
+                {!editing && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setValue(saved);
+                            setEditing(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-[#106feb] transition hover:bg-slate-50"
+                    >
+                        <Pencil className="size-3.5" /> Ubah Tag
+                    </button>
+                )}
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-1.5">
+                {tags.length > 0 ? (
+                    tags.map((tag) => (
+                        <span
+                            key={tag}
+                            className="rounded-full bg-[#106feb]/10 px-3 py-1 text-xs font-semibold text-[#0b4fb0]"
+                        >
+                            {tag}
+                        </span>
+                    ))
+                ) : (
+                    <span className="text-xs text-slate-400">
+                        Belum ada tag — halaman utama memakai tag bawaan.
+                    </span>
+                )}
+            </div>
+
+            {editing && (
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="flex-1 space-y-1.5">
+                        <label className="text-xs font-semibold text-[#12213e]">
+                            Tag (pisahkan dengan koma)
+                        </label>
+                        <input
+                            type="text"
+                            value={value}
+                            maxLength={1000}
+                            onChange={(e) => setValue(e.target.value)}
+                            placeholder="mis. Teknologi Informasi, Administrasi"
+                            className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                        />
+                        {error && (
+                            <p className="text-xs font-medium text-rose-600">
+                                {error}
+                            </p>
+                        )}
+                    </div>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={save}
+                            disabled={processing}
+                            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#106feb] px-4 text-sm font-bold text-white transition hover:bg-[#0b4fb0] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {processing ? (
+                                <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                                <CheckCircle2 className="size-4" />
+                            )}
+                            Simpan
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setEditing(false)}
+                            className="inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold text-slate-500 transition hover:bg-slate-100"
+                        >
+                            Batal
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 /* ---- Dialog keputusan ------------------------------------------------ */
 type DecisionMode = 'approve' | 'reject';
 
@@ -676,8 +811,8 @@ function DecisionDialog({
                                 value={app.campus_supervisor}
                             />
                             <DetailRow
-                                label="Penanggung Jawab"
-                                value={app.guardian_name || '—'}
+                                label="No. WA Pembimbing"
+                                value={app.campus_supervisor_whatsapp || '—'}
                             />
                             <DetailRow
                                 label="No. WhatsApp"
@@ -705,6 +840,20 @@ function DecisionDialog({
                                         value={app.person_in_charge ?? '—'}
                                         icon={UserCog}
                                     />
+                                    {/* No. SK penerimaan — dibuat sekali saat ACC,
+                                        cetak ulang tidak mengubah nomor/tanggal. */}
+                                    <DetailRow
+                                        label="No. SK Penerimaan"
+                                        value={app.sk_number ?? '—'}
+                                    />
+                                    <DetailRow
+                                        label="Tanggal Terbit SK"
+                                        value={
+                                            app.sk_issued_at
+                                                ? formatDate(app.sk_issued_at)
+                                                : '—'
+                                        }
+                                    />
                                 </>
                             )}
                         </div>
@@ -719,6 +868,9 @@ function DecisionDialog({
                                 {app.skills || '—'}
                             </p>
                         </div>
+
+                        {/* Berkas pendukung opsional (surat pengantar / CV / portofolio) */}
+                        <ApplicationDocuments app={app} />
 
                         {/* Catatan dari Admin Verifikator */}
                         {app.verifikator_note && (
@@ -1011,6 +1163,9 @@ export default function OpdDashboard({
 
                 {/* Kuota magang OPD — Admin OPD hanya boleh mengubah kuota OPD-nya sendiri. */}
                 <QuotaEditor opd={opd} />
+
+                {/* Tag kompetensi OPD (batch 5) — sumber tag kartu OPD di landing. */}
+                <TagEditor opd={opd} />
 
                 {/* Toolbar */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

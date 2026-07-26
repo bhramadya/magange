@@ -26,6 +26,7 @@ test('generate creates an active token, updates the password, and logs the reque
         ->and($token->token_hash)->not->toBeNull()
         ->and($token->used_at)->toBeNull()
         ->and($token->expires_at->isFuture())->toBeTrue()
+        ->and($token->expires_at->lte(now()->addMinutes(5)))->toBeTrue()
         ->and($user->refresh()->password)->not->toBeNull()
         ->and(FormRateLimit::where('identifier', $user->email)->count())->toBe(1);
 });
@@ -45,7 +46,7 @@ test('verify returns true for a matching otp and marks it used', function () {
     $token = OtpToken::create([
         'user_id' => $user->id,
         'token_hash' => Hash::make('123456'),
-        'expires_at' => now()->addMinutes(10),
+        'expires_at' => now()->addMinutes(5),
     ]);
 
     expect($this->service->verify($user, '123456'))->toBeTrue()
@@ -57,7 +58,7 @@ test('verify returns false for a wrong otp', function () {
     OtpToken::create([
         'user_id' => $user->id,
         'token_hash' => Hash::make('123456'),
-        'expires_at' => now()->addMinutes(10),
+        'expires_at' => now()->addMinutes(5),
     ]);
 
     expect($this->service->verify($user, '000000'))->toBeFalse();

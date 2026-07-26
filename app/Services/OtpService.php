@@ -19,7 +19,7 @@ class OtpService implements OtpServiceContract
 
     private const WINDOW_MINUTES = 15;
 
-    private const TTL_MINUTES = 10;
+    private const TTL_MINUTES = 5;
 
     private const ACTION = 'otp_request';
 
@@ -84,6 +84,17 @@ class OtpService implements OtpServiceContract
         $token->update(['used_at' => Date::now()]);
 
         return true;
+    }
+
+    /**
+     * Invalidasi semua token OTP aktif milik user (dipakai saat lockout dipicu).
+     */
+    public function invalidateActiveTokens(User $user): void
+    {
+        OtpToken::query()
+            ->where('user_id', $user->id)
+            ->whereNull('used_at')
+            ->update(['used_at' => Date::now()]);
     }
 
     /**
