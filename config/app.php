@@ -69,6 +69,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Schedule Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Zona waktu acuan untuk penjadwal (routes/console.php). Timestamp aplikasi
+    | sengaja TETAP disimpan dalam UTC (mengubah 'timezone' di atas akan
+    | menggeser tafsir seluruh timestamp yang sudah ada di database), tapi
+    | jadwal harian harus mengikuti waktu setempat: cron transisi status magang
+    | wajib jalan 01:00 WIB sesuai aturan bisnis, bukan 01:00 UTC (08:00 WIB).
+    |
+    */
+
+    'schedule_timezone' => env('APP_SCHEDULE_TIMEZONE', 'Asia/Jakarta'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

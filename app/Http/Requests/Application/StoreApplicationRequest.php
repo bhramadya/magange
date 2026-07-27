@@ -15,19 +15,27 @@ class StoreApplicationRequest extends FormRequest
     }
 
     /**
-     * Hitung durasi (bulan) dari rentang tanggal bila frontend tak mengirimnya.
-     * Form publik hanya meminta tanggal mulai/selesai (flowchart Fase 1).
+     * Durasi (bulan) SELALU diturunkan dari rentang tanggal — form publik hanya
+     * meminta tanggal mulai/selesai (flowchart Fase 1). Nilai duration_months
+     * kiriman klien sengaja diabaikan: endpoint pendaftaran terbuka untuk umum,
+     * jadi durasi tidak boleh bisa dikarang tidak sinkron dengan tanggalnya.
+     *
+     * Pembulatan memakai rata-rata panjang bulan (30.4375 hari) alih-alih
+     * Carbon::diffInMonths() yang memotong ke bawah — 1 Jan → 30 Jun (180 hari)
+     * dulu tersimpan "5 bulan", sekarang "6 bulan". Minimal 1 bulan agar periode
+     * pendek tetap tampil wajar; batas atas TIDAK di-clamp di sini supaya
+     * rentang > 12 bulan ditolak validasi, bukan dibulatkan diam-diam.
      */
     protected function prepareForValidation(): void
     {
-        if ($this->filled('start_date') && $this->filled('end_date') && ! $this->filled('duration_months')) {
+        if ($this->filled('start_date') && $this->filled('end_date')) {
             try {
-                $start = Carbon::parse((string) $this->input('start_date'));
-                $end = Carbon::parse((string) $this->input('end_date'));
-                $months = (int) $start->diffInMonths($end);
+                $start = Carbon::parse((string) $this->input('start_date'))->startOfDay();
+                $end = Carbon::parse((string) $this->input('end_date'))->startOfDay();
+                $days = $start->diffInDays($end);
 
                 $this->merge([
-                    'duration_months' => max(1, min(12, $months ?: 1)),
+                    'duration_months' => max(1, (int) round($days / 30.4375)),
                 ]);
             } catch (\Throwable) {
                 // Biarkan validasi tanggal menangani input tak valid.
@@ -44,6 +52,23 @@ class StoreApplicationRequest extends FormRequest
         // (lokal/test) token boleh kosong & verifikasi dilewati oleh Rule.
         $captchaConfigured = ! empty(config('services.recaptcha.secret'));
 
+        // Batas atas periode (12 bulan) ditegakkan di end_date — field yang
+        // kelihatan di form — supaya pesan galatnya muncul di tempat yang benar.
+        // Aturan max:12 pada duration_months di bawah tinggal jaring pengaman.
+        $endDateRules = ['required', 'date', 'after:start_date'];
+
+        if ($this->filled('start_date')) {
+            try {
+                $maxEndDate = Carbon::parse((string) $this->input('start_date'))
+                    ->startOfDay()
+                    ->addYear();
+
+                $endDateRules[] = 'before_or_equal:'.$maxEndDate->toDateString();
+            } catch (\Throwable) {
+                // Format tanggal mulai tak valid — sudah ditangani rule 'date'.
+            }
+        }
+
         return [
             'name' => ['required', 'string', 'max:255'],
             // NIS/NIM alfanumerik (huruf+angka) maksimal 15 karakter (R1).
@@ -53,7 +78,7 @@ class StoreApplicationRequest extends FormRequest
             'tujuan_magang' => ['required', 'string', 'max:1000'],
             'duration_months' => ['required', 'integer', 'min:1', 'max:12'],
             'start_date' => ['required', 'date', 'after_or_equal:today'],
-            'end_date' => ['required', 'date', 'after:start_date'],
+            'end_date' => $endDateRules,
             'institution_name' => ['required', 'string', 'max:255'],
             // Alamat tampil sebagai field wajib di form (hanya Jurusan yang
             // opsional) — validasi diselaraskan dengan UI. Penanggung Jawab
@@ -127,6 +152,7 @@ class StoreApplicationRequest extends FormRequest
             'start_date.after_or_equal' => 'Tanggal mulai tidak boleh lampau.',
             'end_date.required' => 'Tanggal selesai wajib diisi.',
             'end_date.after' => 'Tanggal selesai harus setelah tanggal mulai.',
+            'end_date.before_or_equal' => 'Periode magang maksimal 12 bulan dari tanggal mulai.',
             'institution_name.required' => 'Nama instansi asal wajib diisi.',
             'address.required' => 'Alamat lengkap wajib diisi.',
             'campus_supervisor.required' => 'Nama dosen pembimbing wajib diisi.',

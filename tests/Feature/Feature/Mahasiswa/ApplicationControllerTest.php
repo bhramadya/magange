@@ -194,6 +194,65 @@ test('application requires valid dates', function () {
     $response->assertSessionHasErrors('end_date');
 });
 
+test('periode magang lebih dari 12 bulan ditolak', function () {
+    Queue::fake();
+
+    $start = now()->addMonth()->startOfDay();
+
+    $response = $this->post('/pengajuan', pengajuanFormPayload([
+        'start_date' => $start->toDateString(),
+        'end_date' => $start->copy()->addYear()->addDay()->toDateString(),
+    ]));
+
+    // Pesannya menempel di end_date (field yang kelihatan di form), bukan
+    // dibulatkan diam-diam ke 12 bulan seperti perilaku lama.
+    $response->assertSessionHasErrors('end_date');
+    expect(InternshipApplication::count())->toBe(0);
+});
+
+test('periode magang tepat 12 bulan masih diterima', function () {
+    Queue::fake();
+
+    $start = now()->addMonth()->startOfDay();
+
+    $this->post('/pengajuan', pengajuanFormPayload([
+        'start_date' => $start->toDateString(),
+        'end_date' => $start->copy()->addYear()->toDateString(),
+    ]))->assertRedirect(route('login.otp'));
+
+    expect(InternshipApplication::firstOrFail()->duration_months)->toBe(12);
+});
+
+test('duration_months dihitung ulang server dari rentang tanggal', function () {
+    Queue::fake();
+
+    $start = now()->addMonth()->startOfDay();
+
+    // Klien mengirim durasi palsu (1 bulan) untuk rentang ~6 bulan; server
+    // wajib mengabaikannya dan menghitung sendiri dari tanggalnya.
+    $this->post('/pengajuan', pengajuanFormPayload([
+        'duration_months' => 1,
+        'start_date' => $start->toDateString(),
+        'end_date' => $start->copy()->addDays(180)->toDateString(),
+    ]))->assertRedirect(route('login.otp'));
+
+    // 180 hari ≈ 5,9 bulan → dibulatkan 6 (diffInMonths lama memotong jadi 5).
+    expect(InternshipApplication::firstOrFail()->duration_months)->toBe(6);
+});
+
+test('periode pendek tetap tercatat minimal 1 bulan', function () {
+    Queue::fake();
+
+    $start = now()->addMonth()->startOfDay();
+
+    $this->post('/pengajuan', pengajuanFormPayload([
+        'start_date' => $start->toDateString(),
+        'end_date' => $start->copy()->addDays(10)->toDateString(),
+    ]))->assertRedirect(route('login.otp'));
+
+    expect(InternshipApplication::firstOrFail()->duration_months)->toBe(1);
+});
+
 test('registration stores optional supporting documents', function () {
     Queue::fake();
     Storage::fake('local');

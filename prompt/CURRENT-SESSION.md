@@ -4,7 +4,113 @@
 **Status:** 🟡 In Progress
 
 ## Batch aktif
-- (tidak ada — terakhir selesai: `prompt/QUEUE/2026-07-20-batch-5-revisi.md`, lihat blok ✅ di bawah)
+- **Sesi 2026-07-27** — perbaikan UI (kolom OPD Tujuan, hero image landing) + audit & perbaikan
+  logika periode magang. Antrean task di bawah, dikerjakan urut.
+
+## Antrean task sesi 2026-07-27
+- [x] **T1 — Kolom "OPD Tujuan" di Pengajuan Masuk (verifikator/masuk.tsx)** ✅
+  Desainnya beda sendiri dari kolom lain di panel tinjau (SelectTrigger default
+  shadcn: tinggi 36px, `rounded-md`, border abu) sementara textarea di panel yang
+  sama pakai `h-11 rounded-xl` + focus ring biru. Samakan dengan versi yang sudah
+  benar di `verifikator/dashboard.tsx`.
+  → `SelectTrigger` diberi kelas identik dgn dashboard (`h-11 rounded-xl
+  border-slate-300 px-4` + `focus-visible:ring-4 ring-[#106feb]/15` +
+  `data-[placeholder]` abu + `data-[size=default]:h-11` supaya tak ditimpa varian
+  default), `SelectContent` `border-slate-200 bg-white`, tiap `SelectItem`
+  `focus:bg-[#e8f2fe]`. Satu-satunya Select di halaman itu, jadi tak ada sisa.
+- [x] **T2 — Hero image `dasbor.png` di welcome.tsx** ✅
+  (a) gambar terasa "tertutup" bar URL browser-chrome di atasnya → tidak tampil full;
+  (b) file 1920×1389 (rasio 1.38) dipakai apa adanya lewat `aspect-[1920/1389]`,
+  jauh lebih jangkung dari viewport browser asli sehingga bingkai tidak meyakinkan
+  dan isi screenshot mengecil.
+  → Rasio viewport **dikunci `aspect-[16/10]`** (tidak lagi mengikuti rasio file)
+  + `object-cover object-top`. Efek: tinggi blok turun ±90px (896×560 + bar 44px,
+  dari sebelumnya 896×648), bingkai membaca seperti jendela browser sungguhan,
+  bagian atas screenshot (header + kartu Status/OPD/Durasi/Periode) utuh & lebih
+  besar, yang terpotong hanya ujung bawah (kartu "Butuh Bantuan?" + badge
+  reCAPTCHA yang memang tak diinginkan). Blok fallback `onError` ikut disamakan
+  rasionya. **Asumsi:** browser-chrome (titik lampu + bar URL) DIPERTAHANKAN
+  karena elemen desain sengaja di BLUEPRINT-REDESIGN — kalau yang dimaksud
+  "tertutup" = ingin bar URL dihapus, itu tinggal buang satu blok div.
+  Catatan: `public/images/dasbor1.png` (1920×1080, akun lama "Bhramadya", belum
+  ada nav Presensi Harian) dibiarkan — `dasbor.png` yang lebih baru tetap dipakai.
+- [x] **T3 — Data periode peserta "Faalih Fadhlurrohmaan"** ✅
+  Ubah tanggal magang jadi 15 Juli 2026 – 8 Agustus 2026 (untuk keperluan screenshot
+  hero). Belum ada UI admin untuk mengedit tanggal → lewat DB.
+  → `MGG-2026-000002` (man@gmail.com, status `forwarded_opd`): `start_date`
+  2026-07-24 → **2026-07-15**, `end_date` 2026-07-31 → **2026-08-08**. Hanya satu
+  pengajuan atas nama itu. `duration_months` dibiarkan 1 (periode baru 24 hari).
+- [ ] **T4 — Audit & perbaikan logika periode magang**
+  Temuan audit (StoreApplicationRequest, SubmissionService, TransitionApplicationStatuses):
+  - [x] T4a — `duration_months` diturunkan dengan `diffInMonths()` yang **memotong**
+        (1 Jan→30 Jun = 180 hari tersimpan "5 bulan"), dan rentang > 12 bulan
+        **di-clamp diam-diam** ke 12 sementara tanggalnya disimpan apa adanya →
+        `duration_months` bisa berbohong terhadap `start_date`/`end_date`. ✅
+        → Rumus diganti `round(diffInDays / 30.4375)` (rata-rata panjang bulan),
+        minimal 1. 180 hari kini "6 bulan", 24 hari "1 bulan", 92 hari "3 bulan".
+        Clamp `min(12, …)` **dibuang** — rentang > 12 bulan sekarang DITOLAK, bukan
+        dibulatkan: rule baru `end_date` → `before_or_equal:{start+1 tahun}` dgn
+        pesan "Periode magang maksimal 12 bulan dari tanggal mulai." (pesan
+        ditempel di field yang kelihatan di form; `duration_months.max` jadi
+        jaring pengaman saja). Cermin di frontend: `DatePicker` dapat prop `max`
+        baru + helper `maxTanggalSelesai()`; tanggal selesai auto-reset kalau
+        tanggal mulai digeser sampai melewati batas.
+  - [x] T4b — Nilai `duration_months` kiriman klien dipercaya bulat-bulat
+        (`prepareForValidation` hanya menghitung bila field kosong). Endpoint
+        pendaftaran publik → siapa pun bisa POST durasi palsu. ✅
+        → Guard `! $this->filled('duration_months')` dibuang; durasi SELALU
+        dihitung ulang server dari `start_date`/`end_date`, kiriman klien
+        diabaikan. Form publik memang tidak mengirim field ini.
+  - [x] T4c — `SubmissionService::resubmit()` menyalin `start_date`/`end_date`
+        lama apa adanya. Tiket yang ditolak setelah tanggal mulainya lewat akan
+        diajukan ulang dengan periode lampau — menembus aturan
+        `after_or_equal:today` dan langsung disambar cron begitu di-ACC. ✅
+        → Bila `start_date` lama < hari ini, seluruh periode **digeser maju**
+        mulai hari ini dengan **panjang hari yang sama** (bukan dikosongkan —
+        maksud R15 "tak perlu ketik ulang" tetap terjaga, dan kolomnya NOT NULL).
+        Pergeseran dicatat di `notes` log status: "Diajukan ulang dari MGG-… 
+        (periode digeser ke … – … karena tanggal lama sudah lampau)". Periode
+        yang masih di masa depan tidak disentuh.
+  - [x] T4d — `config('app.timezone')` = UTC sedangkan scheduler `dailyAt('01:00')`
+        dan `Date::now()` dipakai untuk membandingkan tanggal → cron sebenarnya
+        jalan 08:00 WIB, bukan 01:00 seperti aturan bisnis di CLAUDE.md. ✅
+        → Config baru `app.schedule_timezone` (env `APP_SCHEDULE_TIMEZONE`,
+        default `Asia/Jakarta`); `Schedule::command(...)->dailyAt('01:00')
+        ->timezone(...)`. **`app.timezone` sengaja TETAP UTC** — mengubahnya
+        menggeser tafsir seluruh timestamp yang sudah ada di DB; yang perlu
+        lokal cuma jadwalnya.
+        Konsekuensi yang ikut diperbaiki: 01:00 WIB = 18:00 UTC hari
+        SEBELUMNYA, jadi `Date::now()` polos di dalam command akan tertinggal
+        satu hari dan menunda semua transisi 1×24 jam → command kini memakai
+        `Date::now(config('app.schedule_timezone'))->startOfDay()`.
+- [x] **T5 — Gate** (Pint, PHPStan, Pest, tsc, eslint, prettier). ✅
+  Pint ✅ · PHPStan ✅ (`--memory-limit=1G`) · Pest **185 tes: 175 lulus / 10 skip
+  (873 assertion)** ✅ · tsc ✅ · eslint ✅ · prettier ✅.
+  Catatan PHPStan: `Date::now()` mengembalikan `CarbonImmutable` sementara kolom
+  tanggal di model bertipe `Illuminate\Support\Carbon` — assignment properti
+  langsung di `resubmit()` ditolak. Diperbaiki dengan memakai
+  `Illuminate\Support\Carbon::now()`, bukan facade `Date` (bukan cast paksa).
+  Prettier menyisakan 1 warning **pre-existing** di
+  `resources/js/pages/verifikator/users/index.tsx` — file itu tidak disentuh
+  sesi ini, dibiarkan agar diff tetap fokus.
+
+### Tes baru sesi ini
+- `Mahasiswa/ApplicationControllerTest` +4: periode > 12 bulan ditolak, tepat
+  12 bulan diterima (`duration_months` = 12), durasi kiriman klien diabaikan
+  (180 hari → 6, bukan 5), periode 10 hari → minimal 1 bulan.
+- `Mahasiswa/ResubmitTest` +2: periode lampau digeser (panjang hari sama + catatan
+  di log), periode masa depan tidak disentuh.
+- `Penyelesaian/TransitionTimezoneTest` (baru, 2 tes): waktu dibekukan di
+  2026-07-15 18:30 UTC = 2026-07-16 01:30 WIB — pengajuan `start_date`
+  2026-07-16 harus jadi `ongoing` dan `end_date` 2026-07-16 jadi `completed`,
+  sedangkan yang mulai 2026-07-17 tidak tersentuh. **Diverifikasi benar-benar
+  menangkap bug**: dengan `Date::now()` polos (versi lama) tes pertama GAGAL.
+
+### Belum dikerjakan (di luar lingkup, layak jadi batch berikutnya)
+- **Tidak ada UI admin untuk mengoreksi periode magang.** T3 terpaksa lewat
+  query DB langsung. Kalau koreksi tanggal akan sering terjadi (mis. peserta
+  mundur/maju jadwal), perlu endpoint + form di panel Verifikator/OPD.
+- Prettier pre-existing di `verifikator/users/index.tsx`.
 
 ## Sudah selesai
 - [x] 01 — OTP expiry 10 menit → 5 menit (OtpService TTL_MINUTES, mail otp.blade.php, OtpServiceTest — 6 tes lulus)
@@ -187,7 +293,7 @@ persis (nama route/prop/kolom). Ringkasan:
   presensi.tsx disambungkan (riwayat + export semua entri + kirim lampiran
   via transform), nav "Presensi Harian".
 - [x] R7 — middleware global SanitizeInput (script/on*=/javascript: dibuang,
-  password dikecualikan, strip & tanda baca lolos). Tes: script bersih,
+  password dikecualikan, strip & tanda baca lol ). Tes: script bersih,
   "D-3 Teknik" utuh.
 - [x] #17/#18/#19/#21 — diverifikasi SUDAH ada sebelumnya (teks antispam tak
   ditemukan; testimoni HomeController+welcome; foto via route ter-auth; label

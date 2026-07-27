@@ -14,6 +14,7 @@ use App\Models\InternshipApplication;
 use App\Models\Opd;
 use App\Models\User;
 use DomainException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -325,6 +326,26 @@ class SubmissionService implements PengajuanServiceContract
             // (tujuan tetap terbaca dari kolom tujuan_magang).
             $new->opd_id = null;
 
+            // Periode magang tidak boleh ikut tersalin sebagai tanggal lampau:
+            // tiket yang ditolak setelah tanggal mulainya lewat akan menembus
+            // aturan `after_or_equal:today` pendaftaran, dan begitu di-ACC
+            // langsung disambar cron (approved → ongoing → completed di run yang
+            // sama). Bila tanggal mulai sudah lewat, seluruh periode digeser maju
+            // agar mulai hari ini dengan panjang hari yang sama.
+            // Illuminate\Support\Carbon (bukan facade Date yang mengembalikan
+            // CarbonImmutable) — tipe kolom tanggal di model memang Carbon.
+            $today = Carbon::now()->startOfDay();
+            $oldStart = $new->start_date->copy()->startOfDay();
+            $oldEnd = $new->end_date->copy()->startOfDay();
+            $periodShifted = $oldStart->lt($today);
+
+            if ($periodShifted) {
+                $lengthInDays = (int) $oldStart->diffInDays($oldEnd);
+
+                $new->start_date = $today->copy();
+                $new->end_date = $today->copy()->addDays($lengthInDays);
+            }
+
             // Copy fisik berkas agar tiap tiket punya arsip sendiri.
             foreach (['photo_path', 'surat_pengantar_path', 'cv_path', 'portfolio_path'] as $column) {
                 $new->{$column} = $this->copyFile($old->{$column}, $new->ticket_number);
@@ -332,12 +353,22 @@ class SubmissionService implements PengajuanServiceContract
 
             $new->save();
 
+            $note = "Diajukan ulang dari {$old->ticket_number}";
+
+            if ($periodShifted) {
+                $note .= sprintf(
+                    ' (periode digeser ke %s – %s karena tanggal lama sudah lampau)',
+                    $new->start_date->translatedFormat('d M Y'),
+                    $new->end_date->translatedFormat('d M Y'),
+                );
+            }
+
             $this->logStatus(
                 $new,
                 null,
                 ApplicationStatus::PendingVerifikator,
                 $actor,
-                "Diajukan ulang dari {$old->ticket_number}",
+                $note,
             );
 
             return $new;

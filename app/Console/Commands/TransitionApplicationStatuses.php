@@ -24,7 +24,10 @@ class TransitionApplicationStatuses extends Command
 
     public function handle(PengajuanServiceContract $service): int
     {
-        $today = Date::now()->startOfDay();
+        // "Hari ini" harus dibaca dalam waktu setempat (WIB), bukan UTC:
+        // scheduler dipatok 01:00 Asia/Jakarta = 18:00 UTC hari SEBELUMNYA, jadi
+        // Date::now() polos akan tertinggal satu hari dan menunda transisi.
+        $today = Date::now((string) config('app.schedule_timezone', 'UTC'))->startOfDay();
 
         $startedCount = 0;
         $completedCount = 0;
