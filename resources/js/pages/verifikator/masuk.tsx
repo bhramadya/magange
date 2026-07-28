@@ -347,15 +347,14 @@ function ReviewPanel({
                                 OPD Tujuan
                             </label>
                             <Select value={opdId} onValueChange={setOpdId}>
-                                <SelectTrigger className="h-11 w-full rounded-xl border-slate-300 bg-white px-4 font-medium text-[#0a1628] shadow-none focus-visible:border-[#106feb] focus-visible:ring-4 focus-visible:ring-[#106feb]/15 data-[placeholder]:font-normal data-[placeholder]:text-slate-400 data-[size=default]:h-11 dark:bg-white dark:hover:bg-white">
+                                <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Pilih OPD…" />
                                 </SelectTrigger>
-                                <SelectContent className="border-slate-200 bg-white text-[#0a1628]">
+                                <SelectContent>
                                     {opds.map((opd) => (
                                         <SelectItem
                                             key={opd.id}
                                             value={String(opd.id)}
-                                            className="text-[#0a1628] focus:bg-[#e8f2fe] focus:text-[#0a1628]"
                                         >
                                             {opd.name} ({opd.code})
                                         </SelectItem>

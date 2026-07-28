@@ -1271,14 +1271,6 @@ export default function Welcome({
                                     magang.madiunkota.go.id
                                 </span>
                             </div>
-                            {/* Viewport screenshot — rasio dikunci 16/10 (mendekati
-                                jendela browser asli) dan TIDAK mengikuti rasio file.
-                                Screenshot dasbor bentuknya jangkung (1920x1389 ≈ 1.38),
-                                kalau ditampilkan apa adanya bingkai browser jadi tidak
-                                meyakinkan dan isinya mengecil. object-cover +
-                                object-top menahan bagian atas (header + kartu ringkasan
-                                status/periode) tetap utuh & terbaca; sisa bawah
-                                (kartu bantuan, badge reCAPTCHA) yang terpotong. */}
                             <img
                                 src="/images/dasbor.png"
                                 alt="Tampilan dasbor E-Magang Kota Madiun"
@@ -1294,9 +1286,9 @@ export default function Welcome({
                                         fallback.classList.remove('hidden');
                                     }
                                 }}
-                                className="block aspect-[16/10] w-full object-cover object-top"
+                                className="block aspect-[1920/1389] w-full object-contain"
                             />
-                            <div className="hidden aspect-[16/10] w-full flex-col items-center justify-center bg-gradient-to-br from-[#0a1628] via-[#0b4fb0] to-[#cddcef]">
+                            <div className="hidden aspect-[1920/1389] w-full flex-col items-center justify-center bg-gradient-to-br from-[#0a1628] via-[#0b4fb0] to-[#cddcef]">
                                 <div className="flex flex-col items-center gap-3 text-white/90">
                                     <Building2 className="h-12 w-12" />
                                     <span className="text-[15px] font-medium">

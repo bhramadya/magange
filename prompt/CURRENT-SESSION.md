@@ -8,7 +8,10 @@
   logika periode magang. Antrean task di bawah, dikerjakan urut.
 
 ## Antrean task sesi 2026-07-27
-- [x] **T1 — Kolom "OPD Tujuan" di Pengajuan Masuk (verifikator/masuk.tsx)** ✅
+- [~] **T1 — Kolom "OPD Tujuan" di Pengajuan Masuk (verifikator/masuk.tsx)** ↩️ DIBATALKAN
+  **Dikembalikan ke kondisi semula atas permintaan user (2026-07-27).** Riwayat
+  perubahan yang sempat diterapkan lalu dibatalkan ada di bawah ini — jangan
+  dikerjakan ulang tanpa permintaan baru.
   Desainnya beda sendiri dari kolom lain di panel tinjau (SelectTrigger default
   shadcn: tinggi 36px, `rounded-md`, border abu) sementara textarea di panel yang
   sama pakai `h-11 rounded-xl` + focus ring biru. Samakan dengan versi yang sudah
@@ -18,7 +21,12 @@
   `data-[placeholder]` abu + `data-[size=default]:h-11` supaya tak ditimpa varian
   default), `SelectContent` `border-slate-200 bg-white`, tiap `SelectItem`
   `focus:bg-[#e8f2fe]`. Satu-satunya Select di halaman itu, jadi tak ada sisa.
-- [x] **T2 — Hero image `dasbor.png` di welcome.tsx** ✅
+- [~] **T2 — Hero image `dasbor.png` di welcome.tsx** ↩️ DIBATALKAN
+  **Dikembalikan ke kondisi semula atas permintaan user (2026-07-27):**
+  `aspect-[1920/1389]` + `object-contain` (img & blok fallback), komentar
+  penjelas dihapus. Perubahan `DatePicker` (prop `max` + `maxTanggalSelesai()`)
+  di file yang sama TIDAK ikut dibatalkan — itu milik T4a, bukan T2.
+  Riwayat perubahan yang sempat diterapkan lalu dibatalkan ada di bawah ini.
   (a) gambar terasa "tertutup" bar URL browser-chrome di atasnya → tidak tampil full;
   (b) file 1920×1389 (rasio 1.38) dipakai apa adanya lewat `aspect-[1920/1389]`,
   jauh lebih jangkung dari viewport browser asli sehingga bingkai tidak meyakinkan
@@ -111,6 +119,35 @@
   query DB langsung. Kalau koreksi tanggal akan sering terjadi (mis. peserta
   mundur/maju jadwal), perlu endpoint + form di panel Verifikator/OPD.
 - Prettier pre-existing di `verifikator/users/index.tsx`.
+
+## Sesi 2026-07-28 — laporan "PDF surat penerimaan tidak terlampir di email ACC"
+**Tidak bisa direproduksi di repo/DB ini — kodenya benar.** Diverifikasi
+end-to-end (bukan hanya baca kode): job di-dispatch → antrean DB → `queue:work
+--queue=emails` → DomPDF → `MAIL_MAILER=log`, dan MIME yang keluar berisi
+`Content-Type: application/pdf; name=surat-penerimaan-MGG-2026-0051.pdf` +
+`Content-Disposition: attachment` dengan body diawali `%PDF` (±1,26 MB).
+`failed_jobs` = 0, `jobs` = 0, dan kedua pengajuan `approved` punya
+`surat_penerimaan_path` yang filenya ADA di disk privat.
+Yang **memang cacat** dan diperbaiki:
+- `GenerateSuratPenerimaanJobTest` hanya mengecek string `pdfPath` lewat
+  `Mail::fake()` — fake tak pernah membangun pesan Symfony, jadi lampiran yang
+  hilang LOLOS. Dibuktikan: `attachments()` dikosongkan sementara → 3 tes lama
+  tetap hijau. Tes baru "the sent email really carries the pdf as an attachment"
+  memeriksa pesan asli lewat transport `array` (jumlah, nama file, media type,
+  body diawali `%PDF`) dan GAGAL saat lampiran dihapus.
+- Disk `local` ber-`'throw' => false` → `Storage::put()` yang gagal (izin tulis/
+  disk penuh) hanya mengembalikan `false`. Job lama lanjut: path dicatat di DB
+  seolah surat ada, lalu meledak jauh di belakang dengan TypeError "body …
+  got null" yang tak menyebut surat sama sekali. Kini dicek (`$stored === false
+  || ! exists()`) → `RuntimeException` bernama jelas sebelum email dikirim, plus
+  `Log::info('Surat penerimaan terkirim', [... 'bytes' => …])` sebagai bukti
+  lampiran ikut terkirim saat ada laporan serupa.
+- Gate: Pint ✅ · PHPStan ✅ (--memory-limit=1G) · Pest **187 tes: 177 lulus /
+  10 skip (881 assertion)** ✅.
+- **Belum terjawab (butuh info dari sisi pelapor):** email di lingkungan mana,
+  dan apakah worker di sana benar-benar mengonsumsi antrean `emails`
+  (`queue:work` tanpa `--queue=emails` = job ACC tak pernah jalan → yang sampai
+  ke pemohon cuma email konfirmasi pendaftaran, yang MEMANG tanpa lampiran).
 
 ## Sudah selesai
 - [x] 01 — OTP expiry 10 menit → 5 menit (OtpService TTL_MINUTES, mail otp.blade.php, OtpServiceTest — 6 tes lulus)

@@ -66,6 +66,46 @@ test('job generates the pdf, stores it, records the path, and emails it', functi
     });
 });
 
+test('the sent email really carries the pdf as an attachment', function () {
+    // Sengaja TANPA Mail::fake(): fake tidak pernah membangun pesan Symfony,
+    // jadi lampiran yang hilang/rusak lolos begitu saja (tes di atas hanya
+    // memeriksa string pdfPath). Transport 'array' (phpunit.xml) menyimpan
+    // pesan yang sudah jadi, sehingga lampirannya bisa diperiksa sungguhan.
+    Storage::fake('local');
+
+    $app = approvedApplication();
+
+    (new GenerateJobAcceptanceLetter($app))->handle();
+
+    $message = Mail::mailer('array')->getSymfonyTransport()->messages()->last()->getOriginalMessage();
+    $attachments = $message->getAttachments();
+
+    expect($attachments)->toHaveCount(1);
+    expect($attachments[0]->getFilename())->toBe("surat-penerimaan-{$app->ticket_number}.pdf");
+    expect($attachments[0]->getMediaType().'/'.$attachments[0]->getMediaSubtype())->toBe('application/pdf');
+    // Isinya benar-benar PDF, bukan lampiran kosong/nol byte.
+    expect($attachments[0]->getBody())->toStartWith('%PDF');
+});
+
+test('job fails loudly when the pdf cannot be stored instead of emailing a letterless notice', function () {
+    Mail::fake();
+
+    // Disk 'local' punya 'throw' => false: put() gagal = false, bukan exception.
+    $disk = Mockery::mock();
+    $disk->shouldReceive('put')->once()->andReturnFalse();
+    $disk->shouldReceive('exists')->andReturnFalse();
+    Storage::shouldReceive('disk')->with('local')->andReturn($disk);
+
+    $app = approvedApplication();
+
+    expect(fn () => (new GenerateJobAcceptanceLetter($app))->handle())
+        ->toThrow(RuntimeException::class);
+
+    // Tidak ada email tanpa lampiran, dan path palsu tidak tercatat di pengajuan.
+    Mail::assertNothingSent();
+    expect($app->refresh()->surat_penerimaan_path)->toBeNull();
+});
+
 test('job is queued on the emails queue with retry settings', function () {
     $app = approvedApplication();
     $job = new GenerateJobAcceptanceLetter($app);
