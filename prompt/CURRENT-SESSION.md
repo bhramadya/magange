@@ -4,6 +4,10 @@
 **Status:** 🟡 In Progress
 
 ## Batch aktif
+- **Sesi 2026-07-29/30 — Alur TTE Surat Penerimaan & Sertifikat**: implementasi
+  status Menunggu TTE/Perlu Sertifikat, master penandatangan + snapshot,
+  data kop surat dinamis, editor template placeholder, draft/download/upload
+  PDF bertanda tangan, serta email yang dipindah ke sesudah upload.
 - **Sesi 2026-07-27** — perbaikan UI (kolom OPD Tujuan, hero image landing) + audit & perbaikan
   logika periode magang. Antrean task di bawah, dikerjakan urut.
 
@@ -173,7 +177,14 @@ Yang **memang cacat** dan diperbaiki:
   - Gate penuh: Pint ✅, PHPStan ✅ (perlu `--memory-limit=1G`, limit default 128M di php.ini lokal kurang), Pest 135 lulus / 10 skip (721 assertion), tsc/eslint/prettier ✅, vite build ✅.
 
 ## Sedang dikerjakan
-- (kosong — batch 2026-07-16, new_revisi 2026-07-18/19, dan batch 5 2026-07-20 semua selesai)
+- [x] Backend, route, migration, PDF, email, dan UI utama batch TTE.
+- [x] Pint, PHPStan, ESLint, TypeScript, Wayfinder, dan production build.
+- [x] Pest terfokus: 20 tes / 114 assertion lulus memakai SQLite in-memory.
+  PostgreSQL lokal magang_test sedang tidak aktif (SQLSTATE 08006), sehingga
+  suite PostgreSQL native belum dapat dijalankan.
+- [~] Suite penuh SQLite: 178 lulus / 10 skip / 1 gagal; satu kegagalan adalah
+  query PostgreSQL khusus ILIKE di Verifikator UserController (pre-existing),
+  bukan alur TTE.
 
 
 ## Keputusan / catatan penting

@@ -815,6 +815,15 @@ function DetailDialog({
 
                         {/* Dokumen lampiran (surat pengantar / CV / portofolio) */}
                         <ApplicationDocuments app={app} />
+                        {app.acceptance_draft_url && (
+                            <a
+                                href={app.acceptance_draft_url}
+                                className="inline-flex items-center gap-2 rounded-xl border border-[#106feb] px-4 py-2 text-sm font-semibold text-[#106feb]"
+                            >
+                                <FileBadge2 className="size-4" />
+                                Download Surat Penerimaan
+                            </a>
+                        )}
 
                         {/* Rekam jejak progres tiket */}
                         <StatusTimeline app={app} />

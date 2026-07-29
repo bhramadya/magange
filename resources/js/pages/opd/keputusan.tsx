@@ -200,16 +200,25 @@ function Field({
 }
 
 type DecisionMode = 'approve' | 'reject';
+type Signer = {
+    id: number;
+    name: string;
+    title: string;
+    nip: string;
+    is_primary: boolean;
+};
 
 // Panel diberi key={app.id} di pemanggil agar state form fresh tiap pilihan.
 function DecisionPanel({
     app,
     onApproved,
     onRejected,
+    signers,
 }: {
     app: InternshipApplication;
     onApproved: (id: number) => void;
     onRejected: (id: number) => void;
+    signers: Signer[];
 }) {
     const [mode, setMode] = useState<DecisionMode>('approve');
     const [processing, setProcessing] = useState(false);
@@ -220,9 +229,15 @@ function DecisionPanel({
     const [division, setDivision] = useState('');
     const [fieldSupervisor, setFieldSupervisor] = useState('');
     const [personInCharge, setPersonInCharge] = useState('');
+    const [signerId, setSignerId] = useState(
+        String(signers.find((signer) => signer.is_primary)?.id ?? ''),
+    );
 
     const approveValid =
-        division.trim() && fieldSupervisor.trim() && personInCharge.trim();
+        division.trim() &&
+        fieldSupervisor.trim() &&
+        personInCharge.trim() &&
+        (signers.length === 0 || signerId);
 
     function submitApprove() {
         if (!approveValid || processing) {
@@ -237,6 +252,7 @@ function DecisionPanel({
                 division: division.trim(),
                 field_supervisor: fieldSupervisor.trim(),
                 person_in_charge: personInCharge.trim(),
+                signer_id: signerId || undefined,
             },
             {
                 preserveScroll: true,
@@ -246,6 +262,7 @@ function DecisionPanel({
                         errs.division ??
                             errs.field_supervisor ??
                             errs.person_in_charge ??
+                            errs.signer_id ??
                             'Gagal menyetujui pengajuan.',
                     ),
                 onFinish: () => setProcessing(false),
@@ -399,8 +416,8 @@ function DecisionPanel({
                             <span className="font-semibold text-[#12213e]">
                                 {app.opd?.name ?? 'OPD Anda'}
                             </span>
-                            . Data ini dikirim ke peserta dalam email
-                            persetujuan.
+                            . Setelah disetujui, unduh draft surat untuk proses
+                            TTE.
                         </p>
 
                         <Field
@@ -424,14 +441,34 @@ function DecisionPanel({
                             placeholder="cth. Kepala Bidang"
                             icon={UserCog}
                         />
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-[#12213e]">
+                                Penandatangan
+                            </label>
+                            <select
+                                value={signerId}
+                                onChange={(event) =>
+                                    setSignerId(event.target.value)
+                                }
+                                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm"
+                            >
+                                <option value="">Pilih penandatangan</option>
+                                {signers.map((signer) => (
+                                    <option key={signer.id} value={signer.id}>
+                                        {signer.title} — {signer.name}, NIP{' '}
+                                        {signer.nip}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
                         {/* Peringatan kedatangan peserta */}
                         <div className="flex gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
                             <p className="text-xs leading-relaxed text-amber-800">
-                                Notif ini akan dikirim ke peserta magang.
-                                Peserta akan datang berkunjung ke kantor setelah
-                                diterima pengajuan ini.
+                                Email belum dikirim pada tahap ini. Peserta
+                                menerima surat setelah PDF bertanda tangan
+                                diunggah melalui Menunggu TTE.
                             </p>
                         </div>
 
@@ -521,12 +558,14 @@ interface KeputusanProps {
     user?: MagangUser;
     opd?: Opd;
     applications?: InternshipApplication[];
+    signers?: Signer[];
 }
 
 export default function OpdKeputusan({
     user = MOCK_USER,
     opd = THIS_OPD,
     applications = MOCK_APPLICATIONS,
+    signers = [],
 }: KeputusanProps) {
     const initialQueue = useMemo(
         () => applications.filter((a) => a.status === 'forwarded_opd'),
@@ -712,6 +751,7 @@ export default function OpdKeputusan({
                                             'Pengajuan ditolak.',
                                         )
                                     }
+                                    signers={signers}
                                 />
                             ) : (
                                 <div className="flex flex-col items-center gap-3 py-16 text-center">

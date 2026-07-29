@@ -71,6 +71,11 @@ interface PengajuanServiceContract
     public function complete(InternshipApplication $app, ?User $actor = null, ?string $note = null): void;
 
     /**
+     * Periode selesai, tetapi sertifikat bertanda tangan belum diterbitkan.
+     */
+    public function needsCertificate(InternshipApplication $app, ?User $actor = null): void;
+
+    /**
      * Ajukan Ulang (R15): buat pengajuan BARU (tiket baru) dari tiket rejected
      * milik $actor — data form + berkas di-copy, tiket lama tetap read-only.
      */

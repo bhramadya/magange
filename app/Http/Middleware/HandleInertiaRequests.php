@@ -48,6 +48,8 @@ class HandleInertiaRequests extends Middleware
             'success' => fn () => $request->session()->get('success'),
             'error' => fn () => $request->session()->get('error'),
             'generatedCredentials' => fn () => $request->session()->get('generatedCredentials'),
+            'acceptanceDraftUrl' => fn () => $request->session()->get('acceptanceDraftUrl'),
+            'acceptanceDraftName' => fn () => $request->session()->get('acceptanceDraftName'),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

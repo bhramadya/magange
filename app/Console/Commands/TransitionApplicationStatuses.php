@@ -12,7 +12,7 @@ use Throwable;
 /**
  * Transisi status pengajuan berbasis tanggal, dijalankan harian via scheduler:
  *   - approved → ongoing   bila tanggal mulai (start_date) sudah tiba.
- *   - ongoing  → completed bila batas akhir (end_date) sudah lewat/tiba.
+ *   - ongoing  → needs_certificate bila batas akhir (end_date) sudah lewat/tiba.
  *
  * Dipakai <= (bukan ==) agar tetap mengejar bila scheduler sempat absen sehari.
  */
@@ -30,7 +30,7 @@ class TransitionApplicationStatuses extends Command
         $today = Date::now((string) config('app.schedule_timezone', 'UTC'))->startOfDay();
 
         $startedCount = 0;
-        $completedCount = 0;
+        $certificateCount = 0;
 
         // approved → ongoing (tanggal mulai sudah tiba)
         InternshipApplication::query()
@@ -45,20 +45,26 @@ class TransitionApplicationStatuses extends Command
                 }
             });
 
-        // ongoing → completed (batas akhir sudah tiba/lewat)
+        // ongoing → needs_certificate (batas akhir sudah tiba/lewat)
         InternshipApplication::query()
             ->where('status', ApplicationStatus::Ongoing)
             ->whereDate('end_date', '<=', $today)
-            ->each(function (InternshipApplication $app) use ($service, &$completedCount): void {
+            ->each(function (InternshipApplication $app) use ($service, &$certificateCount): void {
                 try {
-                    $service->complete($app);
-                    $completedCount++;
+                    // Pengajuan legacy (tanpa snapshot TTE) tetap mengikuti
+                    // arti lama completed agar arsip sebelum fitur ini utuh.
+                    if ($app->acceptance_signer_name === null) {
+                        $service->complete($app);
+                    } else {
+                        $service->needsCertificate($app);
+                    }
+                    $certificateCount++;
                 } catch (Throwable $e) {
                     $this->error("Gagal menyelesaikan magang #{$app->id}: {$e->getMessage()}");
                 }
             });
 
-        $this->info("Selesai: {$startedCount} mulai magang, {$completedCount} selesai magang.");
+        $this->info("Selesai: {$startedCount} mulai magang, {$certificateCount} perlu sertifikat.");
 
         return self::SUCCESS;
     }

@@ -11,8 +11,10 @@ use App\Http\Controllers\Mahasiswa\DashboardController as MahasiswaDashboardCont
 use App\Http\Controllers\Mahasiswa\PresensiController;
 use App\Http\Controllers\Mahasiswa\ReportController;
 use App\Http\Controllers\Opd\DashboardController as OpdDashboardController;
+use App\Http\Controllers\Opd\LetterController;
 use App\Http\Controllers\Opd\ReportController as OpdReportController;
 use App\Http\Controllers\Opd\SubmissionController as OpdSubmissionController;
+use App\Http\Controllers\Opd\TteController;
 use App\Http\Controllers\OpdQuotaController;
 use App\Http\Controllers\ProfileAvatarController;
 use App\Http\Controllers\SharedPageController;
@@ -97,6 +99,9 @@ Route::middleware(['auth', 'role:admin_opd'])->group(function () {
     Route::get('opd', [OpdDashboardController::class, 'index'])->name('opd.dashboard');
     Route::get('opd/keputusan', [OpdDashboardController::class, 'keputusan'])->name('opd.keputusan');
     Route::get('opd/peserta', [OpdDashboardController::class, 'peserta'])->name('opd.peserta');
+    Route::get('opd/menunggu-tte', [TteController::class, 'waiting'])->name('opd.menunggu-tte');
+    Route::get('opd/perlu-sertifikat', [TteController::class, 'certificates'])->name('opd.perlu-sertifikat');
+    Route::get('opd/surat', [LetterController::class, 'index'])->name('opd.surat');
 });
 
 // --- Bersama semua role (butuh login: header/sidebar pakai user yang login) ---
@@ -155,6 +160,20 @@ Route::middleware(['auth', 'role:admin_opd,admin_verifikator'])
 Route::middleware(['auth', 'role:admin_opd,admin_verifikator'])
     ->patch('opd-tag/{opd}', [OpdQuotaController::class, 'updateDescription'])
     ->name('opd-tag.update');
+
+Route::middleware(['auth', 'role:admin_opd'])
+    ->prefix('opd')
+    ->name('opd.')
+    ->group(function (): void {
+        Route::patch('data-surat', [LetterController::class, 'updateLetterhead'])->name('data-surat.update');
+        Route::post('penandatangan', [LetterController::class, 'storeSigner'])->name('penandatangan.store');
+        Route::put('surat/template', [LetterController::class, 'updateTemplate'])->name('surat.template.update');
+        Route::get('menunggu-tte/{application}/draft', [TteController::class, 'downloadAcceptanceDraft'])->name('menunggu-tte.draft.download');
+        Route::post('menunggu-tte/{application}/unggah', [TteController::class, 'uploadAcceptance'])->name('menunggu-tte.upload');
+        Route::post('perlu-sertifikat/{application}/draft', [TteController::class, 'generateCertificateDraft'])->name('perlu-sertifikat.draft');
+        Route::get('perlu-sertifikat/{application}/draft', [TteController::class, 'downloadCertificateDraft'])->name('perlu-sertifikat.draft.download');
+        Route::post('perlu-sertifikat/{application}/unggah', [TteController::class, 'uploadCertificate'])->name('perlu-sertifikat.upload');
+    });
 
 // Pas foto pemohon (disk privat) untuk pemilik/admin. Otorisasi via
 // policy view: Mahasiswa pemilik, Verifikator semua, OPD hanya pengajuan miliknya.

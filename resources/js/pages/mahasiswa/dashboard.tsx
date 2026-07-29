@@ -121,9 +121,11 @@ const TIMELINE_STEPS = [
 const STEP_OF_STATUS: Record<ApplicationStatus, number> = {
     pending_verifikator: 1,
     forwarded_opd: 2,
+    waiting_tte: 3,
     approved: 3,
     ongoing: 3,
     completion_submitted: 4,
+    needs_certificate: 5,
     completed: 6,
     rejected: 1,
 };

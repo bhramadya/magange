@@ -9,10 +9,12 @@
 export type ApplicationStatus =
     | 'pending_verifikator'
     | 'forwarded_opd'
+    | 'waiting_tte'
     | 'approved'
     | 'rejected'
     | 'ongoing'
     | 'completion_submitted'
+    | 'needs_certificate'
     | 'completed';
 
 export type UserRole = 'mahasiswa' | 'admin_verifikator' | 'admin_opd';
@@ -40,6 +42,9 @@ export interface Opd {
     // Revisi baru: kode internal (angka) + inisial publik (string).
     kode_opd?: number | null;
     inisial_opd?: string | null;
+    letterhead_address?: string | null;
+    letterhead_phone?: string | null;
+    letterhead_email?: string | null;
 }
 
 export interface FinalReport {
@@ -69,6 +74,7 @@ export interface PresensiEntry {
 export interface Certificate {
     id: number;
     is_download_locked: boolean;
+    draft_available?: boolean;
 }
 
 // FAQ dikelola Admin Verifikator, tampil di landing page publik.
@@ -133,6 +139,14 @@ export interface InternshipApplication {
     // nomor auto-increment + tanggal terbit STATIS — cetak ulang tidak berubah).
     sk_number?: string | null;
     sk_issued_at?: string | null; // ISO date
+    acceptance_draft_available?: boolean;
+    acceptance_draft_url?: string | null;
+    acceptance_signed?: boolean;
+    acceptance_signer?: {
+        name: string;
+        title: string | null;
+        nip: string | null;
+    } | null;
 
     // Surat penyelesaian magang (di-generate verifikator di menu laporan).
     completion_sk_number?: string | null;
@@ -163,9 +177,11 @@ export const STATUS_META: Record<
 > = {
     pending_verifikator: { label: 'Menunggu Verifikasi', tone: 'amber' },
     forwarded_opd: { label: 'Diteruskan ke OPD', tone: 'blue' },
+    waiting_tte: { label: 'Menunggu TTE', tone: 'amber' },
     approved: { label: 'Disetujui', tone: 'emerald' },
     rejected: { label: 'Ditolak', tone: 'rose' },
     ongoing: { label: 'Sedang Magang', tone: 'violet' },
     completion_submitted: { label: 'Penyelesaian Diajukan', tone: 'blue' },
+    needs_certificate: { label: 'Perlu Sertifikat', tone: 'amber' },
     completed: { label: 'Selesai', tone: 'emerald' },
 };

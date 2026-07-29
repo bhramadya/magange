@@ -29,7 +29,7 @@ class DashboardController extends Controller
         $user = $request->user();
 
         $applications = InternshipApplication::query()
-            ->with(['user', 'opd', 'forwardedBy'])
+            ->with(['user', 'opd', 'forwardedBy', 'certificate'])
             ->where('opd_id', $user->opd_id)
             ->latest()
             ->get();
@@ -38,6 +38,7 @@ class DashboardController extends Controller
             'user' => new MagangUserResource($user),
             'opd' => new OpdResource($user->opd),
             'applications' => InternshipApplicationResource::collection($applications),
+            'signers' => $user->opd->signers()->orderByDesc('is_primary')->orderBy('name')->get(['id', 'name', 'title', 'nip', 'is_primary']),
         ]);
     }
 
@@ -59,6 +60,7 @@ class DashboardController extends Controller
             'user' => new MagangUserResource($user),
             'opd' => new OpdResource($user->opd),
             'applications' => InternshipApplicationResource::collection($applications),
+            'signers' => $user->opd->signers()->orderByDesc('is_primary')->orderBy('name')->get(['id', 'name', 'title', 'nip', 'is_primary']),
         ]);
     }
 
@@ -81,9 +83,11 @@ class DashboardController extends Controller
             ])
             ->where('opd_id', $user->opd_id)
             ->whereIn('status', [
+                ApplicationStatus::WaitingTte,
                 ApplicationStatus::Approved,
                 ApplicationStatus::Ongoing,
                 ApplicationStatus::CompletionSubmitted,
+                ApplicationStatus::NeedsCertificate,
                 ApplicationStatus::Completed,
             ])
             ->latest()

@@ -12,6 +12,7 @@ use App\Jobs\SendJobRejectionEmail;
 use App\Models\ApplicationStatusLog;
 use App\Models\InternshipApplication;
 use App\Models\Opd;
+use App\Models\OpdSigner;
 use App\Models\User;
 use DomainException;
 use Illuminate\Support\Carbon;
@@ -28,6 +29,7 @@ class SubmissionService implements PengajuanServiceContract
         private RateLimitService $rateLimit,
         private OtpServiceContract $otpService,
         private SkNumberService $skNumbers,
+        private ?LetterDocumentService $letters = null,
     ) {}
 
     /**
@@ -158,13 +160,17 @@ class SubmissionService implements PengajuanServiceContract
      *     division: string,
      *     field_supervisor: string,
      *     person_in_charge: string,
+     *     signer_id?: int|null,
      * }  $data
      */
     public function approve(InternshipApplication $app, array $data, User $actor): void
     {
         $this->guardStatus($app, ApplicationStatus::ForwardedOpd);
+        $signer = isset($data['signer_id'])
+            ? OpdSigner::query()->where('opd_id', $app->opd_id)->findOrFail($data['signer_id'])
+            : null;
 
-        DB::transaction(function () use ($app, $data, $actor): void {
+        DB::transaction(function () use ($app, $data, $actor, $signer): void {
             $from = $app->status;
 
             // Kunci baris OPD agar cek & increment kuota bebas race condition.
@@ -198,15 +204,33 @@ class SubmissionService implements PengajuanServiceContract
                 'person_in_charge' => $data['person_in_charge'],
                 'sk_number' => $skNumber,
                 'sk_issued_at' => $skIssuedAt,
-                'status' => ApplicationStatus::Approved,
+                'status' => $signer === null ? ApplicationStatus::Approved : ApplicationStatus::WaitingTte,
                 'opd_decision_by' => $actor->id,
                 'opd_decision_at' => Date::now(),
+                'acceptance_signer_id' => $signer?->id,
+                'acceptance_signer_name' => $signer?->name,
+                'acceptance_signer_title' => $signer?->title,
+                'acceptance_signer_nip' => $signer?->nip,
             ]);
 
-            $this->logStatus($app, $from, ApplicationStatus::Approved, $actor, 'Disetujui OPD');
+            $this->logStatus(
+                $app,
+                $from,
+                $signer === null ? ApplicationStatus::Approved : ApplicationStatus::WaitingTte,
+                $actor,
+                $signer === null ? 'Disetujui OPD' : 'Disetujui OPD, menunggu TTE surat penerimaan',
+            );
         });
 
-        GenerateJobAcceptanceLetter::dispatch($app);
+        // Data lama yang belum punya daftar penandatangan tetap mengikuti alur
+        // terdahulu. Pengajuan baru dengan signer menghasilkan draft tanpa email.
+        if ($signer === null) {
+            GenerateJobAcceptanceLetter::dispatch($app);
+
+            return;
+        }
+
+        ($this->letters ?? new LetterDocumentService)->generateAcceptanceDraft($app->fresh());
     }
 
     /**
@@ -272,6 +296,22 @@ class SubmissionService implements PengajuanServiceContract
             );
         }
 
+        if ($app->acceptance_signer_name !== null) {
+            DB::transaction(function () use ($app, $actor): void {
+                $from = $app->status;
+                $app->update(['status' => ApplicationStatus::NeedsCertificate]);
+                $this->logStatus(
+                    $app,
+                    $from,
+                    ApplicationStatus::NeedsCertificate,
+                    $actor,
+                    'Periode magang berakhir, menunggu sertifikat bertanda tangan.',
+                );
+            });
+
+            return;
+        }
+
         DB::transaction(function () use ($app, $actor, $note): void {
             $from = $app->status;
 
@@ -283,6 +323,27 @@ class SubmissionService implements PengajuanServiceContract
                 ApplicationStatus::Completed,
                 $actor,
                 $note ?? ($actor === null ? 'Selesai magang (otomatis oleh sistem)' : 'Magang diselesaikan'),
+            );
+        });
+    }
+
+    /**
+     * Akhir periode magang kini membutuhkan sertifikat bertanda tangan sebelum
+     * status menjadi completed.
+     */
+    public function needsCertificate(InternshipApplication $app, ?User $actor = null): void
+    {
+        $this->guardStatus($app, ApplicationStatus::Ongoing);
+
+        DB::transaction(function () use ($app, $actor): void {
+            $from = $app->status;
+            $app->update(['status' => ApplicationStatus::NeedsCertificate]);
+            $this->logStatus(
+                $app,
+                $from,
+                ApplicationStatus::NeedsCertificate,
+                $actor,
+                'Periode magang berakhir, menunggu sertifikat bertanda tangan.',
             );
         });
     }

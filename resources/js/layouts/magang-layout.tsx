@@ -16,6 +16,7 @@ import {
     GraduationCap,
     UserCog,
     CalendarCheck,
+    FileSignature,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -164,10 +165,28 @@ export const opdNav: MagangNavItem[] = [
         icon: ClipboardCheck,
     },
     {
+        key: 'menunggu-tte',
+        title: 'Menunggu TTE',
+        href: '/opd/menunggu-tte',
+        icon: FileSignature,
+    },
+    {
+        key: 'perlu-sertifikat',
+        title: 'Perlu Sertifikat',
+        href: '/opd/perlu-sertifikat',
+        icon: Award,
+    },
+    {
         key: 'peserta',
         title: 'Kelola Peserta',
         href: '/opd/peserta',
         icon: Users,
+    },
+    {
+        key: 'surat',
+        title: 'Kelola Surat',
+        href: '/opd/surat',
+        icon: FileText,
     },
     {
         key: 'bantuan',

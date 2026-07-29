@@ -3,10 +3,14 @@
 
 Halo **{{ $certificate->application->user->name }}**,
 
-Selamat! **Sertifikat magang** Anda untuk tiket **{{ $certificate->application->ticket_number }}** telah diterbitkan dan siap diunduh melalui portal.
+Selamat! **Sertifikat magang** Anda untuk tiket **{{ $certificate->application->ticket_number }}** telah diterbitkan.
 
 <x-mail::panel>
+@if ($pdfPath)
+Sertifikat yang telah ditandatangani kami lampirkan pada email ini. Salinannya juga tersedia di portal.
+@else
 Silakan masuk ke akun Anda, buka halaman **Penyelesaian**, lalu klik tombol **Unduh Sertifikat** untuk mendapatkan sertifikat resmi Anda.
+@endif
 </x-mail::panel>
 
 Terima kasih atas dedikasi Anda selama menjalani magang di lingkungan Pemerintah Kota Madiun. Semoga pengalaman ini bermanfaat untuk karir Anda ke depan.

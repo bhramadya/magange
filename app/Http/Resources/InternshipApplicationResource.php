@@ -72,6 +72,16 @@ class InternshipApplicationResource extends JsonResource
             // Nomor SK surat penerimaan (R5): di-set sekali saat approve.
             'sk_number' => $this->sk_number,
             'sk_issued_at' => $this->sk_issued_at?->toDateString(),
+            'acceptance_draft_available' => $this->acceptance_draft_path !== null,
+            'acceptance_draft_url' => $this->acceptance_draft_path !== null
+                ? route('opd.menunggu-tte.draft.download', $this->resource)
+                : null,
+            'acceptance_signed' => $this->acceptance_signed_path !== null,
+            'acceptance_signer' => $this->acceptance_signer_name === null ? null : [
+                'name' => $this->acceptance_signer_name,
+                'title' => $this->acceptance_signer_title,
+                'nip' => $this->acceptance_signer_nip,
+            ],
 
             'rejection_reason' => $this->rejection_reason,
             'forwarded_at' => $this->forwarded_at?->toISOString(),
@@ -107,6 +117,7 @@ class InternshipApplicationResource extends JsonResource
             'certificate' => $this->whenLoaded('certificate', fn () => $this->certificate ? [
                 'id' => $this->certificate->id,
                 'is_download_locked' => $this->certificate->is_download_locked,
+                'draft_available' => $this->certificate->draft_path !== null,
             ] : null, null),
             'certificate_available' => $this->whenLoaded(
                 'certificate',

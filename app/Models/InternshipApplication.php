@@ -78,6 +78,12 @@ use Illuminate\Support\Carbon;
     'opd_decision_at',
     'rejection_reason',
     'surat_penerimaan_path',
+    'acceptance_signer_id',
+    'acceptance_signer_name',
+    'acceptance_signer_title',
+    'acceptance_signer_nip',
+    'acceptance_draft_path',
+    'acceptance_signed_path',
     'sk_number',
     'sk_issued_at',
 ])]
@@ -139,6 +145,17 @@ class InternshipApplication extends Model
     public function opdDecisionBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'opd_decision_by');
+    }
+
+    /**
+     * Penandatangan surat penerimaan saat dipilih. Informasi yang dirender
+     * memakai snapshot kolom acceptance_signer_* agar riwayat tidak berubah.
+     *
+     * @return BelongsTo<OpdSigner, $this>
+     */
+    public function acceptanceSigner(): BelongsTo
+    {
+        return $this->belongsTo(OpdSigner::class, 'acceptance_signer_id');
     }
 
     /**

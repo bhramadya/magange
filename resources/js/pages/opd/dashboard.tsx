@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     Search,
     ClipboardCheck,
@@ -19,10 +19,16 @@ import {
     Users,
     Pencil,
     Award,
+    FileText,
+    UserRoundPlus,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import { ApplicationDocuments } from '@/components/application-documents';
+import {
+    storeSigner,
+    updateLetterhead,
+} from '@/actions/App/Http/Controllers/Opd/LetterController';
 import { StatusBadge } from '@/components/status-badge';
 import {
     Dialog,
@@ -187,6 +193,8 @@ const MOCK_APPLICATIONS: InternshipApplication[] = [
 // Urutan kiri→kanan: Perlu Keputusan, Disetujui, Sedang Magang, Selesai, Ditolak, Semua.
 type FilterKey =
     | 'forwarded_opd'
+    | 'waiting_tte'
+    | 'needs_certificate'
     | 'approved'
     | 'active'
     | 'completed'
@@ -202,6 +210,8 @@ const OPD_STATUS_LABEL: Partial<Record<ApplicationStatus, string>> = {
 
 const FILTERS: { key: FilterKey; label: string }[] = [
     { key: 'forwarded_opd', label: 'Perlu Keputusan' },
+    { key: 'waiting_tte', label: 'Menunggu TTE' },
+    { key: 'needs_certificate', label: 'Perlu Sertifikat' },
     { key: 'approved', label: 'Disetujui' },
     { key: 'active', label: 'Sedang Magang' },
     { key: 'completed', label: 'Selesai Magang' },
@@ -260,6 +270,10 @@ function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
 
     if (filter === 'approved') {
         return app.status === 'approved';
+    }
+
+    if (filter === 'waiting_tte' || filter === 'needs_certificate') {
+        return app.status === filter;
     }
 
     if (filter === 'active') {
@@ -583,6 +597,160 @@ function TagEditor({ opd }: { opd: Opd }) {
     );
 }
 
+function LetterDataEditor({ opd }: { opd: Opd }) {
+    const [address, setAddress] = useState(opd.letterhead_address ?? '');
+    const [phone, setPhone] = useState(opd.letterhead_phone ?? '');
+    const [email, setEmail] = useState(opd.letterhead_email ?? '');
+    const [processing, setProcessing] = useState(false);
+
+    function save() {
+        setProcessing(true);
+        router.patch(
+            updateLetterhead.url(),
+            {
+                letterhead_address: address,
+                letterhead_phone: phone,
+                letterhead_email: email,
+            },
+            {
+                preserveScroll: true,
+                onFinish: () => setProcessing(false),
+            },
+        );
+    }
+
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="flex items-center gap-1.5 text-sm font-bold text-[#12213e]">
+                <FileText className="size-4 text-[#106feb]" /> Data Surat
+            </p>
+            <div className="mt-3 grid gap-2">
+                <input
+                    value={address}
+                    onChange={(event) => setAddress(event.target.value)}
+                    placeholder="Alamat OPD"
+                    className="h-10 rounded-xl border border-slate-200 px-3 text-sm"
+                />
+                <input
+                    value={phone}
+                    onChange={(event) => setPhone(event.target.value)}
+                    placeholder="Telepon"
+                    className="h-10 rounded-xl border border-slate-200 px-3 text-sm"
+                />
+                <input
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="Pos-el"
+                    className="h-10 rounded-xl border border-slate-200 px-3 text-sm"
+                />
+                <button
+                    type="button"
+                    onClick={save}
+                    disabled={processing}
+                    className="rounded-xl bg-[#106feb] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                    Simpan Data Surat
+                </button>
+            </div>
+        </div>
+    );
+}
+
+type Signer = {
+    id: number;
+    name: string;
+    title: string;
+    nip: string;
+    is_primary: boolean;
+};
+
+function SignerEditor({ signers }: { signers: Signer[] }) {
+    const [showForm, setShowForm] = useState(false);
+    const [name, setName] = useState('');
+    const [title, setTitle] = useState('');
+    const [nip, setNip] = useState('');
+    const [processing, setProcessing] = useState(false);
+
+    function save() {
+        setProcessing(true);
+        router.post(
+            storeSigner.url(),
+            { name, title, nip, is_primary: signers.length === 0 },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setName('');
+                    setTitle('');
+                    setNip('');
+                    setShowForm(false);
+                },
+                onFinish: () => setProcessing(false),
+            },
+        );
+    }
+
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="flex items-center gap-1.5 text-sm font-bold text-[#12213e]">
+                <UserRoundPlus className="size-4 text-[#106feb]" />{' '}
+                Penandatangan
+            </p>
+            <select
+                className="mt-3 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
+                value=""
+            >
+                <option value="">
+                    {signers.length
+                        ? 'Pilih penandatangan tersimpan'
+                        : 'Belum ada penandatangan'}
+                </option>
+                {signers.map((signer) => (
+                    <option key={signer.id}>
+                        {signer.title} — {signer.name}, NIP {signer.nip}
+                    </option>
+                ))}
+            </select>
+            <button
+                type="button"
+                onClick={() => setShowForm((value) => !value)}
+                className="mt-2 text-sm font-semibold text-[#106feb]"
+            >
+                + Tambah orang baru
+            </button>
+            {showForm && (
+                <div className="mt-3 grid gap-2">
+                    <input
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        placeholder="Nama"
+                        className="h-10 rounded-xl border border-slate-200 px-3 text-sm"
+                    />
+                    <input
+                        value={title}
+                        onChange={(event) => setTitle(event.target.value)}
+                        placeholder="Jabatan"
+                        className="h-10 rounded-xl border border-slate-200 px-3 text-sm"
+                    />
+                    <input
+                        value={nip}
+                        onChange={(event) => setNip(event.target.value)}
+                        placeholder="NIP"
+                        className="h-10 rounded-xl border border-slate-200 px-3 text-sm"
+                    />
+                    <button
+                        type="button"
+                        disabled={!name || !title || !nip || processing}
+                        onClick={save}
+                        className="rounded-xl bg-[#106feb] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                    >
+                        Tambah
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
 /* ---- Dialog keputusan ------------------------------------------------ */
 type DecisionMode = 'approve' | 'reject';
 
@@ -644,12 +812,14 @@ function DecisionDialog({
     onApproved,
     onRejected,
     onCompleted,
+    signers,
 }: {
     app: InternshipApplication | null;
     onClose: () => void;
     onApproved: (id: number) => void;
     onRejected: (id: number) => void;
     onCompleted: (id: number) => void;
+    signers: Signer[];
 }) {
     const [mode, setMode] = useState<DecisionMode>('approve');
     const [processing, setProcessing] = useState(false);
@@ -660,9 +830,15 @@ function DecisionDialog({
     const [division, setDivision] = useState('');
     const [fieldSupervisor, setFieldSupervisor] = useState('');
     const [personInCharge, setPersonInCharge] = useState('');
+    const [signerId, setSignerId] = useState(
+        String(signers.find((signer) => signer.is_primary)?.id ?? ''),
+    );
 
     const approveValid =
-        division.trim() && fieldSupervisor.trim() && personInCharge.trim();
+        division.trim() &&
+        fieldSupervisor.trim() &&
+        personInCharge.trim() &&
+        (signers.length === 0 || signerId);
 
     // Hanya pengajuan `forwarded_opd` yang bisa diputuskan.
     const decidable = app?.status === 'forwarded_opd';
@@ -685,6 +861,7 @@ function DecisionDialog({
                 division: division.trim(),
                 field_supervisor: fieldSupervisor.trim(),
                 person_in_charge: personInCharge.trim(),
+                signer_id: signerId || undefined,
             },
             {
                 preserveScroll: true,
@@ -694,6 +871,7 @@ function DecisionDialog({
                         errs.division ??
                             errs.field_supervisor ??
                             errs.person_in_charge ??
+                            errs.signer_id ??
                             'Gagal menyetujui pengajuan.',
                     ),
                 onFinish: () => setProcessing(false),
@@ -922,8 +1100,8 @@ function DecisionDialog({
                                             <span className="font-semibold text-[#12213e]">
                                                 {app.opd?.name ?? 'OPD Anda'}
                                             </span>
-                                            . Data ini dikirim ke peserta dalam
-                                            email persetujuan.
+                                            . Setelah disetujui, unduh draft
+                                            surat untuk proses TTE.
                                         </p>
 
                                         <Field
@@ -947,15 +1125,43 @@ function DecisionDialog({
                                             placeholder="cth. Kepala Bidang"
                                             icon={UserCog}
                                         />
+                                        <div className="space-y-1.5">
+                                            <label className="text-sm font-semibold text-[#0a1628]">
+                                                Penandatangan
+                                            </label>
+                                            <select
+                                                value={signerId}
+                                                onChange={(event) =>
+                                                    setSignerId(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm"
+                                            >
+                                                <option value="">
+                                                    Pilih penandatangan
+                                                </option>
+                                                {signers.map((signer) => (
+                                                    <option
+                                                        key={signer.id}
+                                                        value={signer.id}
+                                                    >
+                                                        {signer.title} —{' '}
+                                                        {signer.name}, NIP{' '}
+                                                        {signer.nip}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
 
                                         {/* Peringatan kedatangan peserta */}
                                         <div className="flex gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                                             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
                                             <p className="text-xs leading-relaxed text-amber-800">
-                                                Notif ini akan dikirim ke
-                                                peserta magang. Peserta akan
-                                                datang berkunjung ke kantor
-                                                setelah diterima pengajuan ini.
+                                                Email belum dikirim pada tahap
+                                                ini. Peserta menerima surat
+                                                setelah PDF bertanda tangan
+                                                diunggah melalui Menunggu TTE.
                                             </p>
                                         </div>
 
@@ -1079,13 +1285,22 @@ interface OpdDashboardProps {
     user?: MagangUser;
     opd?: Opd;
     applications?: InternshipApplication[];
+    signers?: Signer[];
 }
 
 export default function OpdDashboard({
     user = MOCK_USER,
     opd = THIS_OPD,
     applications = MOCK_APPLICATIONS,
+    signers = [],
 }: OpdDashboardProps) {
+    const { acceptanceDraftUrl, acceptanceDraftName } = usePage<{
+        acceptanceDraftUrl?: string;
+        acceptanceDraftName?: string;
+    }>().props;
+    const [showDraftPopup, setShowDraftPopup] = useState(
+        Boolean(acceptanceDraftUrl),
+    );
     const [rows, setRows] = useState(applications);
     const [filter, setFilter] = useState<FilterKey>('forwarded_opd');
     const [query, setQuery] = useState('');
@@ -1161,11 +1376,23 @@ export default function OpdDashboard({
                     ))}
                 </div>
 
-                {/* Kuota magang OPD — Admin OPD hanya boleh mengubah kuota OPD-nya sendiri. */}
-                <QuotaEditor opd={opd} />
-
-                {/* Tag kompetensi OPD (batch 5) — sumber tag kartu OPD di landing. */}
-                <TagEditor opd={opd} />
+                <section className="rounded-3xl border border-[#cddcef] bg-[#e8f2fe]/40 p-4 sm:p-5">
+                    <div className="mb-4">
+                        <h3 className="text-lg font-black text-[#12213e]">
+                            Kelola OPD
+                        </h3>
+                        <p className="text-sm text-slate-500">
+                            Kuota, tag kompetensi, data surat, dan penandatangan
+                            dalam satu kartu.
+                        </p>
+                    </div>
+                    <div className="grid gap-4 lg:grid-cols-2">
+                        <QuotaEditor opd={opd} />
+                        <TagEditor opd={opd} />
+                        <LetterDataEditor opd={opd} />
+                        <SignerEditor signers={signers} />
+                    </div>
+                </section>
 
                 {/* Toolbar */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1337,7 +1564,35 @@ export default function OpdDashboard({
                 onApproved={(id) => applyStatus(id, 'approved')}
                 onRejected={(id) => applyStatus(id, 'rejected')}
                 onCompleted={(id) => applyStatus(id, 'completed')}
+                signers={signers}
             />
+            {showDraftPopup && acceptanceDraftUrl && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+                    <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+                        <h3 className="text-lg font-black text-[#12213e]">
+                            Download Surat Penerimaan
+                        </h3>
+                        <p className="mt-2 text-sm text-slate-500">
+                            {acceptanceDraftName}
+                        </p>
+                        <div className="mt-5 flex gap-2">
+                            <a
+                                href={acceptanceDraftUrl}
+                                className="flex-1 rounded-xl bg-[#106feb] px-4 py-2.5 text-center text-sm font-bold text-white"
+                            >
+                                Download
+                            </a>
+                            <button
+                                type="button"
+                                onClick={() => setShowDraftPopup(false)}
+                                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600"
+                            >
+                                Nanti
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </MagangLayout>
     );
 }

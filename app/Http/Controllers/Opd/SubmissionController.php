@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Opd;
 
 use App\Contracts\PengajuanServiceContract;
+use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Opd\ApproveApplicationRequest;
 use App\Http\Requests\Verifikator\RejectApplicationRequest;
@@ -24,6 +25,13 @@ class SubmissionController extends Controller
         } catch (DomainException $e) {
             // mis. kuota OPD penuh — tampilkan pesan ramah di dialog, bukan 500.
             return back()->withErrors(['division' => $e->getMessage()]);
+        }
+
+        if ($application->fresh()->status === ApplicationStatus::WaitingTte) {
+            return back()
+                ->with('success', 'Pengajuan disetujui. Unduh Surat Penerimaan untuk ditandatangani.')
+                ->with('acceptanceDraftUrl', route('opd.menunggu-tte.draft.download', $application))
+                ->with('acceptanceDraftName', 'Surat Penerimaan ('.$application->user->name.').pdf');
         }
 
         return back()->with('success', 'Pengajuan berhasil disetujui.');
