@@ -12,6 +12,7 @@ use App\Http\Controllers\Mahasiswa\PresensiController;
 use App\Http\Controllers\Mahasiswa\ReportController;
 use App\Http\Controllers\Opd\DashboardController as OpdDashboardController;
 use App\Http\Controllers\Opd\LetterController;
+use App\Http\Controllers\Opd\PlacementOptionController;
 use App\Http\Controllers\Opd\ReportController as OpdReportController;
 use App\Http\Controllers\Opd\SubmissionController as OpdSubmissionController;
 use App\Http\Controllers\Opd\TteController;

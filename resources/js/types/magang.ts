@@ -47,6 +47,34 @@ export interface Opd {
     letterhead_email?: string | null;
 }
 
+/**
+ * Pejabat yang berhak menandatangani surat/sertifikat OPD. Dikelola penuh di
+ * menu Kelola Surat; dipilih saat menyetujui pengajuan & membuat sertifikat.
+ */
+export interface Signer {
+    id: number;
+    name: string;
+    title: string;
+    nip: string;
+    is_primary: boolean;
+}
+
+/**
+ * Master penempatan per OPD (bidang, pembimbing lapangan, penanggung jawab).
+ * Hanya nama — mereka tidak menandatangani dokumen apa pun.
+ */
+export interface PlacementOption {
+    id: number;
+    name: string;
+}
+
+/** Kunci sama dengan nama kolom pengajuan supaya pemetaan form langsung. */
+export interface PlacementOptions {
+    division: PlacementOption[];
+    field_supervisor: PlacementOption[];
+    person_in_charge: PlacementOption[];
+}
+
 export interface FinalReport {
     status: ReportStatus;
     file_name: string;

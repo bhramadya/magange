@@ -22,14 +22,16 @@ import {
     Pencil,
     Award,
     FileText,
-    UserRoundPlus,
+    Plus,
+    Trash2,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import {
-    storeSigner,
-    updateLetterhead,
-} from '@/actions/App/Http/Controllers/Opd/LetterController';
+    destroy as destroyPlacement,
+    store as storePlacement,
+    update as updatePlacement,
+} from '@/actions/App/Http/Controllers/Opd/PlacementOptionController';
 import { ApplicationDocuments } from '@/components/application-documents';
 import { StatusBadge } from '@/components/status-badge';
 import {
@@ -51,6 +53,9 @@ import type {
     InternshipApplication,
     MagangUser,
     Opd,
+    PlacementOption,
+    PlacementOptions,
+    Signer,
 } from '@/types/magang';
 
 /* =========================================================================
@@ -680,93 +685,169 @@ function TagEditor({ opd }: { opd: Opd }) {
     );
 }
 
-function LetterDataEditor({ opd }: { opd: Opd }) {
-    const [address, setAddress] = useState(opd.letterhead_address ?? '');
-    const [phone, setPhone] = useState(opd.letterhead_phone ?? '');
-    const [email, setEmail] = useState(opd.letterhead_email ?? '');
-    const [processing, setProcessing] = useState(false);
+/* ---- Master penempatan (bidang / pembimbing / penanggung jawab) --------
+ * Menggantikan Data Surat & Penandatangan yang PINDAH ke menu Kelola Surat.
+ * Ketiga daftar ini hanya berisi NAMA: pembimbing lapangan & penanggung jawab
+ * tidak menandatangani dokumen apa pun (itu urusan penandatangan di Kelola
+ * Surat). Pola CRUD-nya menyalin Kelola FAQ: daftar + edit inline + hapus
+ * dua langkah.
+ */
+type PlacementType = 'division' | 'field_supervisor' | 'person_in_charge';
 
-    function save() {
-        setProcessing(true);
-        router.patch(
-            updateLetterhead.url(),
-            {
-                letterhead_address: address,
-                letterhead_phone: phone,
-                letterhead_email: email,
-            },
-            {
-                preserveScroll: true,
-                onFinish: () => setProcessing(false),
-            },
+function PlacementOptionRow({
+    option,
+}: {
+    option: PlacementOption;
+}) {
+    const [editing, setEditing] = useState(false);
+    const [confirming, setConfirming] = useState(false);
+    const [value, setValue] = useState(option.name);
+    const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    if (editing) {
+        return (
+            <div className="rounded-xl border border-[#cddcef] bg-[#e8f2fe]/40 p-2.5">
+                <input
+                    value={value}
+                    onChange={(event) => setValue(event.target.value)}
+                    className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                />
+                {error && (
+                    <p className="mt-1 text-xs text-rose-600">{error}</p>
+                )}
+                <div className="mt-2 flex items-center gap-1.5">
+                    <button
+                        type="button"
+                        disabled={processing || value.trim() === ''}
+                        onClick={() => {
+                            setProcessing(true);
+                            setError(null);
+                            router.put(
+                                updatePlacement.url(option.id),
+                                { name: value.trim() },
+                                {
+                                    preserveScroll: true,
+                                    onSuccess: () => setEditing(false),
+                                    onError: (errs) =>
+                                        setError(
+                                            errs.name ?? 'Gagal menyimpan.',
+                                        ),
+                                    onFinish: () => setProcessing(false),
+                                },
+                            );
+                        }}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-[#106feb] px-2.5 py-1.5 text-sm font-semibold text-white transition hover:bg-[#0b4fb0] disabled:opacity-50"
+                    >
+                        {processing ? (
+                            <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                            <CheckCircle2 className="size-4" />
+                        )}
+                        Simpan
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setValue(option.name);
+                            setError(null);
+                            setEditing(false);
+                        }}
+                        className="cursor-pointer rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-100"
+                    >
+                        Batal
+                    </button>
+                </div>
+            </div>
         );
     }
 
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="flex items-center gap-1.5 text-sm font-bold text-[#12213e]">
-                <FileText className="size-4 text-[#106feb]" /> Data Surat
-            </p>
-            <div className="mt-3 grid gap-2">
-                <input
-                    value={address}
-                    onChange={(event) => setAddress(event.target.value)}
-                    placeholder="Alamat OPD"
-                    className="h-10 rounded-xl border border-slate-200 px-3 text-sm"
-                />
-                <input
-                    value={phone}
-                    onChange={(event) => setPhone(event.target.value)}
-                    placeholder="Telepon"
-                    className="h-10 rounded-xl border border-slate-200 px-3 text-sm"
-                />
-                <input
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="Pos-el"
-                    className="h-10 rounded-xl border border-slate-200 px-3 text-sm"
-                />
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 py-2">
+            <span className="min-w-0 truncate text-sm text-[#12213e]">
+                {option.name}
+            </span>
+            <span className="flex shrink-0 items-center gap-1">
                 <button
                     type="button"
-                    onClick={save}
-                    disabled={processing}
-                    className="rounded-xl bg-[#106feb] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                    onClick={() => setEditing(true)}
+                    aria-label={`Edit ${option.name}`}
+                    className="cursor-pointer rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100"
                 >
-                    Simpan Data Surat
+                    <Pencil className="size-4" />
                 </button>
-            </div>
+                {!confirming ? (
+                    <button
+                        type="button"
+                        onClick={() => setConfirming(true)}
+                        aria-label={`Hapus ${option.name}`}
+                        className="cursor-pointer rounded-lg p-1.5 text-rose-600 transition hover:bg-rose-50"
+                    >
+                        <Trash2 className="size-4" />
+                    </button>
+                ) : (
+                    <>
+                        <button
+                            type="button"
+                            disabled={processing}
+                            onClick={() => {
+                                setProcessing(true);
+                                router.delete(
+                                    destroyPlacement.url(option.id),
+                                    {
+                                        preserveScroll: true,
+                                        onFinish: () => setProcessing(false),
+                                    },
+                                );
+                            }}
+                            className="cursor-pointer rounded-lg bg-rose-600 px-2 py-1 text-xs font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
+                        >
+                            Ya, hapus
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setConfirming(false)}
+                            className="cursor-pointer rounded-lg px-2 py-1 text-xs font-medium text-slate-500 transition hover:bg-slate-100"
+                        >
+                            Batal
+                        </button>
+                    </>
+                )}
+            </span>
         </div>
     );
 }
 
-type Signer = {
-    id: number;
-    name: string;
+function PlacementOptionEditor({
+    type,
+    title,
+    hint,
+    icon: Icon,
+    options,
+}: {
+    type: PlacementType;
     title: string;
-    nip: string;
-    is_primary: boolean;
-};
-
-function SignerEditor({ signers }: { signers: Signer[] }) {
-    const [showForm, setShowForm] = useState(false);
-    const [name, setName] = useState('');
-    const [title, setTitle] = useState('');
-    const [nip, setNip] = useState('');
+    hint: string;
+    icon: typeof Briefcase;
+    options: PlacementOption[];
+}) {
+    const [value, setValue] = useState('');
     const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    function save() {
+    function tambah() {
+        if (value.trim() === '' || processing) {
+            return;
+        }
         setProcessing(true);
+        setError(null);
         router.post(
-            storeSigner.url(),
-            { name, title, nip, is_primary: signers.length === 0 },
+            storePlacement.url(),
+            { type, name: value.trim() },
             {
                 preserveScroll: true,
-                onSuccess: () => {
-                    setName('');
-                    setTitle('');
-                    setNip('');
-                    setShowForm(false);
-                },
+                onSuccess: () => setValue(''),
+                onError: (errs) => setError(errs.name ?? 'Gagal menambahkan.'),
                 onFinish: () => setProcessing(false),
             },
         );
@@ -775,61 +856,60 @@ function SignerEditor({ signers }: { signers: Signer[] }) {
     return (
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="flex items-center gap-1.5 text-sm font-bold text-[#12213e]">
-                <UserRoundPlus className="size-4 text-[#106feb]" />{' '}
-                Penandatangan
+                <Icon className="size-4 text-[#106feb]" /> {title}
             </p>
-            <select
-                className="mt-3 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"
-                value=""
-            >
-                <option value="">
-                    {signers.length
-                        ? 'Pilih penandatangan tersimpan'
-                        : 'Belum ada penandatangan'}
-                </option>
-                {signers.map((signer) => (
-                    <option key={signer.id}>
-                        {signer.title} — {signer.name}, NIP {signer.nip}
-                    </option>
+            <p className="mt-1 text-xs text-slate-500">{hint}</p>
+
+            <div className="mt-3 space-y-2">
+                {options.map((option) => (
+                    <PlacementOptionRow key={option.id} option={option} />
                 ))}
-            </select>
-            <button
-                type="button"
-                onClick={() => setShowForm((value) => !value)}
-                className="mt-2 text-sm font-semibold text-[#106feb]"
-            >
-                + Tambah orang baru
-            </button>
-            {showForm && (
-                <div className="mt-3 grid gap-2">
+                {options.length === 0 && (
+                    <p className="rounded-xl border border-dashed border-slate-300 px-3 py-3 text-center text-xs text-slate-500">
+                        Belum ada data — tambahkan di bawah.
+                    </p>
+                )}
+            </div>
+
+            <div className="mt-3 flex items-start gap-2">
+                <span className="flex-1">
+                    <label htmlFor={`tambah-${type}`} className="sr-only">
+                        Tambah {title}
+                    </label>
                     <input
-                        value={name}
-                        onChange={(event) => setName(event.target.value)}
-                        placeholder="Nama"
-                        className="h-10 rounded-xl border border-slate-200 px-3 text-sm"
+                        id={`tambah-${type}`}
+                        value={value}
+                        onChange={(event) => setValue(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                                event.preventDefault();
+                                tambah();
+                            }
+                        }}
+                        maxLength={255}
+                        placeholder="Tambah nama baru…"
+                        className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                     />
-                    <input
-                        value={title}
-                        onChange={(event) => setTitle(event.target.value)}
-                        placeholder="Jabatan"
-                        className="h-10 rounded-xl border border-slate-200 px-3 text-sm"
-                    />
-                    <input
-                        value={nip}
-                        onChange={(event) => setNip(event.target.value)}
-                        placeholder="NIP"
-                        className="h-10 rounded-xl border border-slate-200 px-3 text-sm"
-                    />
-                    <button
-                        type="button"
-                        disabled={!name || !title || !nip || processing}
-                        onClick={save}
-                        className="rounded-xl bg-[#106feb] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                    >
-                        Tambah
-                    </button>
-                </div>
-            )}
+                    {error && (
+                        <span className="mt-1 block text-xs text-rose-600">
+                            {error}
+                        </span>
+                    )}
+                </span>
+                <button
+                    type="button"
+                    onClick={tambah}
+                    disabled={value.trim() === '' || processing}
+                    className="inline-flex h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl bg-[#106feb] px-3 text-sm font-semibold text-white transition hover:bg-[#0b4fb0] disabled:opacity-50"
+                >
+                    {processing ? (
+                        <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                        <Plus className="size-4" />
+                    )}
+                    Tambah
+                </button>
+            </div>
         </div>
     );
 }
@@ -844,17 +924,27 @@ function SignerEditor({ signers }: { signers: Signer[] }) {
  * itu sumber utama kesan "penuh". Ringkasan pada kepala kartu menjaga
  * informasinya tetap terbaca tanpa perlu dibuka.
  */
-function KelolaOpdPanel({ opd, signers }: { opd: Opd; signers: Signer[] }) {
+function KelolaOpdPanel({
+    opd,
+    placementOptions,
+}: {
+    opd: Opd;
+    placementOptions: PlacementOptions;
+}) {
     const [open, setOpen] = useState(false);
 
     const tagCount = (opd.description ?? '')
         .split(',')
         .map((tag) => tag.trim())
         .filter(Boolean).length;
+    // Data Surat & Penandatangan sekarang di menu Kelola Surat, jadi ringkasan
+    // ini menyebut master penempatan sebagai gantinya.
     const summary = [
         `Kuota ${opd.quota_used ?? 0}/${opd.quota ?? 0}`,
         `${tagCount} tag kompetensi`,
-        `${signers.length} penandatangan`,
+        `${placementOptions.division.length} bidang`,
+        `${placementOptions.field_supervisor.length} pembimbing`,
+        `${placementOptions.person_in_charge.length} penanggung jawab`,
     ].join(' · ');
 
     return (
@@ -892,8 +982,27 @@ function KelolaOpdPanel({ opd, signers }: { opd: Opd; signers: Signer[] }) {
                     <div className="grid gap-4 border-t border-[#cddcef] p-4 lg:grid-cols-2">
                         <QuotaEditor opd={opd} />
                         <TagEditor opd={opd} />
-                        <LetterDataEditor opd={opd} />
-                        <SignerEditor signers={signers} />
+                        <PlacementOptionEditor
+                            type="division"
+                            title="Bidang / Penempatan"
+                            hint="Pilihan bidang penempatan peserta saat menyetujui pengajuan."
+                            icon={Briefcase}
+                            options={placementOptions.division}
+                        />
+                        <PlacementOptionEditor
+                            type="field_supervisor"
+                            title="Pembimbing Lapangan"
+                            hint="Nama saja — pembimbing lapangan tidak menandatangani dokumen."
+                            icon={UserCog}
+                            options={placementOptions.field_supervisor}
+                        />
+                        <PlacementOptionEditor
+                            type="person_in_charge"
+                            title="Penanggung Jawab"
+                            hint="Nama saja — penanggung jawab tidak menandatangani dokumen."
+                            icon={Users}
+                            options={placementOptions.person_in_charge}
+                        />
                     </div>
                 </CollapsibleContent>
             </section>
@@ -962,6 +1071,8 @@ function DecisionDialog({
     onRejected,
     onCompleted,
     signers,
+    placementOptions,
+    opdReady,
 }: {
     app: InternshipApplication | null;
     onClose: () => void;
@@ -969,6 +1080,8 @@ function DecisionDialog({
     onRejected: (id: number) => void;
     onCompleted: (id: number) => void;
     signers: Signer[];
+    placementOptions: PlacementOptions;
+    opdReady: { ready: boolean; missing: string[] };
 }) {
     const [mode, setMode] = useState<DecisionMode>('approve');
     const [processing, setProcessing] = useState(false);
@@ -983,11 +1096,15 @@ function DecisionDialog({
         String(signers.find((signer) => signer.is_primary)?.id ?? ''),
     );
 
+    // Penandatangan WAJIB: tanpa itu backend jatuh ke jalur lama (status
+    // langsung `approved` + email otomatis) sehingga pengajuan tak pernah
+    // masuk Menunggu TTE — persis bug yang diperbaiki batch ini.
     const approveValid =
+        opdReady.ready &&
         division.trim() &&
         fieldSupervisor.trim() &&
         personInCharge.trim() &&
-        (signers.length === 0 || signerId);
+        signerId;
 
     // Hanya pengajuan `forwarded_opd` yang bisa diputuskan.
     const decidable = app?.status === 'forwarded_opd';
@@ -1021,6 +1138,7 @@ function DecisionDialog({
                             errs.field_supervisor ??
                             errs.person_in_charge ??
                             errs.signer_id ??
+                            errs.letterhead ??
                             'Gagal menyetujui pengajuan.',
                     ),
                 onFinish: () => setProcessing(false),

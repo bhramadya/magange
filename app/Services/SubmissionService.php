@@ -349,6 +349,54 @@ class SubmissionService implements PengajuanServiceContract
     }
 
     /**
+     * Tarik pengajuan yang sudah disetujui TANPA snapshot penandatangan
+     * kembali ke waiting_tte. Sasarannya: arsip lama (pra-fitur TTE) dan
+     * korban bug "ACC tanpa penandatangan" — keduanya melewati alur TTE
+     * sehingga tak pernah punya surat resmi bertanda tangan.
+     *
+     * Sengaja TIDAK menyentuh kuota (sudah di-increment saat approve) dan
+     * TIDAK menerbitkan nomor SK baru (sudah ada, penomoran idempoten).
+     */
+    public function reissueForTte(InternshipApplication $app, OpdSigner $signer, User $actor): void
+    {
+        if (! in_array($app->status, [ApplicationStatus::Approved, ApplicationStatus::Ongoing], true)) {
+            throw new DomainException(
+                "Pengajuan berstatus {$app->status->value} tidak bisa ditarik ke Menunggu TTE.",
+            );
+        }
+
+        if ($app->acceptance_signer_name !== null) {
+            throw new DomainException('Pengajuan ini sudah memiliki penandatangan surat.');
+        }
+
+        if ($signer->opd_id !== $app->opd_id) {
+            throw new DomainException('Penandatangan bukan milik OPD pengajuan ini.');
+        }
+
+        DB::transaction(function () use ($app, $signer, $actor): void {
+            $from = $app->status;
+
+            $app->update([
+                'status' => ApplicationStatus::WaitingTte,
+                'acceptance_signer_id' => $signer->id,
+                'acceptance_signer_name' => $signer->name,
+                'acceptance_signer_title' => $signer->title,
+                'acceptance_signer_nip' => $signer->nip,
+            ]);
+
+            $this->logStatus(
+                $app,
+                $from,
+                ApplicationStatus::WaitingTte,
+                $actor,
+                'Ditarik ke Menunggu TTE untuk penerbitan surat penerimaan bertanda tangan.',
+            );
+        });
+
+        ($this->letters ?? new LetterDocumentService)->generateAcceptanceDraft($app->fresh());
+    }
+
+    /**
      * Ajukan Ulang (R15): tiket rejected tidak bisa diedit — buat pengajuan
      * BARU dengan nomor tiket baru, seluruh data form + berkas di-copy dari
      * tiket lama agar pemohon tidak mengetik ulang. Tiket lama tetap rejected

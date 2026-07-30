@@ -9,8 +9,11 @@ use App\Http\Resources\InternshipApplicationResource;
 use App\Http\Resources\MagangUserResource;
 use App\Http\Resources\OpdResource;
 use App\Models\InternshipApplication;
+use App\Models\OpdPlacementOption;
+use App\Models\OpdSigner;
 use App\Models\PresensiLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -38,7 +41,8 @@ class DashboardController extends Controller
             'user' => new MagangUserResource($user),
             'opd' => new OpdResource($user->opd),
             'applications' => InternshipApplicationResource::collection($applications),
-            'signers' => $user->opd->signers()->orderByDesc('is_primary')->orderBy('name')->get(['id', 'name', 'title', 'nip', 'is_primary']),
+            'signers' => $this->signers($request),
+            'placementOptions' => $this->placementOptions($request),
         ]);
     }
 
@@ -60,7 +64,8 @@ class DashboardController extends Controller
             'user' => new MagangUserResource($user),
             'opd' => new OpdResource($user->opd),
             'applications' => InternshipApplicationResource::collection($applications),
-            'signers' => $user->opd->signers()->orderByDesc('is_primary')->orderBy('name')->get(['id', 'name', 'title', 'nip', 'is_primary']),
+            'signers' => $this->signers($request),
+            'placementOptions' => $this->placementOptions($request),
         ]);
     }
 
@@ -113,6 +118,52 @@ class DashboardController extends Controller
             'user' => new MagangUserResource($user),
             'opd' => new OpdResource($user->opd),
             'participants' => $participants,
+            // Dipakai tombol "Buat Surat Ber-TTE" untuk pengajuan lama yang
+            // disetujui tanpa snapshot penandatangan.
+            'signers' => $this->signers($request),
         ]);
+    }
+
+    /**
+     * Daftar penandatangan OPD ini, utama lebih dulu.
+     *
+     * @return Collection<int, OpdSigner>
+     */
+    private function signers(Request $request): Collection
+    {
+        return $request->user()->opd->signers()
+            ->orderByDesc('is_primary')
+            ->orderBy('name')
+            ->get(['id', 'name', 'title', 'nip', 'is_primary']);
+    }
+
+    /**
+     * Master penempatan dikelompokkan per jenis; kunci array sama dengan nama
+     * kolom pengajuan (division / field_supervisor / person_in_charge) supaya
+     * form keputusan tinggal memetakan langsung.
+     *
+     * @return array<string, list<array{id: int, name: string}>>
+     */
+    private function placementOptions(Request $request): array
+    {
+        $grouped = OpdPlacementOption::query()
+            ->where('opd_id', $request->user()->opd_id)
+            ->orderBy('name')
+            ->get(['id', 'type', 'name'])
+            ->groupBy('type');
+
+        $payload = [];
+
+        foreach (OpdPlacementOption::types() as $type) {
+            $payload[$type] = $grouped->get($type, collect())
+                ->map(fn (OpdPlacementOption $option): array => [
+                    'id' => $option->id,
+                    'name' => $option->name,
+                ])
+                ->values()
+                ->all();
+        }
+
+        return $payload;
     }
 }

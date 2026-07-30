@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Opd\ApproveApplicationRequest;
 use App\Http\Requests\Verifikator\RejectApplicationRequest;
 use App\Models\InternshipApplication;
+use App\Models\OpdSigner;
 use DomainException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -46,6 +47,26 @@ class SubmissionController extends Controller
         $this->submissionService->reject($application, $request->user(), $validated['rejection_reason']);
 
         return back()->with('success', 'Pengajuan berhasil ditolak.');
+    }
+
+    /**
+     * Tarik pengajuan lama (disetujui tanpa penandatangan) ke Menunggu TTE.
+     */
+    public function reissueForTte(Request $request, InternshipApplication $application): RedirectResponse
+    {
+        $this->authorize('update', $application);
+
+        $signer = OpdSigner::query()
+            ->where('opd_id', $request->user()->opd_id)
+            ->findOrFail($request->integer('signer_id'));
+
+        try {
+            $this->submissionService->reissueForTte($application, $signer, $request->user());
+        } catch (DomainException $e) {
+            return back()->withErrors(['signer_id' => $e->getMessage()]);
+        }
+
+        return back()->with('success', 'Pengajuan ditarik ke Menunggu TTE. Unduh surat untuk ditandatangani.');
     }
 
     /**

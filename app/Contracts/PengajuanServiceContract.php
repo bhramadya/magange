@@ -3,6 +3,7 @@
 namespace App\Contracts;
 
 use App\Models\InternshipApplication;
+use App\Models\OpdSigner;
 use App\Models\User;
 
 interface PengajuanServiceContract
@@ -74,6 +75,12 @@ interface PengajuanServiceContract
      * Periode selesai, tetapi sertifikat bertanda tangan belum diterbitkan.
      */
     public function needsCertificate(InternshipApplication $app, ?User $actor = null): void;
+
+    /**
+     * Tarik kembali pengajuan yang sudah disetujui TANPA snapshot penandatangan
+     * (arsip lama) ke waiting_tte agar surat resminya bisa dibuat & ditandatangani.
+     */
+    public function reissueForTte(InternshipApplication $app, OpdSigner $signer, User $actor): void;
 
     /**
      * Ajukan Ulang (R15): buat pengajuan BARU (tiket baru) dari tiket rejected
