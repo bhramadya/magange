@@ -136,6 +136,10 @@ Route::middleware(['auth', 'role:admin_opd'])
         Route::post('{application}/approve', [OpdSubmissionController::class, 'approve'])->name('approve');
         Route::post('{application}/reject', [OpdSubmissionController::class, 'reject'])->name('reject');
         Route::post('{application}/complete', [OpdSubmissionController::class, 'complete'])->name('complete');
+        // Pengajuan yang sudah disetujui TANPA snapshot penandatangan (arsip
+        // lama / korban bug ACC tanpa signer) ditarik kembali ke Menunggu TTE
+        // supaya surat resminya tetap bisa dibuat & ditandatangani.
+        Route::post('{application}/tarik-tte', [OpdSubmissionController::class, 'reissueForTte'])->name('tarik-tte');
     });
 
 // Mahasiswa: unggah laporan akhir (aktor "Selesai" #4 saat is_confirmed).
@@ -167,7 +171,17 @@ Route::middleware(['auth', 'role:admin_opd'])
     ->group(function (): void {
         Route::patch('data-surat', [LetterController::class, 'updateLetterhead'])->name('data-surat.update');
         Route::post('penandatangan', [LetterController::class, 'storeSigner'])->name('penandatangan.store');
+        Route::put('penandatangan/{signer}', [LetterController::class, 'updateSigner'])->name('penandatangan.update');
+        Route::delete('penandatangan/{signer}', [LetterController::class, 'destroySigner'])->name('penandatangan.destroy');
         Route::put('surat/template', [LetterController::class, 'updateTemplate'])->name('surat.template.update');
+        // Arsip dokumen yang sudah ditandatangani (tab Arsip di Kelola Surat).
+        Route::get('surat/arsip/{application}/penerimaan', [LetterController::class, 'downloadSignedAcceptance'])->name('surat.arsip.penerimaan');
+        Route::get('surat/arsip/{certificate}/sertifikat', [LetterController::class, 'downloadSignedCertificate'])->name('surat.arsip.sertifikat');
+        // Master penempatan (kartu Kelola OPD di dasbor): bidang, pembimbing
+        // lapangan, penanggung jawab — nama saja, tanpa tanda tangan.
+        Route::post('penempatan', [PlacementOptionController::class, 'store'])->name('penempatan.store');
+        Route::put('penempatan/{option}', [PlacementOptionController::class, 'update'])->name('penempatan.update');
+        Route::delete('penempatan/{option}', [PlacementOptionController::class, 'destroy'])->name('penempatan.destroy');
         Route::get('menunggu-tte/{application}/draft', [TteController::class, 'downloadAcceptanceDraft'])->name('menunggu-tte.draft.download');
         Route::post('menunggu-tte/{application}/unggah', [TteController::class, 'uploadAcceptance'])->name('menunggu-tte.upload');
         Route::post('perlu-sertifikat/{application}/draft', [TteController::class, 'generateCertificateDraft'])->name('perlu-sertifikat.draft');

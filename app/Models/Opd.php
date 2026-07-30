@@ -82,4 +82,14 @@ class Opd extends Model
     {
         return $this->hasMany(OpdLetterTemplate::class);
     }
+
+    /**
+     * Master penempatan (bidang, pembimbing lapangan, penanggung jawab).
+     *
+     * @return HasMany<OpdPlacementOption, $this>
+     */
+    public function placementOptions(): HasMany
+    {
+        return $this->hasMany(OpdPlacementOption::class);
+    }
 }
