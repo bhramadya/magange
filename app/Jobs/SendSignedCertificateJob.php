@@ -12,6 +12,9 @@ class SendSignedCertificateJob implements ShouldQueue
 {
     use Queueable;
 
+    /**
+     * @var int
+     */
     public $tries = 3;
 
     /**

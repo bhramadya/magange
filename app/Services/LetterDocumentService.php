@@ -161,7 +161,9 @@ TEXT,
         return strtr($template, [
             '{nama_peserta}' => $application->user->name,
             '{asal_instansi}' => $application->institution_name,
-            '{opd}' => $application->opd?->name ?? '-',
+            // ?? sudah bersemantik isset, jadi opd yang null tetap jatuh ke '-'
+            // tanpa perlu ?-> (nullsafe di kiri ?? justru redundan).
+            '{opd}' => $application->opd->name ?? '-',
             '{bidang}' => $application->division ?? '-',
             '{tanggal_mulai}' => $application->start_date->translatedFormat('d F Y'),
             '{tanggal_selesai}' => $application->end_date->translatedFormat('d F Y'),

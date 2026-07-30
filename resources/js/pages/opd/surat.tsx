@@ -1,6 +1,6 @@
 import { Head, router } from '@inertiajs/react';
-import { updateTemplate } from '@/actions/App/Http/Controllers/Opd/LetterController';
 import { useState } from 'react';
+import { updateTemplate } from '@/actions/App/Http/Controllers/Opd/LetterController';
 import MagangLayout, { opdNav } from '@/layouts/magang-layout';
 import type { MagangUser, Opd } from '@/types/magang';
 

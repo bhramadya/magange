@@ -4,7 +4,9 @@ import {
     ClipboardCheck,
     CheckCircle2,
     XCircle,
-    Activity,
+    ChevronDown,
+    FileSignature,
+    Settings2,
     Building2,
     GraduationCap,
     Calendar,
@@ -24,12 +26,17 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
-import { ApplicationDocuments } from '@/components/application-documents';
 import {
     storeSigner,
     updateLetterhead,
 } from '@/actions/App/Http/Controllers/Opd/LetterController';
+import { ApplicationDocuments } from '@/components/application-documents';
 import { StatusBadge } from '@/components/status-badge';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
     Dialog,
     DialogContent,
@@ -208,10 +215,56 @@ const OPD_STATUS_LABEL: Partial<Record<ApplicationStatus, string>> = {
     forwarded_opd: 'Perlu Keputusan',
 };
 
-const FILTERS: { key: FilterKey; label: string }[] = [
-    { key: 'forwarded_opd', label: 'Perlu Keputusan' },
-    { key: 'waiting_tte', label: 'Menunggu TTE' },
-    { key: 'needs_certificate', label: 'Perlu Sertifikat' },
+/*
+ * SATU sumber kebenaran untuk filter. Sebelumnya ada DUA permukaan kontrol
+ * (5 kartu statistik + 8 chip) yang menulis state `filter` yang sama padahal
+ * isinya beda — kartu tak punya Menunggu TTE / Perlu Sertifikat / Semua,
+ * sehingga mengeklik chip bisa membuat tak ada kartu yang tampak aktif.
+ * Kini dipisah menurut PERAN, bukan diduplikasi:
+ *   ACTION_FILTERS → tahap yang menuntut tindakan admin (kartu besar, atas)
+ *   STATUS_FILTERS → penelusuran riwayat (chip kecil, di toolbar tabel)
+ * Urutan baca kiri→kanan lalu atas→bawah tetap mengikuti aturan CLAUDE.md:
+ * Perlu Keputusan, Menunggu TTE, Perlu Sertifikat, Disetujui, Sedang Magang,
+ * Selesai Magang, Ditolak, Semua.
+ */
+type ActionFilterKey = 'forwarded_opd' | 'waiting_tte' | 'needs_certificate';
+
+const ACTION_FILTERS: {
+    key: ActionFilterKey;
+    label: string;
+    caption: string;
+    icon: typeof ClipboardCheck;
+    iconTone: string;
+    activeTone: string;
+}[] = [
+    {
+        key: 'forwarded_opd',
+        label: 'Perlu Keputusan',
+        caption: 'Setujui atau tolak pengajuan',
+        icon: ClipboardCheck,
+        // "Perlu Keputusan" wajib berlatar kuning (aturan CLAUDE.md).
+        iconTone: 'bg-amber-100 text-amber-700',
+        activeTone: 'border-amber-400 ring-2 ring-amber-300/50',
+    },
+    {
+        key: 'waiting_tte',
+        label: 'Menunggu TTE',
+        caption: 'Unggah surat bertanda tangan',
+        icon: FileSignature,
+        iconTone: 'bg-[#cddcef] text-[#0b4fb0]',
+        activeTone: 'border-[#106feb] ring-2 ring-[#106feb]/30',
+    },
+    {
+        key: 'needs_certificate',
+        label: 'Perlu Sertifikat',
+        caption: 'Unggah sertifikat bertanda tangan',
+        icon: Award,
+        iconTone: 'bg-violet-100 text-violet-700',
+        activeTone: 'border-violet-400 ring-2 ring-violet-300/50',
+    },
+];
+
+const STATUS_FILTERS: { key: FilterKey; label: string }[] = [
     { key: 'approved', label: 'Disetujui' },
     { key: 'active', label: 'Sedang Magang' },
     { key: 'completed', label: 'Selesai Magang' },
@@ -219,45 +272,17 @@ const FILTERS: { key: FilterKey; label: string }[] = [
     { key: 'all', label: 'Semua' },
 ];
 
-// Kartu statistik dipetakan 1:1 dengan filter (tanpa "Semua") agar jumlah,
-// urutan, & label kartu selalu selaras dengan chip filter di bawahnya.
-const STAT_CARDS: {
-    key: Exclude<FilterKey, 'all'>;
-    label: string;
-    icon: typeof ClipboardCheck;
-    tone: string;
-}[] = [
-    {
-        key: 'forwarded_opd',
-        label: 'Perlu Keputusan',
-        icon: ClipboardCheck,
-        tone: 'bg-amber-50 text-amber-600',
-    },
-    {
-        key: 'approved',
-        label: 'Disetujui',
-        icon: CheckCircle2,
-        tone: 'bg-emerald-50 text-emerald-600',
-    },
-    {
-        key: 'active',
-        label: 'Sedang Magang',
-        icon: Activity,
-        tone: 'bg-violet-50 text-violet-600',
-    },
-    {
-        key: 'completed',
-        label: 'Selesai Magang',
-        icon: Award,
-        tone: 'bg-sky-50 text-sky-600',
-    },
-    {
-        key: 'rejected',
-        label: 'Ditolak',
-        icon: XCircle,
-        tone: 'bg-rose-50 text-rose-600',
-    },
+// Dipakai untuk menghitung badge angka di SEMUA kontrol filter sekaligus,
+// termasuk "Semua" (yang dulu tak punya angka).
+const ALL_FILTER_KEYS: FilterKey[] = [
+    ...ACTION_FILTERS.map((f) => f.key),
+    ...STATUS_FILTERS.map((f) => f.key),
 ];
+
+const FILTER_LABEL: Record<FilterKey, string> = {
+    ...Object.fromEntries(ACTION_FILTERS.map((f) => [f.key, f.label])),
+    ...Object.fromEntries(STATUS_FILTERS.map((f) => [f.key, f.label])),
+} as Record<FilterKey, string>;
 
 function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
     if (filter === 'all') {
@@ -287,50 +312,108 @@ function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
     return app.status === 'rejected';
 }
 
-/* ---- Kartu statistik ------------------------------------------------- */
-// Kartu berfungsi sebagai pintasan filter: klik → set filter terkait aktif.
-function StatCard({
-    icon: Icon,
-    label,
+/* ---- Kontrol filter -------------------------------------------------- */
+/*
+ * Kartu "Butuh Tindakan": tahap yang benar-benar menuntut aksi admin.
+ * Sekaligus pintasan filter (klik → tabel di bawah ikut tersaring), jadi
+ * angka pada kartu SELALU sama dengan jumlah baris yang tampil.
+ * Hover sengaja hanya mengubah warna/border — tanpa translate/scale — supaya
+ * tidak menggeser layout (baris kartu dipakai untuk memindai angka).
+ */
+function ActionCard({
+    filter,
     value,
-    tone,
-    delay,
     active,
     onClick,
+    delay,
 }: {
-    icon: typeof ClipboardCheck;
-    label: string;
+    filter: (typeof ACTION_FILTERS)[number];
     value: number;
-    tone: string;
-    delay: number;
     active: boolean;
     onClick: () => void;
+    delay: number;
 }) {
+    const Icon = filter.icon;
+
     return (
         <motion.button
             type="button"
             onClick={onClick}
-            initial={{ opacity: 0, y: 16 }}
+            aria-pressed={active}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay, ease: 'circOut' }}
+            transition={{ duration: 0.35, delay, ease: 'circOut' }}
             className={cn(
-                'group rounded-2xl border bg-white p-5 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md',
+                'flex cursor-pointer items-center gap-4 rounded-2xl border bg-white p-4 text-left shadow-sm transition-colors duration-200',
+                'focus-visible:ring-4 focus-visible:ring-[#106feb]/25 focus-visible:outline-none',
                 active
-                    ? 'border-[#106feb] ring-2 ring-[#106feb]/20'
-                    : 'border-slate-200 hover:border-[#106feb]/40',
+                    ? filter.activeTone
+                    : 'border-slate-200 hover:border-[#106feb]/40 hover:bg-slate-50/70',
             )}
         >
-            <div
+            <span
                 className={cn(
-                    'mb-3 flex size-10 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110',
-                    tone,
+                    'flex size-11 shrink-0 items-center justify-center rounded-xl',
+                    filter.iconTone,
                 )}
             >
                 <Icon className="size-5" />
-            </div>
-            <p className="text-2xl font-black text-[#12213e]">{value}</p>
-            <p className="mt-0.5 text-sm text-slate-500">{label}</p>
+            </span>
+            <span className="min-w-0">
+                <span className="flex items-baseline gap-2">
+                    <span className="text-2xl font-black text-[#12213e] tabular-nums">
+                        {value}
+                    </span>
+                    <span className="truncate text-sm font-bold text-[#12213e]">
+                        {filter.label}
+                    </span>
+                </span>
+                <span className="mt-0.5 block truncate text-xs text-slate-500">
+                    {filter.caption}
+                </span>
+            </span>
         </motion.button>
+    );
+}
+
+// Chip status pasif (penelusuran riwayat). Angka ikut ditampilkan supaya chip
+// tak lagi butuh kartu statistik terpisah sebagai sumber angka.
+function StatusChip({
+    label,
+    count,
+    active,
+    onClick,
+}: {
+    label: string;
+    count: number;
+    active: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-pressed={active}
+            className={cn(
+                'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full px-3.5 text-sm font-medium transition-colors duration-200',
+                'focus-visible:ring-4 focus-visible:ring-[#106feb]/25 focus-visible:outline-none',
+                active
+                    ? 'bg-[#106feb] text-white shadow-sm'
+                    : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50',
+            )}
+        >
+            {label}
+            <span
+                className={cn(
+                    'rounded-full px-1.5 py-0.5 text-xs font-bold tabular-nums',
+                    active
+                        ? 'bg-white/25 text-white'
+                        : 'bg-slate-100 text-slate-500',
+                )}
+            >
+                {count}
+            </span>
+        </button>
     );
 }
 
@@ -752,6 +835,72 @@ function SignerEditor({ signers }: { signers: Signer[] }) {
 }
 
 /* ---- Dialog keputusan ------------------------------------------------ */
+/* ---- Kelola OPD (kartu dasbor, dapat dilipat) ------------------------- */
+/*
+ * Tetap kartu di dasbor (aturan CLAUDE.md: BUKAN menu sidebar tersendiri),
+ * tetapi dilipat & dipindah ke BAWAH tabel. Alasannya: keempat editor di
+ * dalamnya adalah setelan yang jarang diubah, sementara sebelumnya mereka
+ * menempati ruang paling berharga di antara statistik dan daftar kerja —
+ * itu sumber utama kesan "penuh". Ringkasan pada kepala kartu menjaga
+ * informasinya tetap terbaca tanpa perlu dibuka.
+ */
+function KelolaOpdPanel({ opd, signers }: { opd: Opd; signers: Signer[] }) {
+    const [open, setOpen] = useState(false);
+
+    const tagCount = (opd.description ?? '')
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean).length;
+    const summary = [
+        `Kuota ${opd.quota_used ?? 0}/${opd.quota ?? 0}`,
+        `${tagCount} tag kompetensi`,
+        `${signers.length} penandatangan`,
+    ].join(' · ');
+
+    return (
+        <Collapsible open={open} onOpenChange={setOpen}>
+            <section className="overflow-hidden rounded-3xl border border-[#cddcef] bg-[#e8f2fe]/40">
+                <CollapsibleTrigger
+                    className={cn(
+                        'flex w-full cursor-pointer items-center gap-3 p-4 text-left transition-colors duration-200',
+                        'hover:bg-[#cddcef]/25 focus-visible:ring-4 focus-visible:ring-[#106feb]/25 focus-visible:outline-none',
+                    )}
+                >
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#106feb] ring-1 ring-[#cddcef]">
+                        <Settings2 className="size-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                        <span className="block text-base font-black text-[#12213e]">
+                            Kelola OPD
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-slate-500">
+                            {summary}
+                        </span>
+                    </span>
+                    <span className="hidden text-sm font-semibold text-[#106feb] sm:inline">
+                        {open ? 'Tutup' : 'Buka'}
+                    </span>
+                    <ChevronDown
+                        aria-hidden
+                        className={cn(
+                            'size-4 shrink-0 text-[#106feb] transition-transform duration-200',
+                            open && 'rotate-180',
+                        )}
+                    />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                    <div className="grid gap-4 border-t border-[#cddcef] p-4 lg:grid-cols-2">
+                        <QuotaEditor opd={opd} />
+                        <TagEditor opd={opd} />
+                        <LetterDataEditor opd={opd} />
+                        <SignerEditor signers={signers} />
+                    </div>
+                </CollapsibleContent>
+            </section>
+        </Collapsible>
+    );
+}
+
 type DecisionMode = 'approve' | 'reject';
 
 function DetailRow({
@@ -1306,16 +1455,17 @@ export default function OpdDashboard({
     const [query, setQuery] = useState('');
     const [active, setActive] = useState<InternshipApplication | null>(null);
 
-    // Hitung per kartu memakai matchFilter yang sama dengan chip filter,
-    // sehingga angka kartu = jumlah baris yang tampil saat filter itu dipilih.
+    // Semua angka (kartu maupun chip) dihitung dengan matchFilter yang sama
+    // dipakai tabel, jadi angka pada kontrol = jumlah baris yang tampil saat
+    // filter itu dipilih — termasuk "Semua", yang dulu tak punya angka.
     const counts = useMemo(
         () =>
             Object.fromEntries(
-                STAT_CARDS.map((c) => [
-                    c.key,
-                    rows.filter((a) => matchFilter(a, c.key)).length,
+                ALL_FILTER_KEYS.map((key) => [
+                    key,
+                    rows.filter((a) => matchFilter(a, key)).length,
                 ]),
-            ) as Record<Exclude<FilterKey, 'all'>, number>,
+            ) as Record<FilterKey, number>,
         [rows],
     );
 
@@ -1360,201 +1510,225 @@ export default function OpdDashboard({
                     </p>
                 </div>
 
-                {/* Statistik — selaras 1:1 dengan chip filter (klik untuk memfilter). */}
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                    {STAT_CARDS.map((c, i) => (
-                        <StatCard
-                            key={c.key}
-                            icon={c.icon}
-                            label={c.label}
-                            value={counts[c.key]}
-                            tone={c.tone}
-                            delay={i * 0.05}
-                            active={filter === c.key}
-                            onClick={() => setFilter(c.key)}
-                        />
-                    ))}
-                </div>
-
-                <section className="rounded-3xl border border-[#cddcef] bg-[#e8f2fe]/40 p-4 sm:p-5">
-                    <div className="mb-4">
-                        <h3 className="text-lg font-black text-[#12213e]">
-                            Kelola OPD
-                        </h3>
-                        <p className="text-sm text-slate-500">
-                            Kuota, tag kompetensi, data surat, dan penandatangan
-                            dalam satu kartu.
-                        </p>
-                    </div>
-                    <div className="grid gap-4 lg:grid-cols-2">
-                        <QuotaEditor opd={opd} />
-                        <TagEditor opd={opd} />
-                        <LetterDataEditor opd={opd} />
-                        <SignerEditor signers={signers} />
+                {/* Butuh Tindakan — hanya tahap yang menuntut aksi admin. */}
+                <section aria-labelledby="butuh-tindakan">
+                    <h3
+                        id="butuh-tindakan"
+                        className="mb-2.5 text-xs font-bold tracking-wide text-slate-500 uppercase"
+                    >
+                        Butuh tindakan
+                    </h3>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {ACTION_FILTERS.map((f, i) => (
+                            <ActionCard
+                                key={f.key}
+                                filter={f}
+                                value={counts[f.key]}
+                                delay={i * 0.05}
+                                active={filter === f.key}
+                                onClick={() => setFilter(f.key)}
+                            />
+                        ))}
                     </div>
                 </section>
 
-                {/* Toolbar */}
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex flex-wrap gap-1.5">
-                        {FILTERS.map((f) => (
-                            <button
-                                key={f.key}
-                                type="button"
-                                onClick={() => setFilter(f.key)}
-                                className={cn(
-                                    'rounded-full px-3.5 py-1.5 text-sm font-medium transition',
-                                    filter === f.key
-                                        ? 'bg-[#106feb] text-white shadow-sm'
-                                        : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50',
-                                )}
+                {/* Daftar pengajuan + toolbar status/pencarian. */}
+                <section
+                    aria-labelledby="daftar-pengajuan"
+                    className="space-y-3"
+                >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <h3
+                                id="daftar-pengajuan"
+                                className="text-lg font-black text-[#12213e]"
                             >
-                                {f.label}
-                            </button>
+                                Daftar Pengajuan
+                            </h3>
+                            <p className="mt-0.5 text-sm text-slate-500">
+                                Menampilkan {filtered.length} dari {rows.length}{' '}
+                                pengajuan · filter{' '}
+                                <span className="font-semibold text-[#12213e]">
+                                    {FILTER_LABEL[filter]}
+                                </span>
+                            </p>
+                        </div>
+
+                        <div className="relative sm:w-64">
+                            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
+                            <label className="sr-only" htmlFor="cari-pengajuan">
+                                Cari pengajuan
+                            </label>
+                            <input
+                                id="cari-pengajuan"
+                                type="search"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder="Cari tiket / instansi…"
+                                className="h-11 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-sm transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5">
+                        {STATUS_FILTERS.map((f) => (
+                            <StatusChip
+                                key={f.key}
+                                label={f.label}
+                                count={counts[f.key]}
+                                active={filter === f.key}
+                                onClick={() => setFilter(f.key)}
+                            />
                         ))}
                     </div>
 
-                    <div className="relative sm:w-64">
-                        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
-                        <input
-                            type="search"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            placeholder="Cari tiket / instansi…"
-                            className="h-10 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-sm transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
-                        />
-                    </div>
-                </div>
+                    {/* Tabel */}
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        {/* Desktop */}
+                        <table className="hidden w-full text-left text-sm md:table">
+                            <thead className="border-b border-slate-200 bg-slate-50 text-xs tracking-wide text-slate-500 uppercase">
+                                <tr>
+                                    <th className="px-5 py-3 font-semibold">
+                                        No. Tiket
+                                    </th>
+                                    <th className="px-5 py-3 font-semibold">
+                                        Nama Lengkap
+                                    </th>
+                                    <th className="px-5 py-3 font-semibold">
+                                        Asal Instansi
+                                    </th>
+                                    <th className="px-5 py-3 font-semibold">
+                                        Divisi
+                                    </th>
+                                    <th className="px-5 py-3 font-semibold">
+                                        Diteruskan
+                                    </th>
+                                    <th className="px-5 py-3 font-semibold">
+                                        Status
+                                    </th>
+                                    <th className="px-5 py-3 text-right font-semibold">
+                                        Aksi
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {filtered.map((app) => (
+                                    <tr
+                                        key={app.id}
+                                        className="transition hover:bg-slate-50/60"
+                                    >
+                                        <td className="px-5 py-3.5 font-mono text-xs font-semibold text-[#12213e]">
+                                            {app.ticket_number}
+                                        </td>
+                                        <td className="px-5 py-3.5 font-medium text-[#12213e]">
+                                            {app.applicant_name ?? '—'}
+                                        </td>
+                                        <td className="px-5 py-3.5">
+                                            {app.institution_name}
+                                        </td>
+                                        <td className="px-5 py-3.5 text-slate-600">
+                                            {app.division ?? '—'}
+                                        </td>
+                                        <td className="px-5 py-3.5 text-slate-500">
+                                            {app.forwarded_at
+                                                ? formatDate(app.forwarded_at)
+                                                : '—'}
+                                        </td>
+                                        <td className="px-5 py-3.5">
+                                            <StatusBadge
+                                                status={app.status}
+                                                label={
+                                                    OPD_STATUS_LABEL[app.status]
+                                                }
+                                            />
+                                        </td>
+                                        <td className="px-5 py-3.5 text-right">
+                                            <button
+                                                type="button"
+                                                onClick={() => setActive(app)}
+                                                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-[#106feb] transition hover:bg-[#cddcef]/40"
+                                            >
+                                                {app.status === 'forwarded_opd'
+                                                    ? 'Putuskan'
+                                                    : 'Detail'}
+                                                <ArrowRight className="size-3.5" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
 
-                {/* Tabel */}
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    {/* Desktop */}
-                    <table className="hidden w-full text-left text-sm md:table">
-                        <thead className="border-b border-slate-200 bg-slate-50 text-xs tracking-wide text-slate-500 uppercase">
-                            <tr>
-                                <th className="px-5 py-3 font-semibold">
-                                    No. Tiket
-                                </th>
-                                <th className="px-5 py-3 font-semibold">
-                                    Nama Lengkap
-                                </th>
-                                <th className="px-5 py-3 font-semibold">
-                                    Asal Instansi
-                                </th>
-                                <th className="px-5 py-3 font-semibold">
-                                    Divisi
-                                </th>
-                                <th className="px-5 py-3 font-semibold">
-                                    Diteruskan
-                                </th>
-                                <th className="px-5 py-3 font-semibold">
-                                    Status
-                                </th>
-                                <th className="px-5 py-3 text-right font-semibold">
-                                    Aksi
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        {/* Mobile */}
+                        <div className="divide-y divide-slate-100 md:hidden">
                             {filtered.map((app) => (
-                                <tr
+                                <button
                                     key={app.id}
-                                    className="transition hover:bg-slate-50/60"
+                                    type="button"
+                                    onClick={() => setActive(app)}
+                                    className="flex w-full flex-col gap-2 px-4 py-4 text-left transition hover:bg-slate-50/60"
                                 >
-                                    <td className="px-5 py-3.5 font-mono text-xs font-semibold text-[#12213e]">
-                                        {app.ticket_number}
-                                    </td>
-                                    <td className="px-5 py-3.5 font-medium text-[#12213e]">
-                                        {app.applicant_name ?? '—'}
-                                    </td>
-                                    <td className="px-5 py-3.5">
-                                        {app.institution_name}
-                                    </td>
-                                    <td className="px-5 py-3.5 text-slate-600">
-                                        {app.division ?? '—'}
-                                    </td>
-                                    <td className="px-5 py-3.5 text-slate-500">
-                                        {app.forwarded_at
-                                            ? formatDate(app.forwarded_at)
-                                            : '—'}
-                                    </td>
-                                    <td className="px-5 py-3.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="font-mono text-xs font-semibold text-[#12213e]">
+                                            {app.ticket_number}
+                                        </span>
                                         <StatusBadge
                                             status={app.status}
                                             label={OPD_STATUS_LABEL[app.status]}
                                         />
-                                    </td>
-                                    <td className="px-5 py-3.5 text-right">
-                                        <button
-                                            type="button"
-                                            onClick={() => setActive(app)}
-                                            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-[#106feb] transition hover:bg-[#cddcef]/40"
-                                        >
-                                            {app.status === 'forwarded_opd'
-                                                ? 'Putuskan'
-                                                : 'Detail'}
-                                            <ArrowRight className="size-3.5" />
-                                        </button>
-                                    </td>
-                                </tr>
+                                    </div>
+                                    <p className="text-sm font-bold text-[#12213e]">
+                                        {app.applicant_name ?? '—'}
+                                    </p>
+                                    <p className="flex items-center gap-1.5 text-sm font-medium text-[#12213e]">
+                                        <Building2 className="size-3.5 text-slate-400" />{' '}
+                                        {app.institution_name}
+                                    </p>
+                                    <p className="flex items-center gap-1.5 text-xs text-slate-500">
+                                        <GraduationCap className="size-3.5" />{' '}
+                                        {app.tujuan_magang}
+                                    </p>
+                                    <div className="flex items-center gap-4 text-xs text-slate-400">
+                                        <span className="flex items-center gap-1">
+                                            <Calendar className="size-3" />{' '}
+                                            {app.forwarded_at
+                                                ? formatDate(app.forwarded_at)
+                                                : '—'}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <Clock className="size-3" />{' '}
+                                            {app.duration_months} bln
+                                        </span>
+                                    </div>
+                                </button>
                             ))}
-                        </tbody>
-                    </table>
-
-                    {/* Mobile */}
-                    <div className="divide-y divide-slate-100 md:hidden">
-                        {filtered.map((app) => (
-                            <button
-                                key={app.id}
-                                type="button"
-                                onClick={() => setActive(app)}
-                                className="flex w-full flex-col gap-2 px-4 py-4 text-left transition hover:bg-slate-50/60"
-                            >
-                                <div className="flex items-center justify-between gap-2">
-                                    <span className="font-mono text-xs font-semibold text-[#12213e]">
-                                        {app.ticket_number}
-                                    </span>
-                                    <StatusBadge
-                                        status={app.status}
-                                        label={OPD_STATUS_LABEL[app.status]}
-                                    />
-                                </div>
-                                <p className="text-sm font-bold text-[#12213e]">
-                                    {app.applicant_name ?? '—'}
-                                </p>
-                                <p className="flex items-center gap-1.5 text-sm font-medium text-[#12213e]">
-                                    <Building2 className="size-3.5 text-slate-400" />{' '}
-                                    {app.institution_name}
-                                </p>
-                                <p className="flex items-center gap-1.5 text-xs text-slate-500">
-                                    <GraduationCap className="size-3.5" />{' '}
-                                    {app.tujuan_magang}
-                                </p>
-                                <div className="flex items-center gap-4 text-xs text-slate-400">
-                                    <span className="flex items-center gap-1">
-                                        <Calendar className="size-3" />{' '}
-                                        {app.forwarded_at
-                                            ? formatDate(app.forwarded_at)
-                                            : '—'}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                        <Clock className="size-3" />{' '}
-                                        {app.duration_months} bln
-                                    </span>
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-
-                    {filtered.length === 0 && (
-                        <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
-                            <ClipboardCheck className="size-10 text-slate-300" />
-                            <p className="text-sm font-medium text-slate-500">
-                                Tidak ada pengajuan pada filter ini.
-                            </p>
                         </div>
-                    )}
-                </div>
+
+                        {filtered.length === 0 && (
+                            <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
+                                <ClipboardCheck className="size-10 text-slate-300" />
+                                <p className="text-sm font-medium text-slate-500">
+                                    {query.trim()
+                                        ? `Tidak ada hasil untuk “${query.trim()}” pada filter ${FILTER_LABEL[filter]}.`
+                                        : `Tidak ada pengajuan berstatus ${FILTER_LABEL[filter]}.`}
+                                </p>
+                                {query.trim() && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuery('')}
+                                        className="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold text-[#106feb] transition-colors hover:bg-[#cddcef]/40"
+                                    >
+                                        Hapus pencarian
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                {/* Setelan OPD ditaruh paling bawah & terlipat: jarang diubah,
+                    jadi tak boleh mendorong daftar kerja ke bawah layar. */}
+                <KelolaOpdPanel opd={opd} signers={signers} />
             </div>
 
             <DecisionDialog

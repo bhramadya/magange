@@ -32,6 +32,12 @@ test('opd dashboard is scoped to the admin own opd and unwraps props', function 
         ->where('opd.quota', 8)
         ->where('opd.quota_used', 2)
         ->where('user.role', 'admin_opd')
+        // Dibaca kartu "Kelola OPD" yang dapat dilipat di dasbor (kuota, tag,
+        // data surat, penandatangan). MagangLayout juga butuh user.name —
+        // prop yang hilang di sini = layar putih, bukan error server.
+        ->has('user.name')
+        ->has('opd.description')
+        ->has('signers')
     );
 });
 

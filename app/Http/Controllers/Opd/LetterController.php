@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Opd\StoreOpdSignerRequest;
 use App\Http\Requests\Opd\UpdateLetterheadRequest;
 use App\Http\Requests\Opd\UpdateLetterTemplateRequest;
+use App\Http\Resources\MagangUserResource;
 use App\Http\Resources\OpdResource;
 use App\Models\OpdLetterTemplate;
 use App\Services\LetterDocumentService;
@@ -21,6 +22,10 @@ class LetterController extends Controller
         $opd = $request->user()->opd;
 
         return Inertia::render('opd/surat', [
+            // Wajib: halaman ini membungkus dirinya dengan MagangLayout, yang
+            // membaca user.role/name — tanpa prop ini render React melempar
+            // TypeError dan halaman tampil kosong (blank putih).
+            'user' => new MagangUserResource($request->user()),
             'opd' => new OpdResource($opd),
             'templates' => [
                 OpdLetterTemplate::TYPE_ACCEPTANCE => OpdLetterTemplate::query()
