@@ -80,11 +80,25 @@ test('the sent email really carries the pdf as an attachment', function () {
     $message = Mail::mailer('array')->getSymfonyTransport()->messages()->last()->getOriginalMessage();
     $attachments = $message->getAttachments();
 
-    expect($attachments)->toHaveCount(1);
-    expect($attachments[0]->getFilename())->toBe("surat-penerimaan-{$app->ticket_number}.pdf");
-    expect($attachments[0]->getMediaType().'/'.$attachments[0]->getMediaSubtype())->toBe('application/pdf');
-    // Isinya benar-benar PDF, bukan lampiran kosong/nol byte.
-    expect($attachments[0]->getBody())->toStartWith('%PDF');
+    expect($attachments)->toHaveCount(2);
+    $pdf = collect($attachments)->first(
+        fn ($attachment) => $attachment->getMediaType().'/'.$attachment->getMediaSubtype() === 'application/pdf'
+    );
+    $logo = collect($attachments)->first(
+        fn ($attachment) => $attachment->getMediaType().'/'.$attachment->getMediaSubtype() === 'image/png'
+    );
+
+    expect($pdf)->not->toBeNull()
+        ->and($pdf->getFilename())->toBe("surat-penerimaan-{$app->ticket_number}.pdf")
+        // Isinya benar-benar PDF, bukan lampiran kosong/nol byte.
+        ->and($pdf->getBody())->toStartWith('%PDF');
+    expect($logo)->not->toBeNull();
+
+    // Logo email disematkan inline (CID), bukan di-fetch dari APP_URL, jadi
+    // email tetap menampilkan gambar walau APP_URL lokal/ngrok tidak hidup.
+    expect($message->getHtmlBody())
+        ->toContain('cid:')
+        ->not->toContain('images/Lambang_Kota_Madiun.png');
 });
 
 test('job fails loudly when the pdf cannot be stored instead of emailing a letterless notice', function () {

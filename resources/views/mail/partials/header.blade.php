@@ -1,12 +1,17 @@
 {{--
     Header email branded — background strip gradien biru, logo Lambang Kota
     Madiun besar + wordmark "magang kota Madiun", badge status, garis pemisah.
+    Logo disematkan inline (CID) agar tampil walau APP_URL lokal/ngrok mati;
+    fallback ke URL remote bila file PNG tidak ada.
 --}}
 @php
     $badge = $badge ?? null;
     $badgeBg = $badgeBg ?? '#e8f2fe';
     $badgeText = $badgeText ?? '#106feb';
-    $logoUrl = rtrim(config('app.url'), '/') . '/images/Lambang_Kota_Madiun.png';
+    $logoPath = public_path('images/Lambang_Kota_Madiun.png');
+    $logoSrc = is_file($logoPath)
+        ? $message->embed($logoPath)
+        : rtrim(config('app.url'), '/') . '/images/Lambang_Kota_Madiun.png';
 @endphp
 {{-- Strip header gradien biru --}}
 <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
@@ -15,7 +20,7 @@
 <table cellpadding="0" cellspacing="0" role="presentation">
 <tr>
 <td class="email-logo-cell" valign="middle" style="padding-right: 16px;">
-<img class="email-logo-img" src="{{ $logoUrl }}" alt="Lambang Kota Madiun" width="56"
+<img class="email-logo-img" src="{{ $logoSrc }}" alt="Lambang Kota Madiun" width="56"
      style="display:block; width:56px; height:auto; border:0; filter:drop-shadow(0 4px 12px rgba(0,0,0,0.35));">
 </td>
 <td class="email-wordmark-cell" valign="middle" style="border-left: 2px solid rgba(255,255,255,0.25); padding-left: 16px;">
