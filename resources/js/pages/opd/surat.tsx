@@ -126,7 +126,8 @@ function LetterheadSection({ opd }: { opd: Opd }) {
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <p className="flex items-center gap-1.5 text-sm font-bold text-[#12213e]">
-                        <FileText className="size-4 text-[#106feb]" /> Data Surat
+                        <FileText className="size-4 text-[#106feb]" /> Data
+                        Surat
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
                         Dipakai sebagai kop pada Surat Penerimaan dan
@@ -198,9 +199,7 @@ function LetterheadSection({ opd }: { opd: Opd }) {
                         <input
                             id="letterhead_address"
                             value={address}
-                            onChange={(event) =>
-                                setAddress(event.target.value)
-                            }
+                            onChange={(event) => setAddress(event.target.value)}
                             placeholder="mis. Jl. Perintis Kemerdekaan No. 32, Madiun"
                             className={`mt-1 ${inputClass}`}
                         />

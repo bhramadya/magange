@@ -2,14 +2,13 @@ import { Head, useForm } from '@inertiajs/react';
 import type { ChangeEvent } from 'react';
 import { StatusBadge } from '@/components/status-badge';
 import MagangLayout, { opdNav } from '@/layouts/magang-layout';
-import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
-type Signer = {
-    id: number;
-    name: string;
-    title: string;
-    nip: string;
-    is_primary: boolean;
-};
+import type {
+    InternshipApplication,
+    MagangUser,
+    Opd,
+    Signer,
+} from '@/types/magang';
+
 interface Props {
     user: MagangUser;
     opd: Opd;

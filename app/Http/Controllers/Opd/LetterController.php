@@ -14,6 +14,7 @@ use App\Models\InternshipApplication;
 use App\Models\OpdLetterTemplate;
 use App\Models\OpdSigner;
 use App\Services\LetterDocumentService;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -175,18 +176,13 @@ class LetterController extends Controller
     private function signedDocuments(Request $request, string $cari): array
     {
         $opdId = $request->user()->opd_id;
+        $cocok = $this->pencarianPengajuan($cari);
 
         $acceptances = InternshipApplication::query()
             ->with('user')
             ->where('opd_id', $opdId)
             ->whereNotNull('acceptance_signed_path')
-            ->when($cari !== '', fn (Builder $query): Builder => $query->where(
-                fn (Builder $inner): Builder => $inner
-                    ->whereRaw('lower(sk_number) like ?', ['%'.mb_strtolower($cari).'%'])
-                    ->orWhereRaw('lower(ticket_number) like ?', ['%'.mb_strtolower($cari).'%'])
-                    ->orWhereHas('user', fn (Builder $user): Builder => $user
-                        ->whereRaw('lower(name) like ?', ['%'.mb_strtolower($cari).'%'])),
-            ))
+            ->when($cari !== '', $cocok)
             ->get()
             ->map(fn (InternshipApplication $application): array => [
                 'key' => 'acceptance-'.$application->id,
@@ -203,14 +199,7 @@ class LetterController extends Controller
             ->with('application.user')
             ->whereHas('application', fn (Builder $query): Builder => $query->where('opd_id', $opdId))
             ->where('file_path', '!=', '')
-            ->when($cari !== '', fn (Builder $query): Builder => $query->whereHas(
-                'application',
-                fn (Builder $application): Builder => $application
-                    ->whereRaw('lower(sk_number) like ?', ['%'.mb_strtolower($cari).'%'])
-                    ->orWhereRaw('lower(ticket_number) like ?', ['%'.mb_strtolower($cari).'%'])
-                    ->orWhereHas('user', fn (Builder $user): Builder => $user
-                        ->whereRaw('lower(name) like ?', ['%'.mb_strtolower($cari).'%'])),
-            ))
+            ->when($cari !== '', fn (Builder $query): Builder => $query->whereHas('application', $cocok))
             ->get()
             ->map(fn (Certificate $certificate): array => [
                 'key' => 'certificate-'.$certificate->id,
@@ -223,10 +212,34 @@ class LetterController extends Controller
                 'download_url' => route('opd.surat.arsip.sertifikat', $certificate),
             ]);
 
-        return $acceptances->concat($certificates)
-            ->sortByDesc('issued_at')
-            ->values()
-            ->all();
+        return array_values(
+            $acceptances->concat($certificates)
+                ->sortByDesc('issued_at')
+                ->all(),
+        );
+    }
+
+    /**
+     * Filter pencarian arsip: Nomor SK lebih dulu (itu yang dicari admin),
+     * nomor tiket & nama peserta sebagai jaring.
+     *
+     * Grup OR SELALU dibungkus `where()` bersarang — di dalam `whereHas`,
+     * `orWhere` yang tidak dibungkus keluar dari klausa korelasi sehingga
+     * sertifikat mana pun ikut cocok begitu ada satu pengajuan yang cocok.
+     *
+     * @return Closure(Builder<InternshipApplication>): Builder<InternshipApplication>
+     */
+    private function pencarianPengajuan(string $cari): Closure
+    {
+        $kunci = '%'.mb_strtolower($cari).'%';
+
+        return fn (Builder $query): Builder => $query->where(
+            fn (Builder $inner): Builder => $inner
+                ->whereRaw('lower(sk_number) like ?', [$kunci])
+                ->orWhereRaw('lower(ticket_number) like ?', [$kunci])
+                ->orWhereHas('user', fn (Builder $user): Builder => $user
+                    ->whereRaw('lower(name) like ?', [$kunci])),
+        );
     }
 
     private function authorizeSigner(Request $request, OpdSigner $signer): void

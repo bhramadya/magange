@@ -21,7 +21,6 @@ import {
     Users,
     Pencil,
     Award,
-    FileText,
     Plus,
     Trash2,
 } from 'lucide-react';
@@ -47,6 +46,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import MagangLayout, { opdNav } from '@/layouts/magang-layout';
+import { opdReadiness } from '@/lib/opd-readiness';
 import { cn } from '@/lib/utils';
 import type {
     ApplicationStatus,
@@ -694,11 +694,7 @@ function TagEditor({ opd }: { opd: Opd }) {
  */
 type PlacementType = 'division' | 'field_supervisor' | 'person_in_charge';
 
-function PlacementOptionRow({
-    option,
-}: {
-    option: PlacementOption;
-}) {
+function PlacementOptionRow({ option }: { option: PlacementOption }) {
     const [editing, setEditing] = useState(false);
     const [confirming, setConfirming] = useState(false);
     const [value, setValue] = useState(option.name);
@@ -713,9 +709,7 @@ function PlacementOptionRow({
                     onChange={(event) => setValue(event.target.value)}
                     className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
                 />
-                {error && (
-                    <p className="mt-1 text-xs text-rose-600">{error}</p>
-                )}
+                {error && <p className="mt-1 text-xs text-rose-600">{error}</p>}
                 <div className="mt-2 flex items-center gap-1.5">
                     <button
                         type="button"
@@ -792,13 +786,10 @@ function PlacementOptionRow({
                             disabled={processing}
                             onClick={() => {
                                 setProcessing(true);
-                                router.delete(
-                                    destroyPlacement.url(option.id),
-                                    {
-                                        preserveScroll: true,
-                                        onFinish: () => setProcessing(false),
-                                    },
-                                );
+                                router.delete(destroyPlacement.url(option.id), {
+                                    preserveScroll: true,
+                                    onFinish: () => setProcessing(false),
+                                });
                             }}
                             className="cursor-pointer rounded-lg bg-rose-600 px-2 py-1 text-xs font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
                         >
@@ -839,6 +830,7 @@ function PlacementOptionEditor({
         if (value.trim() === '' || processing) {
             return;
         }
+
         setProcessing(true);
         setError(null);
         router.post(
@@ -1034,18 +1026,27 @@ function DetailRow({
     );
 }
 
+/**
+ * `options` (opsional) = master penempatan dari Kelola OPD. Dirender sebagai
+ * `<datalist>`: admin bisa MEMILIH dari daftar atau tetap mengetik nama baru
+ * — kasus mendadak tidak terhalang harus mendaftarkan master lebih dulu.
+ */
 function Field({
     label,
     value,
     onChange,
     placeholder,
     icon: Icon,
+    options,
+    listId,
 }: {
     label: string;
     value: string;
     onChange: (v: string) => void;
     placeholder?: string;
     icon?: typeof UserCog;
+    options?: PlacementOption[];
+    listId?: string;
 }) {
     return (
         <div className="space-y-1.5">
@@ -1058,8 +1059,16 @@ function Field({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
+                list={options && options.length > 0 ? listId : undefined}
                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-[#0a1628] transition outline-none placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15"
             />
+            {options && options.length > 0 && (
+                <datalist id={listId}>
+                    {options.map((option) => (
+                        <option key={option.id} value={option.name} />
+                    ))}
+                </datalist>
+            )}
         </div>
     );
 }
@@ -1371,12 +1380,35 @@ function DecisionDialog({
                                             surat untuk proses TTE.
                                         </p>
 
+                                        {!opdReady.ready && (
+                                            <div className="flex gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+                                                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-rose-600" />
+                                                <p className="text-xs leading-relaxed text-rose-800">
+                                                    Belum bisa menyetujui:{' '}
+                                                    {opdReady.missing.join(
+                                                        ' dan ',
+                                                    )}{' '}
+                                                    belum siap. Lengkapi lebih
+                                                    dahulu di menu{' '}
+                                                    <a
+                                                        href="/opd/surat"
+                                                        className="font-bold underline"
+                                                    >
+                                                        Kelola Surat
+                                                    </a>
+                                                    .
+                                                </p>
+                                            </div>
+                                        )}
+
                                         <Field
                                             label="Divisi / Bidang"
                                             value={division}
                                             onChange={setDivision}
                                             placeholder="cth. Bidang Infrastruktur TIK"
                                             icon={Briefcase}
+                                            options={placementOptions.division}
+                                            listId="dlg-divisi"
                                         />
                                         <Field
                                             label="Pembimbing Lapangan"
@@ -1384,6 +1416,10 @@ function DecisionDialog({
                                             onChange={setFieldSupervisor}
                                             placeholder="Nama pembimbing dari OPD"
                                             icon={UserCog}
+                                            options={
+                                                placementOptions.field_supervisor
+                                            }
+                                            listId="dlg-pembimbing"
                                         />
                                         <Field
                                             label="Penanggung Jawab"
@@ -1391,10 +1427,17 @@ function DecisionDialog({
                                             onChange={setPersonInCharge}
                                             placeholder="cth. Kepala Bidang"
                                             icon={UserCog}
+                                            options={
+                                                placementOptions.person_in_charge
+                                            }
+                                            listId="dlg-penanggung-jawab"
                                         />
                                         <div className="space-y-1.5">
                                             <label className="text-sm font-semibold text-[#0a1628]">
-                                                Penandatangan
+                                                Penandatangan{' '}
+                                                <span className="text-rose-600">
+                                                    *
+                                                </span>
                                             </label>
                                             <select
                                                 value={signerId}
@@ -1406,7 +1449,9 @@ function DecisionDialog({
                                                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm"
                                             >
                                                 <option value="">
-                                                    Pilih penandatangan
+                                                    {signers.length > 0
+                                                        ? 'Pilih penandatangan'
+                                                        : 'Belum ada penandatangan'}
                                                 </option>
                                                 {signers.map((signer) => (
                                                     <option
@@ -1548,11 +1593,18 @@ function DecisionDialog({
 }
 
 /* ---- Halaman --------------------------------------------------------- */
+const EMPTY_PLACEMENT_OPTIONS: PlacementOptions = {
+    division: [],
+    field_supervisor: [],
+    person_in_charge: [],
+};
+
 interface OpdDashboardProps {
     user?: MagangUser;
     opd?: Opd;
     applications?: InternshipApplication[];
     signers?: Signer[];
+    placementOptions?: PlacementOptions;
 }
 
 export default function OpdDashboard({
@@ -1560,6 +1612,7 @@ export default function OpdDashboard({
     opd = THIS_OPD,
     applications = MOCK_APPLICATIONS,
     signers = [],
+    placementOptions = EMPTY_PLACEMENT_OPTIONS,
 }: OpdDashboardProps) {
     const { acceptanceDraftUrl, acceptanceDraftName } = usePage<{
         acceptanceDraftUrl?: string;
@@ -1572,6 +1625,10 @@ export default function OpdDashboard({
     const [filter, setFilter] = useState<FilterKey>('forwarded_opd');
     const [query, setQuery] = useState('');
     const [active, setActive] = useState<InternshipApplication | null>(null);
+
+    // Kesiapan OPD untuk menyetujui (penandatangan + Data Surat) — cermin
+    // gate backend di ApproveApplicationRequest.
+    const opdReady = useMemo(() => opdReadiness(opd, signers), [opd, signers]);
 
     // Semua angka (kartu maupun chip) dihitung dengan matchFilter yang sama
     // dipakai tabel, jadi angka pada kontrol = jumlah baris yang tampil saat
@@ -1846,7 +1903,7 @@ export default function OpdDashboard({
 
                 {/* Setelan OPD ditaruh paling bawah & terlipat: jarang diubah,
                     jadi tak boleh mendorong daftar kerja ke bawah layar. */}
-                <KelolaOpdPanel opd={opd} signers={signers} />
+                <KelolaOpdPanel opd={opd} placementOptions={placementOptions} />
             </div>
 
             <DecisionDialog
@@ -1857,6 +1914,8 @@ export default function OpdDashboard({
                 onRejected={(id) => applyStatus(id, 'rejected')}
                 onCompleted={(id) => applyStatus(id, 'completed')}
                 signers={signers}
+                placementOptions={placementOptions}
+                opdReady={opdReady}
             />
             {showDraftPopup && acceptanceDraftUrl && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">

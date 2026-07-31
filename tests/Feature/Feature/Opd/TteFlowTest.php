@@ -443,6 +443,295 @@ test('admin OPD lain tidak bisa mengunduh draft atau mengunggah dokumen TTE', fu
     Queue::assertNotPushed(SendSignedAcceptanceLetterJob::class);
 });
 
+/*
+|--------------------------------------------------------------------------
+| Gate ACC: penandatangan + Data Surat wajib sebelum menyetujui
+|--------------------------------------------------------------------------
+| Bug yang ditutup di sini: `signer_id` dulu hanya wajib BILA OPD sudah punya
+| penandatangan, dan SubmissionService memilih status semata-mata dari
+| "$signer === null". Akibatnya OPD yang belum sempat mendaftarkan
+| penandatangan bisa meng-ACC, pengajuan langsung `approved` + email otomatis
+| berkop generik, dan TIDAK PERNAH muncul di Menunggu TTE.
+*/
+
+test('ACC ditolak bila penandatangan tidak dipilih dan pengajuan tetap di antrean', function () {
+    Storage::fake('local');
+    Queue::fake();
+    $opd = tteOpd();
+    $admin = User::factory()->opdAdmin($opd->id)->create();
+    tteSigner($opd);
+    $application = InternshipApplication::factory()->create([
+        'opd_id' => $opd->id,
+        'status' => ApplicationStatus::ForwardedOpd,
+    ]);
+    $kuotaAwal = $opd->quota_used;
+
+    $this->actingAs($admin)->post("/opd/pengajuan/{$application->id}/approve", [
+        'division' => 'Bidang Arsip',
+        'field_supervisor' => 'Sari',
+        'person_in_charge' => 'Kepala Bidang',
+    ])->assertSessionHasErrors('signer_id');
+
+    expect($application->refresh()->status)->toBe(ApplicationStatus::ForwardedOpd)
+        ->and($application->acceptance_signer_name)->toBeNull()
+        ->and($opd->refresh()->quota_used)->toBe($kuotaAwal);
+    Queue::assertNotPushed(GenerateJobAcceptanceLetter::class);
+});
+
+test('ACC ditolak bila OPD belum punya penandatangan sama sekali', function () {
+    Storage::fake('local');
+    Queue::fake();
+    // OPD dengan kop lengkap tapi tanpa satu pun penandatangan.
+    $opd = tteOpd();
+    $admin = User::factory()->opdAdmin($opd->id)->create();
+    $application = InternshipApplication::factory()->create([
+        'opd_id' => $opd->id,
+        'status' => ApplicationStatus::ForwardedOpd,
+    ]);
+
+    $this->actingAs($admin)->post("/opd/pengajuan/{$application->id}/approve", [
+        'division' => 'Bidang Arsip',
+        'field_supervisor' => 'Sari',
+        'person_in_charge' => 'Kepala Bidang',
+    ])->assertSessionHasErrors('signer_id');
+
+    expect($application->refresh()->status)->toBe(ApplicationStatus::ForwardedOpd);
+    Queue::assertNotPushed(GenerateJobAcceptanceLetter::class);
+});
+
+test('ACC ditolak bila Data Surat OPD belum lengkap', function () {
+    Storage::fake('local');
+    Queue::fake();
+    $opd = Opd::create(['name' => 'Dinas Kearsipan', 'code' => 'ARSIP', 'quota_total' => 5]);
+    $admin = User::factory()->opdAdmin($opd->id)->create();
+    $signer = tteSigner($opd);
+    $application = InternshipApplication::factory()->create([
+        'opd_id' => $opd->id,
+        'status' => ApplicationStatus::ForwardedOpd,
+    ]);
+
+    $this->actingAs($admin)->post("/opd/pengajuan/{$application->id}/approve", [
+        'division' => 'Bidang Arsip',
+        'field_supervisor' => 'Sari',
+        'person_in_charge' => 'Kepala Bidang',
+        'signer_id' => $signer->id,
+    ])->assertSessionHasErrors('letterhead');
+
+    expect($application->refresh()->status)->toBe(ApplicationStatus::ForwardedOpd);
+    Queue::assertNotPushed(GenerateJobAcceptanceLetter::class);
+});
+
+test('ACC lengkap membuat pengajuan tampil di daftar Menunggu TTE', function () {
+    Storage::fake('local');
+    Queue::fake();
+    $opd = tteOpd();
+    $admin = User::factory()->opdAdmin($opd->id)->create();
+    $signer = tteSigner($opd);
+    $application = InternshipApplication::factory()->create([
+        'opd_id' => $opd->id,
+        'status' => ApplicationStatus::ForwardedOpd,
+    ]);
+
+    $this->actingAs($admin)->post("/opd/pengajuan/{$application->id}/approve", [
+        'division' => 'Bidang Arsip',
+        'field_supervisor' => 'Sari',
+        'person_in_charge' => 'Kepala Bidang',
+        'signer_id' => $signer->id,
+    ])->assertSessionHasNoErrors();
+
+    expect($application->refresh()->status)->toBe(ApplicationStatus::WaitingTte);
+
+    $this->actingAs($admin)->get('/opd/menunggu-tte')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('applications', 1));
+});
+
+test('pengajuan lama tanpa penandatangan bisa ditarik kembali ke Menunggu TTE', function () {
+    Storage::fake('local');
+    Queue::fake();
+    $opd = tteOpd();
+    $admin = User::factory()->opdAdmin($opd->id)->create();
+    $signer = tteSigner($opd);
+    $opd->update(['quota_used' => 1]);
+    $application = InternshipApplication::factory()->create([
+        'opd_id' => $opd->id,
+        'status' => ApplicationStatus::Approved,
+        'sk_number' => '503.11/1/401.106/2026',
+        'acceptance_signer_name' => null,
+    ]);
+
+    $this->actingAs($admin)->post("/opd/pengajuan/{$application->id}/tarik-tte", [
+        'signer_id' => $signer->id,
+    ])->assertSessionHasNoErrors();
+
+    $application->refresh();
+    expect($application->status)->toBe(ApplicationStatus::WaitingTte)
+        ->and($application->acceptance_signer_name)->toBe('Budi Santoso')
+        ->and($application->acceptance_draft_path)->not->toBeNull()
+        // Kuota sudah dihitung saat approve & nomor SK sudah terbit — keduanya
+        // tidak boleh berubah karena penarikan ini.
+        ->and($opd->refresh()->quota_used)->toBe(1)
+        ->and($application->sk_number)->toBe('503.11/1/401.106/2026');
+
+    // Pengajuan yang SUDAH punya snapshot tidak boleh ditarik lagi.
+    $this->actingAs($admin)->post("/opd/pengajuan/{$application->id}/tarik-tte", [
+        'signer_id' => $signer->id,
+    ])->assertSessionHasErrors('signer_id');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Kelola Surat: CRUD penandatangan + arsip dokumen bertanda tangan
+|--------------------------------------------------------------------------
+*/
+
+test('penandatangan bisa diubah, dijadikan utama, dan dihapus tanpa merusak snapshot dokumen lama', function () {
+    $opd = tteOpd();
+    $admin = User::factory()->opdAdmin($opd->id)->create();
+    $lama = tteSigner($opd);
+    $baru = tteSigner($opd, 'Siti Aminah', false);
+
+    // Dokumen lama menyimpan snapshot, bukan referensi hidup.
+    $application = InternshipApplication::factory()->create([
+        'opd_id' => $opd->id,
+        'status' => ApplicationStatus::WaitingTte,
+        'acceptance_signer_id' => $lama->id,
+        'acceptance_signer_name' => $lama->name,
+        'acceptance_signer_title' => $lama->title,
+        'acceptance_signer_nip' => $lama->nip,
+    ]);
+
+    // Ubah data.
+    $this->actingAs($admin)->put("/opd/penandatangan/{$baru->id}", [
+        'name' => 'Siti Aminah, S.H.',
+        'title' => 'Plt. Kepala Dinas',
+        'nip' => '198505052010012002',
+    ])->assertRedirect()->assertSessionHasNoErrors();
+    expect($baru->refresh()->name)->toBe('Siti Aminah, S.H.');
+
+    // Jadikan utama → yang lama turun.
+    $this->actingAs($admin)->put("/opd/penandatangan/{$baru->id}", [
+        'name' => 'Siti Aminah, S.H.',
+        'title' => 'Plt. Kepala Dinas',
+        'nip' => '198505052010012002',
+        'is_primary' => true,
+    ])->assertRedirect();
+    expect($baru->refresh()->is_primary)->toBeTrue()
+        ->and($lama->refresh()->is_primary)->toBeFalse();
+
+    // Hapus yang lama → snapshot pada pengajuan tetap menyebut dia.
+    $this->actingAs($admin)->delete("/opd/penandatangan/{$lama->id}")->assertRedirect();
+    expect($opd->signers()->count())->toBe(1)
+        ->and($application->refresh()->acceptance_signer_name)->toBe('Budi Santoso')
+        ->and($application->acceptance_signer_id)->toBeNull();
+});
+
+test('admin OPD lain tidak bisa mengubah atau menghapus penandatangan', function () {
+    $opd = tteOpd();
+    $signer = tteSigner($opd);
+    $opdLain = Opd::create(['name' => 'Dinas Pendidikan', 'code' => 'DPK']);
+    $penyusup = User::factory()->opdAdmin($opdLain->id)->create();
+
+    $this->actingAs($penyusup)->put("/opd/penandatangan/{$signer->id}", [
+        'name' => 'Penyusup',
+        'title' => 'Kepala Dinas',
+        'nip' => '1',
+    ])->assertForbidden();
+    $this->actingAs($penyusup)->delete("/opd/penandatangan/{$signer->id}")->assertForbidden();
+
+    expect($signer->refresh()->name)->toBe('Budi Santoso');
+});
+
+test('arsip Kelola Surat hanya memuat dokumen OPD sendiri dan bisa dicari lewat nomor SK', function () {
+    Storage::fake('local');
+    $opd = tteOpd();
+    $admin = User::factory()->opdAdmin($opd->id)->create();
+    $opdLain = Opd::create(['name' => 'Dinas Pendidikan', 'code' => 'DPK']);
+
+    $milikKita = InternshipApplication::factory()->create([
+        'opd_id' => $opd->id,
+        'status' => ApplicationStatus::Ongoing,
+        'sk_number' => '503.11/7/401.106/2026',
+        'acceptance_signed_path' => 'acceptance-signed/1/surat.pdf',
+    ]);
+    InternshipApplication::factory()->create([
+        'opd_id' => $opdLain->id,
+        'status' => ApplicationStatus::Ongoing,
+        'sk_number' => '503.11/9/401.106/2026',
+        'acceptance_signed_path' => 'acceptance-signed/2/surat.pdf',
+    ]);
+    // Draft sertifikat (file_path masih kosong) belum masuk arsip.
+    Certificate::create([
+        'application_id' => $milikKita->id,
+        'file_name' => 'Sertifikat.pdf',
+        'file_path' => '',
+        'is_download_locked' => false,
+        'uploaded_by' => $admin->id,
+    ]);
+
+    // Sertifikat SIAP milik pengajuan lain di OPD ini, nomor SK-nya berbeda.
+    // Ini yang menangkap bug korelasi: grup OR di dalam whereHas yang tidak
+    // dibungkus membuat sertifikat ini muncul untuk nomor SK APA PUN.
+    $lain = InternshipApplication::factory()->create([
+        'opd_id' => $opd->id,
+        'status' => ApplicationStatus::Completed,
+        'sk_number' => '503.11/8/401.106/2026',
+    ]);
+    Certificate::create([
+        'application_id' => $lain->id,
+        'file_name' => 'Sertifikat.pdf',
+        'file_path' => 'certificates/'.$lain->id.'/sertifikat.pdf',
+        'is_download_locked' => false,
+        'uploaded_by' => $admin->id,
+    ]);
+
+    // Surat penerimaan milik kita + sertifikat siap; milik OPD lain & draft
+    // kosong tidak ikut.
+    $this->actingAs($admin)->get('/opd/surat')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('signers')
+            ->has('documents', 2));
+
+    // Nomor SK milik OPD lain tidak boleh ditemukan dari sini.
+    $this->actingAs($admin)->get('/opd/surat?cari=503.11/9')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('documents', 0)->where('filters.cari', '503.11/9'));
+
+    // Pencarian nomor SK surat penerimaan tidak boleh ikut menarik sertifikat
+    // bernomor SK lain.
+    $this->actingAs($admin)->get('/opd/surat?cari=503.11/7')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('documents', 1)
+            ->where('documents.0.sk_number', '503.11/7/401.106/2026')
+            ->where('documents.0.type', 'acceptance'));
+
+    $this->actingAs($admin)->get('/opd/surat?cari=503.11/8')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('documents', 1)
+            ->where('documents.0.type', 'certificate'));
+});
+
+test('unduhan arsip menolak dokumen milik OPD lain', function () {
+    Storage::fake('local');
+    $opd = tteOpd();
+    $opdLain = Opd::create(['name' => 'Dinas Pendidikan', 'code' => 'DPK']);
+    $penyusup = User::factory()->opdAdmin($opdLain->id)->create();
+    $admin = User::factory()->opdAdmin($opd->id)->create();
+
+    $application = InternshipApplication::factory()->create([
+        'opd_id' => $opd->id,
+        'status' => ApplicationStatus::Ongoing,
+        'acceptance_signed_path' => 'acceptance-signed/1/surat.pdf',
+    ]);
+    Storage::disk('local')->put('acceptance-signed/1/surat.pdf', '%PDF-fake');
+
+    $this->actingAs($penyusup)->get("/opd/surat/arsip/{$application->id}/penerimaan")->assertForbidden();
+    $this->actingAs($admin)->get("/opd/surat/arsip/{$application->id}/penerimaan")->assertOk();
+});
+
 test('sertifikat bertanda tangan tak bisa diunggah sebelum draftnya dibuat', function () {
     Storage::fake('local');
     Queue::fake();

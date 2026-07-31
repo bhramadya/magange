@@ -17,6 +17,7 @@ import {
     Loader2,
     Upload,
     History,
+    FileSignature,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import type { ChangeEvent, FormEvent } from 'react';
@@ -38,6 +39,7 @@ import type {
     MagangUser,
     Opd,
     PresensiEntry,
+    Signer,
 } from '@/types/magang';
 
 /* =========================================================================
@@ -337,6 +339,90 @@ function CompleteAction({
                     Batal
                 </button>
             </div>
+        </div>
+    );
+}
+
+/* ---- tarik ke Menunggu TTE -------------------------------------------
+ * Untuk pengajuan yang berstatus disetujui/sedang magang TAPI tidak punya
+ * snapshot penandatangan: arsip pra-fitur TTE, dan korban bug lama yang
+ * meloloskan ACC tanpa penandatangan. Tanpa tombol ini mereka mustahil
+ * mendapat surat penerimaan resmi bertanda tangan.
+ */
+function ReissueTteAction({
+    applicationId,
+    signers,
+}: {
+    applicationId: number;
+    signers: Signer[];
+}) {
+    const [signerId, setSignerId] = useState(
+        String(signers.find((signer) => signer.is_primary)?.id ?? ''),
+    );
+    const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    if (signers.length === 0) {
+        return (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                Surat penerimaan bertanda tangan belum bisa dibuat — OPD belum
+                punya penandatangan. Tambahkan di menu{' '}
+                <a href="/opd/surat" className="font-bold underline">
+                    Kelola Surat
+                </a>
+                .
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-2 rounded-xl border border-[#cddcef] bg-[#e8f2fe]/50 p-4">
+            <p className="text-xs leading-relaxed text-[#0b4fb0]">
+                Pengajuan ini belum punya surat penerimaan bertanda tangan.
+                Pilih penandatangan untuk membuat suratnya — pengajuan pindah ke
+                <span className="font-semibold"> Menunggu TTE</span>.
+            </p>
+            <select
+                value={signerId}
+                onChange={(event) => setSignerId(event.target.value)}
+                className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"
+            >
+                <option value="">Pilih penandatangan</option>
+                {signers.map((signer) => (
+                    <option key={signer.id} value={signer.id}>
+                        {signer.title} — {signer.name}
+                    </option>
+                ))}
+            </select>
+            {error && <p className="text-xs text-rose-600">{error}</p>}
+            <button
+                type="button"
+                disabled={!signerId || processing}
+                onClick={() => {
+                    setProcessing(true);
+                    setError(null);
+                    router.post(
+                        `/opd/pengajuan/${applicationId}/tarik-tte`,
+                        { signer_id: signerId },
+                        {
+                            preserveScroll: true,
+                            onError: (errs) =>
+                                setError(
+                                    errs.signer_id ?? 'Gagal membuat surat.',
+                                ),
+                            onFinish: () => setProcessing(false),
+                        },
+                    );
+                }}
+                className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#106feb] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0b4fb0] disabled:opacity-50"
+            >
+                {processing ? (
+                    <Loader2 className="size-4 animate-spin" />
+                ) : (
+                    <FileSignature className="size-4" />
+                )}
+                Buat Surat Ber-TTE
+            </button>
         </div>
     );
 }
@@ -696,13 +782,20 @@ function StatusTimeline({ app }: { app: InternshipApplication }) {
 function DetailDialog({
     participant,
     onClose,
+    signers,
 }: {
     participant: Participant | null;
     onClose: () => void;
+    signers: Signer[];
 }) {
     const app = participant?.application ?? null;
     const canComplete =
         app?.status === 'ongoing' || app?.status === 'completion_submitted';
+    // Disetujui/sedang magang tapi tanpa snapshot penandatangan = tidak pernah
+    // melewati alur TTE.
+    const perluTte =
+        (app?.status === 'approved' || app?.status === 'ongoing') &&
+        !app?.acceptance_signer;
 
     return (
         <Dialog
@@ -904,6 +997,14 @@ function DetailDialog({
                                 </p>
                             )}
 
+                        {perluTte && (
+                            <ReissueTteAction
+                                key={`tte-${app.id}`}
+                                applicationId={app.id}
+                                signers={signers}
+                            />
+                        )}
+
                         {canComplete && (
                             <CompleteAction
                                 key={app.id}
@@ -994,12 +1095,14 @@ interface PesertaProps {
     user?: MagangUser;
     opd?: Opd;
     participants?: Participant[];
+    signers?: Signer[];
 }
 
 export default function OpdPeserta({
     user = MOCK_USER,
     opd = THIS_OPD,
     participants = MOCK_PARTICIPANTS,
+    signers = [],
 }: PesertaProps) {
     const [filter, setFilter] = useState<FilterKey>('all');
     const [query, setQuery] = useState('');
@@ -1104,6 +1207,7 @@ export default function OpdPeserta({
             <DetailDialog
                 participant={active}
                 onClose={() => setActive(null)}
+                signers={signers}
             />
         </MagangLayout>
     );

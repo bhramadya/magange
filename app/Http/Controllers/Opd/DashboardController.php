@@ -155,13 +155,14 @@ class DashboardController extends Controller
         $payload = [];
 
         foreach (OpdPlacementOption::types() as $type) {
-            $payload[$type] = $grouped->get($type, collect())
-                ->map(fn (OpdPlacementOption $option): array => [
-                    'id' => $option->id,
-                    'name' => $option->name,
-                ])
-                ->values()
-                ->all();
+            $payload[$type] = array_values(
+                $grouped->get($type, collect())
+                    ->map(fn (OpdPlacementOption $option): array => [
+                        'id' => $option->id,
+                        'name' => $option->name,
+                    ])
+                    ->all(),
+            );
         }
 
         return $payload;

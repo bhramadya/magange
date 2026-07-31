@@ -46,6 +46,8 @@ class ApproveApplicationRequest extends FormRequest
      * Kesiapan OPD dicek setelah aturan field: penandatangan harus sudah
      * terdaftar dan Data Surat (alamat/telepon/pos-el) sudah terisi, keduanya
      * dikelola di menu Kelola Surat.
+     *
+     * @return list<callable>
      */
     public function after(): array
     {
