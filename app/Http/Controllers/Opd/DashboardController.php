@@ -9,8 +9,11 @@ use App\Http\Resources\InternshipApplicationResource;
 use App\Http\Resources\MagangUserResource;
 use App\Http\Resources\OpdResource;
 use App\Models\InternshipApplication;
+use App\Models\OpdPlacementOption;
+use App\Models\OpdSigner;
 use App\Models\PresensiLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -29,7 +32,7 @@ class DashboardController extends Controller
         $user = $request->user();
 
         $applications = InternshipApplication::query()
-            ->with(['user', 'opd', 'forwardedBy'])
+            ->with(['user', 'opd', 'forwardedBy', 'certificate'])
             ->where('opd_id', $user->opd_id)
             ->latest()
             ->get();
@@ -38,6 +41,8 @@ class DashboardController extends Controller
             'user' => new MagangUserResource($user),
             'opd' => new OpdResource($user->opd),
             'applications' => InternshipApplicationResource::collection($applications),
+            'signers' => $this->signers($request),
+            'placementOptions' => $this->placementOptions($request),
         ]);
     }
 
@@ -59,6 +64,8 @@ class DashboardController extends Controller
             'user' => new MagangUserResource($user),
             'opd' => new OpdResource($user->opd),
             'applications' => InternshipApplicationResource::collection($applications),
+            'signers' => $this->signers($request),
+            'placementOptions' => $this->placementOptions($request),
         ]);
     }
 
@@ -81,9 +88,11 @@ class DashboardController extends Controller
             ])
             ->where('opd_id', $user->opd_id)
             ->whereIn('status', [
+                ApplicationStatus::WaitingTte,
                 ApplicationStatus::Approved,
                 ApplicationStatus::Ongoing,
                 ApplicationStatus::CompletionSubmitted,
+                ApplicationStatus::NeedsCertificate,
                 ApplicationStatus::Completed,
             ])
             ->latest()
@@ -103,12 +112,77 @@ class DashboardController extends Controller
                 ->map(fn (PresensiLog $log): array => PresensiController::entryPayload($log))
                 ->values()
                 ->all(),
+            // Riwayat pendaftaran sebelumnya (dossier) — ditampilkan di tab
+            // "Jejak" dialog Kelola Peserta. Bentuk kunci disamakan dengan
+            // Verifikator\UserController supaya bisa pakai komponen bersama.
+            'riwayat_pengajuan' => InternshipApplication::query()
+                ->where('user_id', $app->user_id)
+                ->where('id', '!=', $app->id)
+                ->with('opd:id,name')
+                ->latest()
+                ->get()
+                ->map(fn (InternshipApplication $a): array => [
+                    'ticket_number' => $a->ticket_number,
+                    'status' => $a->status->value,
+                    'opd_name' => $a->opd?->name,
+                    'institution_name' => $a->institution_name,
+                    'start_date' => $a->start_date->toDateString(),
+                    'end_date' => $a->end_date->toDateString(),
+                    'created_at' => $a->created_at?->toIso8601String(),
+                ])->all(),
         ])->all();
 
         return Inertia::render('opd/peserta', [
             'user' => new MagangUserResource($user),
             'opd' => new OpdResource($user->opd),
             'participants' => $participants,
+            // Dipakai tombol "Buat Surat Ber-TTE" untuk pengajuan lama yang
+            // disetujui tanpa snapshot penandatangan.
+            'signers' => $this->signers($request),
         ]);
+    }
+
+    /**
+     * Daftar penandatangan OPD ini, utama lebih dulu.
+     *
+     * @return Collection<int, OpdSigner>
+     */
+    private function signers(Request $request): Collection
+    {
+        return $request->user()->opd->signers()
+            ->orderByDesc('is_primary')
+            ->orderBy('name')
+            ->get(['id', 'name', 'title', 'nip', 'is_primary']);
+    }
+
+    /**
+     * Master penempatan dikelompokkan per jenis; kunci array sama dengan nama
+     * kolom pengajuan (division / field_supervisor / person_in_charge) supaya
+     * form keputusan tinggal memetakan langsung.
+     *
+     * @return array<string, list<array{id: int, name: string}>>
+     */
+    private function placementOptions(Request $request): array
+    {
+        $grouped = OpdPlacementOption::query()
+            ->where('opd_id', $request->user()->opd_id)
+            ->orderBy('name')
+            ->get(['id', 'type', 'name'])
+            ->groupBy('type');
+
+        $payload = [];
+
+        foreach (OpdPlacementOption::types() as $type) {
+            $payload[$type] = array_values(
+                $grouped->get($type, collect())
+                    ->map(fn (OpdPlacementOption $option): array => [
+                        'id' => $option->id,
+                        'name' => $option->name,
+                    ])
+                    ->all(),
+            );
+        }
+
+        return $payload;
     }
 }

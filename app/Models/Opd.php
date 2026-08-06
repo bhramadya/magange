@@ -20,7 +20,19 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'code', 'kode_opd', 'inisial_opd', 'description', 'is_active', 'quota_total', 'quota_used'])]
+#[Fillable([
+    'name',
+    'code',
+    'kode_opd',
+    'inisial_opd',
+    'description',
+    'letterhead_address',
+    'letterhead_phone',
+    'letterhead_email',
+    'is_active',
+    'quota_total',
+    'quota_used',
+])]
 class Opd extends Model
 {
     /**
@@ -53,5 +65,31 @@ class Opd extends Model
     public function applications(): HasMany
     {
         return $this->hasMany(InternshipApplication::class);
+    }
+
+    /**
+     * @return HasMany<OpdSigner, $this>
+     */
+    public function signers(): HasMany
+    {
+        return $this->hasMany(OpdSigner::class);
+    }
+
+    /**
+     * @return HasMany<OpdLetterTemplate, $this>
+     */
+    public function letterTemplates(): HasMany
+    {
+        return $this->hasMany(OpdLetterTemplate::class);
+    }
+
+    /**
+     * Master penempatan (bidang, pembimbing lapangan, penanggung jawab).
+     *
+     * @return HasMany<OpdPlacementOption, $this>
+     */
+    public function placementOptions(): HasMany
+    {
+        return $this->hasMany(OpdPlacementOption::class);
     }
 }

@@ -1,11 +1,22 @@
 <x-mail::message>
-@include('mail.partials.header', ['badge' => 'Disetujui', 'badgeBg' => '#dcfce7', 'badgeText' => '#15803d'])
+@include('mail.partials.header', ['badge' => 'Pengajuan Disetujui', 'badgeBg' => '#dcfce7', 'badgeText' => '#15803d'])
 
 Halo **{{ $application->user->name }}**,
 
-Selamat! Pengajuan magang Anda dengan nomor tiket **{{ $application->ticket_number }}** telah **disetujui** oleh {{ $application->opd?->name ?? 'OPD terkait' }}.
+Selamat! Pengajuan magang Anda telah **disetujui** oleh **{{ $application->opd?->name ?? 'OPD terkait' }}**. Berikut rincian penempatan Anda.
 
-{{-- Rincian magang peserta --}}
+{{-- Kartu nomor tiket --}}
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin:20px 0 8px;">
+<tr><td align="center">
+<table cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:separate; border:1px solid #cddcef; border-radius:14px; background-color:#e8f2fe;">
+<tr><td align="center" style="padding:18px 32px;">
+<span style="display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:#0b4fb0; padding-bottom:6px;">Nomor Tiket</span>
+<span style="display:block; font-size:22px; font-weight:800; letter-spacing:2px; color:#106feb;">{{ $application->ticket_number }}</span>
+</td></tr>
+</table>
+</td></tr>
+</table>
+
 <x-mail::table>
 | Rincian | Keterangan |
 |:--------|:-----------|
@@ -22,11 +33,11 @@ Selamat! Pengajuan magang Anda dengan nomor tiket **{{ $application->ticket_numb
 </x-mail::table>
 
 <x-mail::panel>
-**Langkah selanjutnya:** Silakan datang ke kantor **{{ $application->opd?->name ?? 'OPD terkait' }}**, menemui bidang **{{ $application->division ?? '-' }}**, dengan pembimbing lapangan **{{ $application->field_supervisor ?? '-' }}**. Bawa surat penerimaan resmi (terlampir PDF) saat hari pertama magang.
+Anda diharapkan hadir di kantor OPD terkait dengan menemui perwakilan dari bidang **{{ $application->division ?? '-' }}**. Koordinasi tugas dan orientasi lapangan selanjutnya akan dipandu oleh **{{ $application->field_supervisor ?? '-' }}**.
 </x-mail::panel>
 
 Surat penerimaan resmi terlampir pada email ini dalam format PDF.
 
 Terima kasih,<br>
-**Pemerintah Kota Madiun**
+**E-Magang Kota Madiun**
 </x-mail::message>

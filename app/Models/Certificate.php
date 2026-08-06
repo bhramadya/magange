@@ -23,6 +23,11 @@ use Illuminate\Support\Carbon;
     'file_path',
     'is_download_locked',
     'uploaded_by',
+    'draft_path',
+    'signer_id',
+    'signer_name',
+    'signer_title',
+    'signer_nip',
 ])]
 class Certificate extends Model
 {
@@ -54,5 +59,13 @@ class Certificate extends Model
     public function uploadedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    /**
+     * @return BelongsTo<OpdSigner, $this>
+     */
+    public function signer(): BelongsTo
+    {
+        return $this->belongsTo(OpdSigner::class);
     }
 }

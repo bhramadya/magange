@@ -10,6 +10,7 @@ use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -50,12 +51,37 @@ class GenerateJobAcceptanceLetter implements ShouldQueue
 
         $path = "acceptance-letter/{$application->id}/surat-penerimaan-{$application->ticket_number}.pdf";
 
-        Storage::disk('local')->put($path, $pdf->output());
+        $contents = $pdf->output();
+        $disk = Storage::disk('local');
+
+        $stored = $disk->put($path, $contents);
+
+        // Disk 'local' dikonfigurasi 'throw' => false, jadi put() yang gagal
+        // (izin tulis, disk penuh) hanya mengembalikan false — TANPA exception.
+        // Tanpa cek ini job lanjut: path tercatat di DB seolah surat ada, lalu
+        // Attachment::fromStorageDisk membaca null dan meledak jauh di belakang
+        // dengan TypeError "body ... got null" yang tidak menyebut surat sama
+        // sekali. Gagal di sini supaya penyebabnya kelihatan di failed_jobs.
+        if ($stored === false || ! $disk->exists($path)) {
+            throw new RuntimeException(
+                "Surat penerimaan {$application->ticket_number} gagal disimpan ke disk 'local' ({$path}); email tidak dikirim.",
+            );
+        }
 
         $application->update(['surat_penerimaan_path' => $path]);
 
         Mail::to($application->user->email)
             ->send(new AcceptanceLetterMail($application, $path));
+
+        // Jejak untuk menjawab "email diterima tapi PDF-nya tidak ada":
+        // baris ini membuktikan lampiran ikut terkirim beserta ukurannya.
+        Log::info('Surat penerimaan terkirim', [
+            'application_id' => $application->id,
+            'ticket_number' => $application->ticket_number,
+            'to' => $application->user->email,
+            'path' => $path,
+            'bytes' => strlen($contents),
+        ]);
     }
 
     public function failed(?Throwable $exception): void

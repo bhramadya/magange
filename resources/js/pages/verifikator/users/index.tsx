@@ -48,6 +48,8 @@ interface UserApplicationRow {
     status: ApplicationStatus;
     opd_name?: string | null;
     institution_name?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
     created_at?: string | null;
 }
 
@@ -352,13 +354,14 @@ function UserDetailDialog({
                                         // Fallback bila status tak dikenal /
                                         // null (data presensi lama) — jangan
                                         // biarkan 1 baris rusak me-crash dialog.
-                                        const meta =
-                                            PRESENSI_META[entry.status] ?? {
-                                                label:
-                                                    entry.status ||
-                                                    'Tidak diketahui',
-                                                badge: 'bg-slate-100 text-slate-700',
-                                            };
+                                        const meta = PRESENSI_META[
+                                            entry.status
+                                        ] ?? {
+                                            label:
+                                                entry.status ||
+                                                'Tidak diketahui',
+                                            badge: 'bg-slate-100 text-slate-700',
+                                        };
 
                                         return (
                                             <li

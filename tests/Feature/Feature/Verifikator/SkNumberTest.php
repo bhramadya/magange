@@ -5,6 +5,7 @@ use App\Enums\ReportStatus;
 use App\Models\FinalReport;
 use App\Models\InternshipApplication;
 use App\Models\Opd;
+use App\Models\OpdSigner;
 use App\Models\SkCounter;
 use App\Models\User;
 use App\Services\SkNumberService;
@@ -22,20 +23,52 @@ function skForwardedApplication(Opd $opd): InternshipApplication
     ]);
 }
 
+/**
+ * OPD siap-ACC: kop surat lengkap + satu penandatangan utama.
+ * ApproveApplicationRequest mewajibkan keduanya (gate TTE), jadi fixture yang
+ * hanya membuat OPD kosong akan ditolak 422 sebelum nomor SK sempat terbit.
+ */
+function skOpdSiapAcc(): Opd
+{
+    return Opd::create([
+        'name' => 'Dinas Kominfo',
+        'code' => 'DKI',
+        'is_active' => true,
+        'quota_total' => 5,
+        'letterhead_address' => 'Jl. Perintis Kemerdekaan No. 32, Madiun',
+        'letterhead_phone' => '(0351) 467327',
+        'letterhead_email' => 'kominfo@madiunkota.go.id',
+    ]);
+}
+
+function skSigner(Opd $opd): OpdSigner
+{
+    return OpdSigner::create([
+        'opd_id' => $opd->id,
+        'name' => 'Budi Santoso',
+        'title' => 'Kepala Dinas',
+        'nip' => '198001012001011001',
+        'is_primary' => true,
+    ]);
+}
+
 // ---------------------------------------------------------------------------
 // R4/R5 — Nomor SK surat penerimaan saat OPD approve
 // ---------------------------------------------------------------------------
 
 test('approve OPD men-generate sk_number + sk_issued_at sekali', function () {
     Queue::fake();
-    $opd = Opd::create(['name' => 'Dinas Kominfo', 'code' => 'DKI', 'is_active' => true, 'quota_total' => 5]);
+    Storage::fake('local'); // approve dengan penandatangan mencetak draft PDF
+    $opd = skOpdSiapAcc();
     $admin = User::factory()->opdAdmin($opd->id)->create();
+    $signer = skSigner($opd);
     $app = skForwardedApplication($opd);
 
     $this->actingAs($admin)->post("/opd/pengajuan/{$app->id}/approve", [
         'division' => 'Aplikasi',
         'field_supervisor' => 'Pak Budi',
         'person_in_charge' => 'Bu Sari',
+        'signer_id' => $signer->id,
     ])->assertRedirect();
 
     $app->refresh();
@@ -45,11 +78,13 @@ test('approve OPD men-generate sk_number + sk_issued_at sekali', function () {
 
 test('nomor SK auto-increment antar approve + start number bisa diatur', function () {
     Queue::fake();
+    Storage::fake('local');
     $service = app(SkNumberService::class);
     $service->setStart(SkNumberService::KEY_ACCEPTANCE, 40);
 
-    $opd = Opd::create(['name' => 'Dinas Kominfo', 'code' => 'DKI', 'is_active' => true, 'quota_total' => 5]);
+    $opd = skOpdSiapAcc();
     $admin = User::factory()->opdAdmin($opd->id)->create();
+    $signer = skSigner($opd);
 
     foreach ([40, 41] as $expected) {
         $app = skForwardedApplication($opd);
@@ -57,6 +92,7 @@ test('nomor SK auto-increment antar approve + start number bisa diatur', functio
             'division' => 'Aplikasi',
             'field_supervisor' => 'Pak Budi',
             'person_in_charge' => 'Bu Sari',
+            'signer_id' => $signer->id,
         ]);
 
         expect($app->refresh()->sk_number)->toBe("503.11/{$expected}/401.106/".now()->year);

@@ -23,8 +23,17 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { ApplicationDocuments } from '@/components/application-documents';
 import MagangLayout, { opdNav } from '@/layouts/magang-layout';
+import { opdReadiness } from '@/lib/opd-readiness';
+import type { OpdReadiness } from '@/lib/opd-readiness';
 import { cn } from '@/lib/utils';
-import type { InternshipApplication, MagangUser, Opd } from '@/types/magang';
+import type {
+    InternshipApplication,
+    MagangUser,
+    Opd,
+    PlacementOption,
+    PlacementOptions,
+    Signer,
+} from '@/types/magang';
 
 /* =========================================================================
  *  OPD — PERLU KEPUTUSAN (opd/keputusan)
@@ -169,18 +178,27 @@ function DetailRow({
     );
 }
 
+/**
+ * `options` (opsional) = master penempatan dari kartu Kelola OPD. Dirender
+ * sebagai `<datalist>` sehingga admin bisa memilih dari daftar ATAU tetap
+ * mengetik nama baru.
+ */
 function Field({
     label,
     value,
     onChange,
     placeholder,
     icon: Icon,
+    options,
+    listId,
 }: {
     label: string;
     value: string;
     onChange: (v: string) => void;
     placeholder?: string;
     icon?: typeof UserCog;
+    options?: PlacementOption[];
+    listId?: string;
 }) {
     return (
         <div className="space-y-1.5">
@@ -193,8 +211,16 @@ function Field({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
+                list={options && options.length > 0 ? listId : undefined}
                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-[#0a1628] transition outline-none placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15"
             />
+            {options && options.length > 0 && (
+                <datalist id={listId}>
+                    {options.map((option) => (
+                        <option key={option.id} value={option.name} />
+                    ))}
+                </datalist>
+            )}
         </div>
     );
 }
@@ -206,10 +232,16 @@ function DecisionPanel({
     app,
     onApproved,
     onRejected,
+    signers,
+    placementOptions,
+    opdReady,
 }: {
     app: InternshipApplication;
     onApproved: (id: number) => void;
     onRejected: (id: number) => void;
+    signers: Signer[];
+    placementOptions: PlacementOptions;
+    opdReady: OpdReadiness;
 }) {
     const [mode, setMode] = useState<DecisionMode>('approve');
     const [processing, setProcessing] = useState(false);
@@ -220,9 +252,19 @@ function DecisionPanel({
     const [division, setDivision] = useState('');
     const [fieldSupervisor, setFieldSupervisor] = useState('');
     const [personInCharge, setPersonInCharge] = useState('');
+    const [signerId, setSignerId] = useState(
+        String(signers.find((signer) => signer.is_primary)?.id ?? ''),
+    );
 
+    // Penandatangan WAJIB (bukan lagi opsional saat daftar signer kosong):
+    // tanpa itu pengajuan lolos ke status `approved` dan tidak pernah masuk
+    // Menunggu TTE.
     const approveValid =
-        division.trim() && fieldSupervisor.trim() && personInCharge.trim();
+        opdReady.ready &&
+        division.trim() &&
+        fieldSupervisor.trim() &&
+        personInCharge.trim() &&
+        signerId;
 
     function submitApprove() {
         if (!approveValid || processing) {
@@ -237,6 +279,7 @@ function DecisionPanel({
                 division: division.trim(),
                 field_supervisor: fieldSupervisor.trim(),
                 person_in_charge: personInCharge.trim(),
+                signer_id: signerId || undefined,
             },
             {
                 preserveScroll: true,
@@ -246,6 +289,8 @@ function DecisionPanel({
                         errs.division ??
                             errs.field_supervisor ??
                             errs.person_in_charge ??
+                            errs.signer_id ??
+                            errs.letterhead ??
                             'Gagal menyetujui pengajuan.',
                     ),
                 onFinish: () => setProcessing(false),
@@ -399,9 +444,27 @@ function DecisionPanel({
                             <span className="font-semibold text-[#12213e]">
                                 {app.opd?.name ?? 'OPD Anda'}
                             </span>
-                            . Data ini dikirim ke peserta dalam email
-                            persetujuan.
+                            . Setelah disetujui, unduh draft surat untuk proses
+                            TTE.
                         </p>
+
+                        {!opdReady.ready && (
+                            <div className="flex gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+                                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-rose-600" />
+                                <p className="text-xs leading-relaxed text-rose-800">
+                                    Belum bisa menyetujui:{' '}
+                                    {opdReady.missing.join(' dan ')} belum siap.
+                                    Lengkapi lebih dahulu di menu{' '}
+                                    <a
+                                        href="/opd/surat"
+                                        className="font-bold underline"
+                                    >
+                                        Kelola Surat
+                                    </a>
+                                    .
+                                </p>
+                            </div>
+                        )}
 
                         <Field
                             label="Divisi / Bidang"
@@ -409,6 +472,8 @@ function DecisionPanel({
                             onChange={setDivision}
                             placeholder="cth. Bidang Infrastruktur TIK"
                             icon={Briefcase}
+                            options={placementOptions.division}
+                            listId="keputusan-divisi"
                         />
                         <Field
                             label="Pembimbing Lapangan"
@@ -416,6 +481,8 @@ function DecisionPanel({
                             onChange={setFieldSupervisor}
                             placeholder="Nama pembimbing dari OPD"
                             icon={UserCog}
+                            options={placementOptions.field_supervisor}
+                            listId="keputusan-pembimbing"
                         />
                         <Field
                             label="Penanggung Jawab"
@@ -423,15 +490,42 @@ function DecisionPanel({
                             onChange={setPersonInCharge}
                             placeholder="cth. Kepala Bidang"
                             icon={UserCog}
+                            options={placementOptions.person_in_charge}
+                            listId="keputusan-penanggung-jawab"
                         />
+                        <div className="space-y-1.5">
+                            <label className="text-sm font-semibold text-[#12213e]">
+                                Penandatangan{' '}
+                                <span className="text-rose-600">*</span>
+                            </label>
+                            <select
+                                value={signerId}
+                                onChange={(event) =>
+                                    setSignerId(event.target.value)
+                                }
+                                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm"
+                            >
+                                <option value="">
+                                    {signers.length > 0
+                                        ? 'Pilih penandatangan'
+                                        : 'Belum ada penandatangan'}
+                                </option>
+                                {signers.map((signer) => (
+                                    <option key={signer.id} value={signer.id}>
+                                        {signer.title} — {signer.name}, NIP{' '}
+                                        {signer.nip}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
                         {/* Peringatan kedatangan peserta */}
                         <div className="flex gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
                             <p className="text-xs leading-relaxed text-amber-800">
-                                Notif ini akan dikirim ke peserta magang.
-                                Peserta akan datang berkunjung ke kantor setelah
-                                diterima pengajuan ini.
+                                Email belum dikirim pada tahap ini. Peserta
+                                menerima surat setelah PDF bertanda tangan
+                                diunggah melalui Menunggu TTE.
                             </p>
                         </div>
 
@@ -517,21 +611,34 @@ function DecisionPanel({
 }
 
 /* ---- halaman --------------------------------------------------------- */
+const EMPTY_PLACEMENT_OPTIONS: PlacementOptions = {
+    division: [],
+    field_supervisor: [],
+    person_in_charge: [],
+};
+
 interface KeputusanProps {
     user?: MagangUser;
     opd?: Opd;
     applications?: InternshipApplication[];
+    signers?: Signer[];
+    placementOptions?: PlacementOptions;
 }
 
 export default function OpdKeputusan({
     user = MOCK_USER,
     opd = THIS_OPD,
     applications = MOCK_APPLICATIONS,
+    signers = [],
+    placementOptions = EMPTY_PLACEMENT_OPTIONS,
 }: KeputusanProps) {
     const initialQueue = useMemo(
         () => applications.filter((a) => a.status === 'forwarded_opd'),
         [applications],
     );
+
+    // Cermin gate backend: OPD wajib punya penandatangan + Data Surat lengkap.
+    const opdReady = useMemo(() => opdReadiness(opd, signers), [opd, signers]);
 
     const [queue, setQueue] = useState(initialQueue);
     const [query, setQuery] = useState('');
@@ -706,12 +813,15 @@ export default function OpdKeputusan({
                                             'Pengajuan disetujui. Peserta dapat mulai magang.',
                                         )
                                     }
+                                    placementOptions={placementOptions}
+                                    opdReady={opdReady}
                                     onRejected={(id) =>
                                         removeFromQueue(
                                             id,
                                             'Pengajuan ditolak.',
                                         )
                                     }
+                                    signers={signers}
                                 />
                             ) : (
                                 <div className="flex flex-col items-center gap-3 py-16 text-center">

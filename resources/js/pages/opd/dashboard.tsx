@@ -1,10 +1,12 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     Search,
     ClipboardCheck,
     CheckCircle2,
     XCircle,
-    Activity,
+    ChevronDown,
+    FileSignature,
+    Settings2,
     Building2,
     GraduationCap,
     Calendar,
@@ -19,11 +21,23 @@ import {
     Users,
     Pencil,
     Award,
+    Plus,
+    Trash2,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
+import {
+    destroy as destroyPlacement,
+    store as storePlacement,
+    update as updatePlacement,
+} from '@/actions/App/Http/Controllers/Opd/PlacementOptionController';
 import { ApplicationDocuments } from '@/components/application-documents';
 import { StatusBadge } from '@/components/status-badge';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import {
     Dialog,
     DialogContent,
@@ -32,12 +46,16 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import MagangLayout, { opdNav } from '@/layouts/magang-layout';
+import { opdReadiness } from '@/lib/opd-readiness';
 import { cn } from '@/lib/utils';
 import type {
     ApplicationStatus,
     InternshipApplication,
     MagangUser,
     Opd,
+    PlacementOption,
+    PlacementOptions,
+    Signer,
 } from '@/types/magang';
 
 /* =========================================================================
@@ -187,6 +205,8 @@ const MOCK_APPLICATIONS: InternshipApplication[] = [
 // Urutan kiri→kanan: Perlu Keputusan, Disetujui, Sedang Magang, Selesai, Ditolak, Semua.
 type FilterKey =
     | 'forwarded_opd'
+    | 'waiting_tte'
+    | 'needs_certificate'
     | 'approved'
     | 'active'
     | 'completed'
@@ -200,8 +220,56 @@ const OPD_STATUS_LABEL: Partial<Record<ApplicationStatus, string>> = {
     forwarded_opd: 'Perlu Keputusan',
 };
 
-const FILTERS: { key: FilterKey; label: string }[] = [
-    { key: 'forwarded_opd', label: 'Perlu Keputusan' },
+/*
+ * SATU sumber kebenaran untuk filter. Sebelumnya ada DUA permukaan kontrol
+ * (5 kartu statistik + 8 chip) yang menulis state `filter` yang sama padahal
+ * isinya beda — kartu tak punya Menunggu TTE / Perlu Sertifikat / Semua,
+ * sehingga mengeklik chip bisa membuat tak ada kartu yang tampak aktif.
+ * Kini dipisah menurut PERAN, bukan diduplikasi:
+ *   ACTION_FILTERS → tahap yang menuntut tindakan admin (kartu besar, atas)
+ *   STATUS_FILTERS → penelusuran riwayat (chip kecil, di toolbar tabel)
+ * Urutan baca kiri→kanan lalu atas→bawah tetap mengikuti aturan CLAUDE.md:
+ * Perlu Keputusan, Menunggu TTE, Perlu Sertifikat, Disetujui, Sedang Magang,
+ * Selesai Magang, Ditolak, Semua.
+ */
+type ActionFilterKey = 'forwarded_opd' | 'waiting_tte' | 'needs_certificate';
+
+const ACTION_FILTERS: {
+    key: ActionFilterKey;
+    label: string;
+    caption: string;
+    icon: typeof ClipboardCheck;
+    iconTone: string;
+    activeTone: string;
+}[] = [
+    {
+        key: 'forwarded_opd',
+        label: 'Perlu Keputusan',
+        caption: 'Setujui atau tolak pengajuan',
+        icon: ClipboardCheck,
+        // "Perlu Keputusan" wajib berlatar kuning (aturan CLAUDE.md).
+        iconTone: 'bg-amber-100 text-amber-700',
+        activeTone: 'border-amber-400 ring-2 ring-amber-300/50',
+    },
+    {
+        key: 'waiting_tte',
+        label: 'Menunggu TTE',
+        caption: 'Unggah surat bertanda tangan',
+        icon: FileSignature,
+        iconTone: 'bg-[#cddcef] text-[#0b4fb0]',
+        activeTone: 'border-[#106feb] ring-2 ring-[#106feb]/30',
+    },
+    {
+        key: 'needs_certificate',
+        label: 'Perlu Sertifikat',
+        caption: 'Unggah sertifikat bertanda tangan',
+        icon: Award,
+        iconTone: 'bg-violet-100 text-violet-700',
+        activeTone: 'border-violet-400 ring-2 ring-violet-300/50',
+    },
+];
+
+const STATUS_FILTERS: { key: FilterKey; label: string }[] = [
     { key: 'approved', label: 'Disetujui' },
     { key: 'active', label: 'Sedang Magang' },
     { key: 'completed', label: 'Selesai Magang' },
@@ -209,45 +277,17 @@ const FILTERS: { key: FilterKey; label: string }[] = [
     { key: 'all', label: 'Semua' },
 ];
 
-// Kartu statistik dipetakan 1:1 dengan filter (tanpa "Semua") agar jumlah,
-// urutan, & label kartu selalu selaras dengan chip filter di bawahnya.
-const STAT_CARDS: {
-    key: Exclude<FilterKey, 'all'>;
-    label: string;
-    icon: typeof ClipboardCheck;
-    tone: string;
-}[] = [
-    {
-        key: 'forwarded_opd',
-        label: 'Perlu Keputusan',
-        icon: ClipboardCheck,
-        tone: 'bg-amber-50 text-amber-600',
-    },
-    {
-        key: 'approved',
-        label: 'Disetujui',
-        icon: CheckCircle2,
-        tone: 'bg-emerald-50 text-emerald-600',
-    },
-    {
-        key: 'active',
-        label: 'Sedang Magang',
-        icon: Activity,
-        tone: 'bg-violet-50 text-violet-600',
-    },
-    {
-        key: 'completed',
-        label: 'Selesai Magang',
-        icon: Award,
-        tone: 'bg-sky-50 text-sky-600',
-    },
-    {
-        key: 'rejected',
-        label: 'Ditolak',
-        icon: XCircle,
-        tone: 'bg-rose-50 text-rose-600',
-    },
+// Dipakai untuk menghitung badge angka di SEMUA kontrol filter sekaligus,
+// termasuk "Semua" (yang dulu tak punya angka).
+const ALL_FILTER_KEYS: FilterKey[] = [
+    ...ACTION_FILTERS.map((f) => f.key),
+    ...STATUS_FILTERS.map((f) => f.key),
 ];
+
+const FILTER_LABEL: Record<FilterKey, string> = {
+    ...Object.fromEntries(ACTION_FILTERS.map((f) => [f.key, f.label])),
+    ...Object.fromEntries(STATUS_FILTERS.map((f) => [f.key, f.label])),
+} as Record<FilterKey, string>;
 
 function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
     if (filter === 'all') {
@@ -262,6 +302,10 @@ function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
         return app.status === 'approved';
     }
 
+    if (filter === 'waiting_tte' || filter === 'needs_certificate') {
+        return app.status === filter;
+    }
+
     if (filter === 'active') {
         return ['ongoing', 'completion_submitted'].includes(app.status);
     }
@@ -273,50 +317,108 @@ function matchFilter(app: InternshipApplication, filter: FilterKey): boolean {
     return app.status === 'rejected';
 }
 
-/* ---- Kartu statistik ------------------------------------------------- */
-// Kartu berfungsi sebagai pintasan filter: klik → set filter terkait aktif.
-function StatCard({
-    icon: Icon,
-    label,
+/* ---- Kontrol filter -------------------------------------------------- */
+/*
+ * Kartu "Butuh Tindakan": tahap yang benar-benar menuntut aksi admin.
+ * Sekaligus pintasan filter (klik → tabel di bawah ikut tersaring), jadi
+ * angka pada kartu SELALU sama dengan jumlah baris yang tampil.
+ * Hover sengaja hanya mengubah warna/border — tanpa translate/scale — supaya
+ * tidak menggeser layout (baris kartu dipakai untuk memindai angka).
+ */
+function ActionCard({
+    filter,
     value,
-    tone,
-    delay,
     active,
     onClick,
+    delay,
 }: {
-    icon: typeof ClipboardCheck;
-    label: string;
+    filter: (typeof ACTION_FILTERS)[number];
     value: number;
-    tone: string;
-    delay: number;
     active: boolean;
     onClick: () => void;
+    delay: number;
 }) {
+    const Icon = filter.icon;
+
     return (
         <motion.button
             type="button"
             onClick={onClick}
-            initial={{ opacity: 0, y: 16 }}
+            aria-pressed={active}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay, ease: 'circOut' }}
+            transition={{ duration: 0.35, delay, ease: 'circOut' }}
             className={cn(
-                'group rounded-2xl border bg-white p-5 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md',
+                'flex cursor-pointer items-center gap-4 rounded-2xl border bg-white p-4 text-left shadow-sm transition-colors duration-200',
+                'focus-visible:ring-4 focus-visible:ring-[#106feb]/25 focus-visible:outline-none',
                 active
-                    ? 'border-[#106feb] ring-2 ring-[#106feb]/20'
-                    : 'border-slate-200 hover:border-[#106feb]/40',
+                    ? filter.activeTone
+                    : 'border-slate-200 hover:border-[#106feb]/40 hover:bg-slate-50/70',
             )}
         >
-            <div
+            <span
                 className={cn(
-                    'mb-3 flex size-10 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110',
-                    tone,
+                    'flex size-11 shrink-0 items-center justify-center rounded-xl',
+                    filter.iconTone,
                 )}
             >
                 <Icon className="size-5" />
-            </div>
-            <p className="text-2xl font-black text-[#12213e]">{value}</p>
-            <p className="mt-0.5 text-sm text-slate-500">{label}</p>
+            </span>
+            <span className="min-w-0">
+                <span className="flex items-baseline gap-2">
+                    <span className="text-2xl font-black text-[#12213e] tabular-nums">
+                        {value}
+                    </span>
+                    <span className="truncate text-sm font-bold text-[#12213e]">
+                        {filter.label}
+                    </span>
+                </span>
+                <span className="mt-0.5 block truncate text-xs text-slate-500">
+                    {filter.caption}
+                </span>
+            </span>
         </motion.button>
+    );
+}
+
+// Chip status pasif (penelusuran riwayat). Angka ikut ditampilkan supaya chip
+// tak lagi butuh kartu statistik terpisah sebagai sumber angka.
+function StatusChip({
+    label,
+    count,
+    active,
+    onClick,
+}: {
+    label: string;
+    count: number;
+    active: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-pressed={active}
+            className={cn(
+                'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full px-3.5 text-sm font-medium transition-colors duration-200',
+                'focus-visible:ring-4 focus-visible:ring-[#106feb]/25 focus-visible:outline-none',
+                active
+                    ? 'bg-[#106feb] text-white shadow-sm'
+                    : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50',
+            )}
+        >
+            {label}
+            <span
+                className={cn(
+                    'rounded-full px-1.5 py-0.5 text-xs font-bold tabular-nums',
+                    active
+                        ? 'bg-white/25 text-white'
+                        : 'bg-slate-100 text-slate-500',
+                )}
+            >
+                {count}
+            </span>
+        </button>
     );
 }
 
@@ -583,7 +685,323 @@ function TagEditor({ opd }: { opd: Opd }) {
     );
 }
 
+/* ---- Master penempatan (bidang / pembimbing / penanggung jawab) --------
+ * Menggantikan Data Surat & Penandatangan yang PINDAH ke menu Kelola Surat.
+ * Ketiga daftar ini hanya berisi NAMA: pembimbing lapangan & penanggung jawab
+ * tidak menandatangani dokumen apa pun (itu urusan penandatangan di Kelola
+ * Surat). Pola CRUD-nya menyalin Kelola FAQ: daftar + edit inline + hapus
+ * dua langkah.
+ */
+type PlacementType = 'division' | 'field_supervisor' | 'person_in_charge';
+
+function PlacementOptionRow({ option }: { option: PlacementOption }) {
+    const [editing, setEditing] = useState(false);
+    const [confirming, setConfirming] = useState(false);
+    const [value, setValue] = useState(option.name);
+    const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    if (editing) {
+        return (
+            <div className="rounded-xl border border-[#cddcef] bg-[#e8f2fe]/40 p-2.5">
+                <input
+                    value={value}
+                    onChange={(event) => setValue(event.target.value)}
+                    className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                />
+                {error && <p className="mt-1 text-xs text-rose-600">{error}</p>}
+                <div className="mt-2 flex items-center gap-1.5">
+                    <button
+                        type="button"
+                        disabled={processing || value.trim() === ''}
+                        onClick={() => {
+                            setProcessing(true);
+                            setError(null);
+                            router.put(
+                                updatePlacement.url(option.id),
+                                { name: value.trim() },
+                                {
+                                    preserveScroll: true,
+                                    onSuccess: () => setEditing(false),
+                                    onError: (errs) =>
+                                        setError(
+                                            errs.name ?? 'Gagal menyimpan.',
+                                        ),
+                                    onFinish: () => setProcessing(false),
+                                },
+                            );
+                        }}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-[#106feb] px-2.5 py-1.5 text-sm font-semibold text-white transition hover:bg-[#0b4fb0] disabled:opacity-50"
+                    >
+                        {processing ? (
+                            <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                            <CheckCircle2 className="size-4" />
+                        )}
+                        Simpan
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setValue(option.name);
+                            setError(null);
+                            setEditing(false);
+                        }}
+                        className="cursor-pointer rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-500 transition hover:bg-slate-100"
+                    >
+                        Batal
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 py-2">
+            <span className="min-w-0 truncate text-sm text-[#12213e]">
+                {option.name}
+            </span>
+            <span className="flex shrink-0 items-center gap-1">
+                <button
+                    type="button"
+                    onClick={() => setEditing(true)}
+                    aria-label={`Edit ${option.name}`}
+                    className="cursor-pointer rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100"
+                >
+                    <Pencil className="size-4" />
+                </button>
+                {!confirming ? (
+                    <button
+                        type="button"
+                        onClick={() => setConfirming(true)}
+                        aria-label={`Hapus ${option.name}`}
+                        className="cursor-pointer rounded-lg p-1.5 text-rose-600 transition hover:bg-rose-50"
+                    >
+                        <Trash2 className="size-4" />
+                    </button>
+                ) : (
+                    <>
+                        <button
+                            type="button"
+                            disabled={processing}
+                            onClick={() => {
+                                setProcessing(true);
+                                router.delete(destroyPlacement.url(option.id), {
+                                    preserveScroll: true,
+                                    onFinish: () => setProcessing(false),
+                                });
+                            }}
+                            className="cursor-pointer rounded-lg bg-rose-600 px-2 py-1 text-xs font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
+                        >
+                            Ya, hapus
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setConfirming(false)}
+                            className="cursor-pointer rounded-lg px-2 py-1 text-xs font-medium text-slate-500 transition hover:bg-slate-100"
+                        >
+                            Batal
+                        </button>
+                    </>
+                )}
+            </span>
+        </div>
+    );
+}
+
+function PlacementOptionEditor({
+    type,
+    title,
+    hint,
+    icon: Icon,
+    options,
+}: {
+    type: PlacementType;
+    title: string;
+    hint: string;
+    icon: typeof Briefcase;
+    options: PlacementOption[];
+}) {
+    const [value, setValue] = useState('');
+    const [processing, setProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    function tambah() {
+        if (value.trim() === '' || processing) {
+            return;
+        }
+
+        setProcessing(true);
+        setError(null);
+        router.post(
+            storePlacement.url(),
+            { type, name: value.trim() },
+            {
+                preserveScroll: true,
+                onSuccess: () => setValue(''),
+                onError: (errs) => setError(errs.name ?? 'Gagal menambahkan.'),
+                onFinish: () => setProcessing(false),
+            },
+        );
+    }
+
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="flex items-center gap-1.5 text-sm font-bold text-[#12213e]">
+                <Icon className="size-4 text-[#106feb]" /> {title}
+            </p>
+            <p className="mt-1 text-xs text-slate-500">{hint}</p>
+
+            <div className="mt-3 space-y-2">
+                {options.map((option) => (
+                    <PlacementOptionRow key={option.id} option={option} />
+                ))}
+                {options.length === 0 && (
+                    <p className="rounded-xl border border-dashed border-slate-300 px-3 py-3 text-center text-xs text-slate-500">
+                        Belum ada data — tambahkan di bawah.
+                    </p>
+                )}
+            </div>
+
+            <div className="mt-3 flex items-start gap-2">
+                <span className="flex-1">
+                    <label htmlFor={`tambah-${type}`} className="sr-only">
+                        Tambah {title}
+                    </label>
+                    <input
+                        id={`tambah-${type}`}
+                        value={value}
+                        onChange={(event) => setValue(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                                event.preventDefault();
+                                tambah();
+                            }
+                        }}
+                        maxLength={255}
+                        placeholder="Tambah nama baru…"
+                        className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                    />
+                    {error && (
+                        <span className="mt-1 block text-xs text-rose-600">
+                            {error}
+                        </span>
+                    )}
+                </span>
+                <button
+                    type="button"
+                    onClick={tambah}
+                    disabled={value.trim() === '' || processing}
+                    className="inline-flex h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl bg-[#106feb] px-3 text-sm font-semibold text-white transition hover:bg-[#0b4fb0] disabled:opacity-50"
+                >
+                    {processing ? (
+                        <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                        <Plus className="size-4" />
+                    )}
+                    Tambah
+                </button>
+            </div>
+        </div>
+    );
+}
+
 /* ---- Dialog keputusan ------------------------------------------------ */
+/* ---- Kelola OPD (kartu dasbor, dapat dilipat) ------------------------- */
+/*
+ * Tetap kartu di dasbor (aturan CLAUDE.md: BUKAN menu sidebar tersendiri),
+ * tetapi dilipat & dipindah ke BAWAH tabel. Alasannya: keempat editor di
+ * dalamnya adalah setelan yang jarang diubah, sementara sebelumnya mereka
+ * menempati ruang paling berharga di antara statistik dan daftar kerja —
+ * itu sumber utama kesan "penuh". Ringkasan pada kepala kartu menjaga
+ * informasinya tetap terbaca tanpa perlu dibuka.
+ */
+function KelolaOpdPanel({
+    opd,
+    placementOptions,
+}: {
+    opd: Opd;
+    placementOptions: PlacementOptions;
+}) {
+    const [open, setOpen] = useState(false);
+
+    const tagCount = (opd.description ?? '')
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean).length;
+    // Data Surat & Penandatangan sekarang di menu Kelola Surat, jadi ringkasan
+    // ini menyebut master penempatan sebagai gantinya.
+    const summary = [
+        `Kuota ${opd.quota_used ?? 0}/${opd.quota ?? 0}`,
+        `${tagCount} tag kompetensi`,
+        `${placementOptions.division.length} bidang`,
+        `${placementOptions.field_supervisor.length} pembimbing`,
+        `${placementOptions.person_in_charge.length} penanggung jawab`,
+    ].join(' · ');
+
+    return (
+        <Collapsible open={open} onOpenChange={setOpen}>
+            <section className="overflow-hidden rounded-3xl border border-[#cddcef] bg-[#e8f2fe]/40">
+                <CollapsibleTrigger
+                    className={cn(
+                        'flex w-full cursor-pointer items-center gap-3 p-4 text-left transition-colors duration-200',
+                        'hover:bg-[#cddcef]/25 focus-visible:ring-4 focus-visible:ring-[#106feb]/25 focus-visible:outline-none',
+                    )}
+                >
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#106feb] ring-1 ring-[#cddcef]">
+                        <Settings2 className="size-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                        <span className="block text-base font-black text-[#12213e]">
+                            Kelola OPD
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-slate-500">
+                            {summary}
+                        </span>
+                    </span>
+                    <span className="hidden text-sm font-semibold text-[#106feb] sm:inline">
+                        {open ? 'Tutup' : 'Buka'}
+                    </span>
+                    <ChevronDown
+                        aria-hidden
+                        className={cn(
+                            'size-4 shrink-0 text-[#106feb] transition-transform duration-200',
+                            open && 'rotate-180',
+                        )}
+                    />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                    <div className="grid gap-4 border-t border-[#cddcef] p-4 lg:grid-cols-2">
+                        <QuotaEditor opd={opd} />
+                        <TagEditor opd={opd} />
+                        <PlacementOptionEditor
+                            type="division"
+                            title="Bidang / Penempatan"
+                            hint="Pilihan bidang penempatan peserta saat menyetujui pengajuan."
+                            icon={Briefcase}
+                            options={placementOptions.division}
+                        />
+                        <PlacementOptionEditor
+                            type="field_supervisor"
+                            title="Pembimbing Lapangan"
+                            hint="Nama saja — pembimbing lapangan tidak menandatangani dokumen."
+                            icon={UserCog}
+                            options={placementOptions.field_supervisor}
+                        />
+                        <PlacementOptionEditor
+                            type="person_in_charge"
+                            title="Penanggung Jawab"
+                            hint="Nama saja — penanggung jawab tidak menandatangani dokumen."
+                            icon={Users}
+                            options={placementOptions.person_in_charge}
+                        />
+                    </div>
+                </CollapsibleContent>
+            </section>
+        </Collapsible>
+    );
+}
+
 type DecisionMode = 'approve' | 'reject';
 
 function DetailRow({
@@ -608,18 +1026,27 @@ function DetailRow({
     );
 }
 
+/**
+ * `options` (opsional) = master penempatan dari Kelola OPD. Dirender sebagai
+ * `<datalist>`: admin bisa MEMILIH dari daftar atau tetap mengetik nama baru
+ * — kasus mendadak tidak terhalang harus mendaftarkan master lebih dulu.
+ */
 function Field({
     label,
     value,
     onChange,
     placeholder,
     icon: Icon,
+    options,
+    listId,
 }: {
     label: string;
     value: string;
     onChange: (v: string) => void;
     placeholder?: string;
     icon?: typeof UserCog;
+    options?: PlacementOption[];
+    listId?: string;
 }) {
     return (
         <div className="space-y-1.5">
@@ -632,8 +1059,16 @@ function Field({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
+                list={options && options.length > 0 ? listId : undefined}
                 className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm font-medium text-[#0a1628] transition outline-none placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/15"
             />
+            {options && options.length > 0 && (
+                <datalist id={listId}>
+                    {options.map((option) => (
+                        <option key={option.id} value={option.name} />
+                    ))}
+                </datalist>
+            )}
         </div>
     );
 }
@@ -644,12 +1079,18 @@ function DecisionDialog({
     onApproved,
     onRejected,
     onCompleted,
+    signers,
+    placementOptions,
+    opdReady,
 }: {
     app: InternshipApplication | null;
     onClose: () => void;
     onApproved: (id: number) => void;
     onRejected: (id: number) => void;
     onCompleted: (id: number) => void;
+    signers: Signer[];
+    placementOptions: PlacementOptions;
+    opdReady: { ready: boolean; missing: string[] };
 }) {
     const [mode, setMode] = useState<DecisionMode>('approve');
     const [processing, setProcessing] = useState(false);
@@ -660,9 +1101,19 @@ function DecisionDialog({
     const [division, setDivision] = useState('');
     const [fieldSupervisor, setFieldSupervisor] = useState('');
     const [personInCharge, setPersonInCharge] = useState('');
+    const [signerId, setSignerId] = useState(
+        String(signers.find((signer) => signer.is_primary)?.id ?? ''),
+    );
 
+    // Penandatangan WAJIB: tanpa itu backend jatuh ke jalur lama (status
+    // langsung `approved` + email otomatis) sehingga pengajuan tak pernah
+    // masuk Menunggu TTE — persis bug yang diperbaiki batch ini.
     const approveValid =
-        division.trim() && fieldSupervisor.trim() && personInCharge.trim();
+        opdReady.ready &&
+        division.trim() &&
+        fieldSupervisor.trim() &&
+        personInCharge.trim() &&
+        signerId;
 
     // Hanya pengajuan `forwarded_opd` yang bisa diputuskan.
     const decidable = app?.status === 'forwarded_opd';
@@ -685,6 +1136,7 @@ function DecisionDialog({
                 division: division.trim(),
                 field_supervisor: fieldSupervisor.trim(),
                 person_in_charge: personInCharge.trim(),
+                signer_id: signerId || undefined,
             },
             {
                 preserveScroll: true,
@@ -694,6 +1146,8 @@ function DecisionDialog({
                         errs.division ??
                             errs.field_supervisor ??
                             errs.person_in_charge ??
+                            errs.signer_id ??
+                            errs.letterhead ??
                             'Gagal menyetujui pengajuan.',
                     ),
                 onFinish: () => setProcessing(false),
@@ -922,9 +1376,30 @@ function DecisionDialog({
                                             <span className="font-semibold text-[#12213e]">
                                                 {app.opd?.name ?? 'OPD Anda'}
                                             </span>
-                                            . Data ini dikirim ke peserta dalam
-                                            email persetujuan.
+                                            . Setelah disetujui, unduh draft
+                                            surat untuk proses TTE.
                                         </p>
+
+                                        {!opdReady.ready && (
+                                            <div className="flex gap-2.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+                                                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-rose-600" />
+                                                <p className="text-xs leading-relaxed text-rose-800">
+                                                    Belum bisa menyetujui:{' '}
+                                                    {opdReady.missing.join(
+                                                        ' dan ',
+                                                    )}{' '}
+                                                    belum siap. Lengkapi lebih
+                                                    dahulu di menu{' '}
+                                                    <a
+                                                        href="/opd/surat"
+                                                        className="font-bold underline"
+                                                    >
+                                                        Kelola Surat
+                                                    </a>
+                                                    .
+                                                </p>
+                                            </div>
+                                        )}
 
                                         <Field
                                             label="Divisi / Bidang"
@@ -932,6 +1407,8 @@ function DecisionDialog({
                                             onChange={setDivision}
                                             placeholder="cth. Bidang Infrastruktur TIK"
                                             icon={Briefcase}
+                                            options={placementOptions.division}
+                                            listId="dlg-divisi"
                                         />
                                         <Field
                                             label="Pembimbing Lapangan"
@@ -939,6 +1416,10 @@ function DecisionDialog({
                                             onChange={setFieldSupervisor}
                                             placeholder="Nama pembimbing dari OPD"
                                             icon={UserCog}
+                                            options={
+                                                placementOptions.field_supervisor
+                                            }
+                                            listId="dlg-pembimbing"
                                         />
                                         <Field
                                             label="Penanggung Jawab"
@@ -946,16 +1427,53 @@ function DecisionDialog({
                                             onChange={setPersonInCharge}
                                             placeholder="cth. Kepala Bidang"
                                             icon={UserCog}
+                                            options={
+                                                placementOptions.person_in_charge
+                                            }
+                                            listId="dlg-penanggung-jawab"
                                         />
+                                        <div className="space-y-1.5">
+                                            <label className="text-sm font-semibold text-[#0a1628]">
+                                                Penandatangan{' '}
+                                                <span className="text-rose-600">
+                                                    *
+                                                </span>
+                                            </label>
+                                            <select
+                                                value={signerId}
+                                                onChange={(event) =>
+                                                    setSignerId(
+                                                        event.target.value,
+                                                    )
+                                                }
+                                                className="h-11 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm"
+                                            >
+                                                <option value="">
+                                                    {signers.length > 0
+                                                        ? 'Pilih penandatangan'
+                                                        : 'Belum ada penandatangan'}
+                                                </option>
+                                                {signers.map((signer) => (
+                                                    <option
+                                                        key={signer.id}
+                                                        value={signer.id}
+                                                    >
+                                                        {signer.title} —{' '}
+                                                        {signer.name}, NIP{' '}
+                                                        {signer.nip}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
 
                                         {/* Peringatan kedatangan peserta */}
                                         <div className="flex gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                                             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
                                             <p className="text-xs leading-relaxed text-amber-800">
-                                                Notif ini akan dikirim ke
-                                                peserta magang. Peserta akan
-                                                datang berkunjung ke kantor
-                                                setelah diterima pengajuan ini.
+                                                Email belum dikirim pada tahap
+                                                ini. Peserta menerima surat
+                                                setelah PDF bertanda tangan
+                                                diunggah melalui Menunggu TTE.
                                             </p>
                                         </div>
 
@@ -1075,32 +1593,54 @@ function DecisionDialog({
 }
 
 /* ---- Halaman --------------------------------------------------------- */
+const EMPTY_PLACEMENT_OPTIONS: PlacementOptions = {
+    division: [],
+    field_supervisor: [],
+    person_in_charge: [],
+};
+
 interface OpdDashboardProps {
     user?: MagangUser;
     opd?: Opd;
     applications?: InternshipApplication[];
+    signers?: Signer[];
+    placementOptions?: PlacementOptions;
 }
 
 export default function OpdDashboard({
     user = MOCK_USER,
     opd = THIS_OPD,
     applications = MOCK_APPLICATIONS,
+    signers = [],
+    placementOptions = EMPTY_PLACEMENT_OPTIONS,
 }: OpdDashboardProps) {
+    const { acceptanceDraftUrl, acceptanceDraftName } = usePage<{
+        acceptanceDraftUrl?: string;
+        acceptanceDraftName?: string;
+    }>().props;
+    const [showDraftPopup, setShowDraftPopup] = useState(
+        Boolean(acceptanceDraftUrl),
+    );
     const [rows, setRows] = useState(applications);
     const [filter, setFilter] = useState<FilterKey>('forwarded_opd');
     const [query, setQuery] = useState('');
     const [active, setActive] = useState<InternshipApplication | null>(null);
 
-    // Hitung per kartu memakai matchFilter yang sama dengan chip filter,
-    // sehingga angka kartu = jumlah baris yang tampil saat filter itu dipilih.
+    // Kesiapan OPD untuk menyetujui (penandatangan + Data Surat) — cermin
+    // gate backend di ApproveApplicationRequest.
+    const opdReady = useMemo(() => opdReadiness(opd, signers), [opd, signers]);
+
+    // Semua angka (kartu maupun chip) dihitung dengan matchFilter yang sama
+    // dipakai tabel, jadi angka pada kontrol = jumlah baris yang tampil saat
+    // filter itu dipilih — termasuk "Semua", yang dulu tak punya angka.
     const counts = useMemo(
         () =>
             Object.fromEntries(
-                STAT_CARDS.map((c) => [
-                    c.key,
-                    rows.filter((a) => matchFilter(a, c.key)).length,
+                ALL_FILTER_KEYS.map((key) => [
+                    key,
+                    rows.filter((a) => matchFilter(a, key)).length,
                 ]),
-            ) as Record<Exclude<FilterKey, 'all'>, number>,
+            ) as Record<FilterKey, number>,
         [rows],
     );
 
@@ -1145,189 +1685,225 @@ export default function OpdDashboard({
                     </p>
                 </div>
 
-                {/* Statistik — selaras 1:1 dengan chip filter (klik untuk memfilter). */}
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                    {STAT_CARDS.map((c, i) => (
-                        <StatCard
-                            key={c.key}
-                            icon={c.icon}
-                            label={c.label}
-                            value={counts[c.key]}
-                            tone={c.tone}
-                            delay={i * 0.05}
-                            active={filter === c.key}
-                            onClick={() => setFilter(c.key)}
-                        />
-                    ))}
-                </div>
-
-                {/* Kuota magang OPD — Admin OPD hanya boleh mengubah kuota OPD-nya sendiri. */}
-                <QuotaEditor opd={opd} />
-
-                {/* Tag kompetensi OPD (batch 5) — sumber tag kartu OPD di landing. */}
-                <TagEditor opd={opd} />
-
-                {/* Toolbar */}
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex flex-wrap gap-1.5">
-                        {FILTERS.map((f) => (
-                            <button
+                {/* Butuh Tindakan — hanya tahap yang menuntut aksi admin. */}
+                <section aria-labelledby="butuh-tindakan">
+                    <h3
+                        id="butuh-tindakan"
+                        className="mb-2.5 text-xs font-bold tracking-wide text-slate-500 uppercase"
+                    >
+                        Butuh tindakan
+                    </h3>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {ACTION_FILTERS.map((f, i) => (
+                            <ActionCard
                                 key={f.key}
-                                type="button"
+                                filter={f}
+                                value={counts[f.key]}
+                                delay={i * 0.05}
+                                active={filter === f.key}
                                 onClick={() => setFilter(f.key)}
-                                className={cn(
-                                    'rounded-full px-3.5 py-1.5 text-sm font-medium transition',
-                                    filter === f.key
-                                        ? 'bg-[#106feb] text-white shadow-sm'
-                                        : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50',
-                                )}
+                            />
+                        ))}
+                    </div>
+                </section>
+
+                {/* Daftar pengajuan + toolbar status/pencarian. */}
+                <section
+                    aria-labelledby="daftar-pengajuan"
+                    className="space-y-3"
+                >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <h3
+                                id="daftar-pengajuan"
+                                className="text-lg font-black text-[#12213e]"
                             >
-                                {f.label}
-                            </button>
+                                Daftar Pengajuan
+                            </h3>
+                            <p className="mt-0.5 text-sm text-slate-500">
+                                Menampilkan {filtered.length} dari {rows.length}{' '}
+                                pengajuan · filter{' '}
+                                <span className="font-semibold text-[#12213e]">
+                                    {FILTER_LABEL[filter]}
+                                </span>
+                            </p>
+                        </div>
+
+                        <div className="relative sm:w-64">
+                            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
+                            <label className="sr-only" htmlFor="cari-pengajuan">
+                                Cari pengajuan
+                            </label>
+                            <input
+                                id="cari-pengajuan"
+                                type="search"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder="Cari tiket / instansi…"
+                                className="h-11 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-sm transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5">
+                        {STATUS_FILTERS.map((f) => (
+                            <StatusChip
+                                key={f.key}
+                                label={f.label}
+                                count={counts[f.key]}
+                                active={filter === f.key}
+                                onClick={() => setFilter(f.key)}
+                            />
                         ))}
                     </div>
 
-                    <div className="relative sm:w-64">
-                        <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-slate-400" />
-                        <input
-                            type="search"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            placeholder="Cari tiket / instansi…"
-                            className="h-10 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-sm transition outline-none focus:border-[#106feb] focus:ring-4 focus:ring-[#106feb]/15"
-                        />
-                    </div>
-                </div>
+                    {/* Tabel */}
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        {/* Desktop */}
+                        <table className="hidden w-full text-left text-sm md:table">
+                            <thead className="border-b border-slate-200 bg-slate-50 text-xs tracking-wide text-slate-500 uppercase">
+                                <tr>
+                                    <th className="px-5 py-3 font-semibold">
+                                        No. Tiket
+                                    </th>
+                                    <th className="px-5 py-3 font-semibold">
+                                        Nama Lengkap
+                                    </th>
+                                    <th className="px-5 py-3 font-semibold">
+                                        Asal Instansi
+                                    </th>
+                                    <th className="px-5 py-3 font-semibold">
+                                        Divisi
+                                    </th>
+                                    <th className="px-5 py-3 font-semibold">
+                                        Diteruskan
+                                    </th>
+                                    <th className="px-5 py-3 font-semibold">
+                                        Status
+                                    </th>
+                                    <th className="px-5 py-3 text-right font-semibold">
+                                        Aksi
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {filtered.map((app) => (
+                                    <tr
+                                        key={app.id}
+                                        className="transition hover:bg-slate-50/60"
+                                    >
+                                        <td className="px-5 py-3.5 font-mono text-xs font-semibold text-[#12213e]">
+                                            {app.ticket_number}
+                                        </td>
+                                        <td className="px-5 py-3.5 font-medium text-[#12213e]">
+                                            {app.applicant_name ?? '—'}
+                                        </td>
+                                        <td className="px-5 py-3.5">
+                                            {app.institution_name}
+                                        </td>
+                                        <td className="px-5 py-3.5 text-slate-600">
+                                            {app.division ?? '—'}
+                                        </td>
+                                        <td className="px-5 py-3.5 text-slate-500">
+                                            {app.forwarded_at
+                                                ? formatDate(app.forwarded_at)
+                                                : '—'}
+                                        </td>
+                                        <td className="px-5 py-3.5">
+                                            <StatusBadge
+                                                status={app.status}
+                                                label={
+                                                    OPD_STATUS_LABEL[app.status]
+                                                }
+                                            />
+                                        </td>
+                                        <td className="px-5 py-3.5 text-right">
+                                            <button
+                                                type="button"
+                                                onClick={() => setActive(app)}
+                                                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-[#106feb] transition hover:bg-[#cddcef]/40"
+                                            >
+                                                {app.status === 'forwarded_opd'
+                                                    ? 'Putuskan'
+                                                    : 'Detail'}
+                                                <ArrowRight className="size-3.5" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
 
-                {/* Tabel */}
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    {/* Desktop */}
-                    <table className="hidden w-full text-left text-sm md:table">
-                        <thead className="border-b border-slate-200 bg-slate-50 text-xs tracking-wide text-slate-500 uppercase">
-                            <tr>
-                                <th className="px-5 py-3 font-semibold">
-                                    No. Tiket
-                                </th>
-                                <th className="px-5 py-3 font-semibold">
-                                    Nama Lengkap
-                                </th>
-                                <th className="px-5 py-3 font-semibold">
-                                    Asal Instansi
-                                </th>
-                                <th className="px-5 py-3 font-semibold">
-                                    Divisi
-                                </th>
-                                <th className="px-5 py-3 font-semibold">
-                                    Diteruskan
-                                </th>
-                                <th className="px-5 py-3 font-semibold">
-                                    Status
-                                </th>
-                                <th className="px-5 py-3 text-right font-semibold">
-                                    Aksi
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        {/* Mobile */}
+                        <div className="divide-y divide-slate-100 md:hidden">
                             {filtered.map((app) => (
-                                <tr
+                                <button
                                     key={app.id}
-                                    className="transition hover:bg-slate-50/60"
+                                    type="button"
+                                    onClick={() => setActive(app)}
+                                    className="flex w-full flex-col gap-2 px-4 py-4 text-left transition hover:bg-slate-50/60"
                                 >
-                                    <td className="px-5 py-3.5 font-mono text-xs font-semibold text-[#12213e]">
-                                        {app.ticket_number}
-                                    </td>
-                                    <td className="px-5 py-3.5 font-medium text-[#12213e]">
-                                        {app.applicant_name ?? '—'}
-                                    </td>
-                                    <td className="px-5 py-3.5">
-                                        {app.institution_name}
-                                    </td>
-                                    <td className="px-5 py-3.5 text-slate-600">
-                                        {app.division ?? '—'}
-                                    </td>
-                                    <td className="px-5 py-3.5 text-slate-500">
-                                        {app.forwarded_at
-                                            ? formatDate(app.forwarded_at)
-                                            : '—'}
-                                    </td>
-                                    <td className="px-5 py-3.5">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="font-mono text-xs font-semibold text-[#12213e]">
+                                            {app.ticket_number}
+                                        </span>
                                         <StatusBadge
                                             status={app.status}
                                             label={OPD_STATUS_LABEL[app.status]}
                                         />
-                                    </td>
-                                    <td className="px-5 py-3.5 text-right">
-                                        <button
-                                            type="button"
-                                            onClick={() => setActive(app)}
-                                            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-[#106feb] transition hover:bg-[#cddcef]/40"
-                                        >
-                                            {app.status === 'forwarded_opd'
-                                                ? 'Putuskan'
-                                                : 'Detail'}
-                                            <ArrowRight className="size-3.5" />
-                                        </button>
-                                    </td>
-                                </tr>
+                                    </div>
+                                    <p className="text-sm font-bold text-[#12213e]">
+                                        {app.applicant_name ?? '—'}
+                                    </p>
+                                    <p className="flex items-center gap-1.5 text-sm font-medium text-[#12213e]">
+                                        <Building2 className="size-3.5 text-slate-400" />{' '}
+                                        {app.institution_name}
+                                    </p>
+                                    <p className="flex items-center gap-1.5 text-xs text-slate-500">
+                                        <GraduationCap className="size-3.5" />{' '}
+                                        {app.tujuan_magang}
+                                    </p>
+                                    <div className="flex items-center gap-4 text-xs text-slate-400">
+                                        <span className="flex items-center gap-1">
+                                            <Calendar className="size-3" />{' '}
+                                            {app.forwarded_at
+                                                ? formatDate(app.forwarded_at)
+                                                : '—'}
+                                        </span>
+                                        <span className="flex items-center gap-1">
+                                            <Clock className="size-3" />{' '}
+                                            {app.duration_months} bln
+                                        </span>
+                                    </div>
+                                </button>
                             ))}
-                        </tbody>
-                    </table>
-
-                    {/* Mobile */}
-                    <div className="divide-y divide-slate-100 md:hidden">
-                        {filtered.map((app) => (
-                            <button
-                                key={app.id}
-                                type="button"
-                                onClick={() => setActive(app)}
-                                className="flex w-full flex-col gap-2 px-4 py-4 text-left transition hover:bg-slate-50/60"
-                            >
-                                <div className="flex items-center justify-between gap-2">
-                                    <span className="font-mono text-xs font-semibold text-[#12213e]">
-                                        {app.ticket_number}
-                                    </span>
-                                    <StatusBadge
-                                        status={app.status}
-                                        label={OPD_STATUS_LABEL[app.status]}
-                                    />
-                                </div>
-                                <p className="text-sm font-bold text-[#12213e]">
-                                    {app.applicant_name ?? '—'}
-                                </p>
-                                <p className="flex items-center gap-1.5 text-sm font-medium text-[#12213e]">
-                                    <Building2 className="size-3.5 text-slate-400" />{' '}
-                                    {app.institution_name}
-                                </p>
-                                <p className="flex items-center gap-1.5 text-xs text-slate-500">
-                                    <GraduationCap className="size-3.5" />{' '}
-                                    {app.tujuan_magang}
-                                </p>
-                                <div className="flex items-center gap-4 text-xs text-slate-400">
-                                    <span className="flex items-center gap-1">
-                                        <Calendar className="size-3" />{' '}
-                                        {app.forwarded_at
-                                            ? formatDate(app.forwarded_at)
-                                            : '—'}
-                                    </span>
-                                    <span className="flex items-center gap-1">
-                                        <Clock className="size-3" />{' '}
-                                        {app.duration_months} bln
-                                    </span>
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-
-                    {filtered.length === 0 && (
-                        <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
-                            <ClipboardCheck className="size-10 text-slate-300" />
-                            <p className="text-sm font-medium text-slate-500">
-                                Tidak ada pengajuan pada filter ini.
-                            </p>
                         </div>
-                    )}
-                </div>
+
+                        {filtered.length === 0 && (
+                            <div className="flex flex-col items-center gap-2 px-6 py-16 text-center">
+                                <ClipboardCheck className="size-10 text-slate-300" />
+                                <p className="text-sm font-medium text-slate-500">
+                                    {query.trim()
+                                        ? `Tidak ada hasil untuk “${query.trim()}” pada filter ${FILTER_LABEL[filter]}.`
+                                        : `Tidak ada pengajuan berstatus ${FILTER_LABEL[filter]}.`}
+                                </p>
+                                {query.trim() && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuery('')}
+                                        className="cursor-pointer rounded-lg px-3 py-1.5 text-sm font-semibold text-[#106feb] transition-colors hover:bg-[#cddcef]/40"
+                                    >
+                                        Hapus pencarian
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                {/* Setelan OPD ditaruh paling bawah & terlipat: jarang diubah,
+                    jadi tak boleh mendorong daftar kerja ke bawah layar. */}
+                <KelolaOpdPanel opd={opd} placementOptions={placementOptions} />
             </div>
 
             <DecisionDialog
@@ -1337,7 +1913,37 @@ export default function OpdDashboard({
                 onApproved={(id) => applyStatus(id, 'approved')}
                 onRejected={(id) => applyStatus(id, 'rejected')}
                 onCompleted={(id) => applyStatus(id, 'completed')}
+                signers={signers}
+                placementOptions={placementOptions}
+                opdReady={opdReady}
             />
+            {showDraftPopup && acceptanceDraftUrl && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+                    <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+                        <h3 className="text-lg font-black text-[#12213e]">
+                            Download Surat Penerimaan
+                        </h3>
+                        <p className="mt-2 text-sm text-slate-500">
+                            {acceptanceDraftName}
+                        </p>
+                        <div className="mt-5 flex gap-2">
+                            <a
+                                href={acceptanceDraftUrl}
+                                className="flex-1 rounded-xl bg-[#106feb] px-4 py-2.5 text-center text-sm font-bold text-white"
+                            >
+                                Download
+                            </a>
+                            <button
+                                type="button"
+                                onClick={() => setShowDraftPopup(false)}
+                                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600"
+                            >
+                                Nanti
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </MagangLayout>
     );
 }

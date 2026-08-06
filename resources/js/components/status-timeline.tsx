@@ -11,6 +11,7 @@ import type { ApplicationStatus } from '@/types/magang';
 const TIMELINE_STEPS = [
     { key: 'pending_verifikator', label: 'Menunggu Verifikasi', icon: Clock },
     { key: 'forwarded_opd', label: 'Diteruskan ke OPD', icon: Send },
+    { key: 'waiting_tte', label: 'Menunggu TTE', icon: FileCheck },
     { key: 'approved', label: 'Disetujui OPD', icon: CheckCircle2 },
     { key: 'ongoing', label: 'Sedang Magang', icon: FileCheck },
     {
@@ -18,16 +19,19 @@ const TIMELINE_STEPS = [
         label: 'Penyelesaian Diajukan',
         icon: FileCheck,
     },
+    { key: 'needs_certificate', label: 'Perlu Sertifikat', icon: Award },
     { key: 'completed', label: 'Selesai', icon: Award },
 ] as const;
 
 const STEP_INDEX: Record<ApplicationStatus, number> = {
     pending_verifikator: 0,
     forwarded_opd: 1,
-    approved: 2,
-    ongoing: 3,
-    completion_submitted: 4,
-    completed: 5,
+    waiting_tte: 2,
+    approved: 3,
+    ongoing: 4,
+    completion_submitted: 5,
+    needs_certificate: 6,
+    completed: 7,
     rejected: -1,
 };
 

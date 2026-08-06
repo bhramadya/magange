@@ -47,6 +47,56 @@ test('ajukan ulang tiket rejected membuat tiket baru dengan data ter-copy', func
         ->exists())->toBeTrue();
 });
 
+test('ajukan ulang menggeser periode lampau ke depan dengan panjang yang sama', function () {
+    Queue::fake();
+    $mahasiswa = User::factory()->create();
+
+    // Tiket ditolak setelah tanggal mulainya lewat — periodenya 30 hari.
+    $old = InternshipApplication::factory()->create([
+        'user_id' => $mahasiswa->id,
+        'status' => ApplicationStatus::Rejected,
+        'start_date' => now()->subDays(20)->toDateString(),
+        'end_date' => now()->addDays(10)->toDateString(),
+    ]);
+
+    $this->actingAs($mahasiswa)
+        ->post("/mahasiswa/pengajuan/{$old->id}/ajukan-ulang");
+
+    $new = InternshipApplication::where('id', '!=', $old->id)->firstOrFail();
+
+    expect($new->start_date->toDateString())->toBe(now()->startOfDay()->toDateString())
+        ->and($new->end_date->toDateString())->toBe(now()->startOfDay()->addDays(30)->toDateString());
+
+    // Pergeseran dicatat di audit log.
+    expect(ApplicationStatusLog::where('application_id', $new->id)
+        ->where('notes', 'like', '%periode digeser%')
+        ->exists())->toBeTrue();
+});
+
+test('ajukan ulang tidak menyentuh periode yang masih di masa depan', function () {
+    Queue::fake();
+    $mahasiswa = User::factory()->create();
+
+    $old = InternshipApplication::factory()->create([
+        'user_id' => $mahasiswa->id,
+        'status' => ApplicationStatus::Rejected,
+        'start_date' => now()->addDays(15)->toDateString(),
+        'end_date' => now()->addDays(75)->toDateString(),
+    ]);
+
+    $this->actingAs($mahasiswa)
+        ->post("/mahasiswa/pengajuan/{$old->id}/ajukan-ulang");
+
+    $new = InternshipApplication::where('id', '!=', $old->id)->firstOrFail();
+
+    expect($new->start_date->toDateString())->toBe($old->start_date->toDateString())
+        ->and($new->end_date->toDateString())->toBe($old->end_date->toDateString());
+
+    expect(ApplicationStatusLog::where('application_id', $new->id)
+        ->where('notes', 'like', '%periode digeser%')
+        ->exists())->toBeFalse();
+});
+
 test('ajukan ulang ditolak bila status bukan rejected', function () {
     Queue::fake();
     $mahasiswa = User::factory()->create();

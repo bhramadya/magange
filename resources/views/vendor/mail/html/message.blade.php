@@ -21,7 +21,7 @@
 {{-- Footer --}}
 <x-slot:footer>
 <x-mail::footer>
-© {{ date('Y') }} {{ config('app.name') }}. {{ __('All rights reserved.') }}
+© {{ date('Y') }} E-Magang Kota Madiun · Dinas Komunikasi dan Informatika Pemerintah Kota Madiun. Semua hak dilindungi.
 </x-mail::footer>
 </x-slot:footer>
 </x-mail::layout>

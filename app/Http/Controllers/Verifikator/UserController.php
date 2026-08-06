@@ -77,6 +77,8 @@ class UserController extends Controller
                         'status' => $app->status->value,
                         'opd_name' => $app->opd?->name,
                         'institution_name' => $app->institution_name,
+                        'start_date' => $app->start_date->toDateString(),
+                        'end_date' => $app->end_date->toDateString(),
                         'created_at' => $app->created_at?->toIso8601String(),
                     ])->values()->all(),
                     'presensi' => $presensi,

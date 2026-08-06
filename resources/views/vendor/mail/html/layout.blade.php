@@ -7,19 +7,45 @@
 <meta name="color-scheme" content="light">
 <meta name="supported-color-schemes" content="light">
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 @media only screen and (max-width: 600px) {
 .inner-body {
 width: 100% !important;
+border-radius: 0 !important;
 }
-
 .footer {
 width: 100% !important;
+}
+.email-header-wrap {
+border-radius: 0 !important;
 }
 }
 
 @media only screen and (max-width: 500px) {
 .button {
 width: 100% !important;
+}
+.email-logo-cell {
+display: block !important;
+text-align: center !important;
+padding-right: 0 !important;
+padding-bottom: 12px !important;
+}
+.email-logo-img {
+margin-left: auto !important;
+margin-right: auto !important;
+}
+.email-wordmark-cell {
+display: block !important;
+text-align: center !important;
+border-left: none !important;
+padding-left: 0 !important;
+border-top: 2px solid rgba(255,255,255,0.25) !important;
+padding-top: 12px !important;
+}
+.otp-card {
+border-radius: 12px !important;
 }
 }
 </style>

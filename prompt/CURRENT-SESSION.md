@@ -4,7 +4,156 @@
 **Status:** 🟡 In Progress
 
 ## Batch aktif
-- (tidak ada — terakhir selesai: `prompt/QUEUE/2026-07-20-batch-5-revisi.md`, lihat blok ✅ di bawah)
+- **Sesi 2026-07-29/30 — Alur TTE Surat Penerimaan & Sertifikat** ✅ **SELESAI
+  2026-07-30**: status Menunggu TTE/Perlu Sertifikat, master penandatangan +
+  snapshot, data kop surat dinamis, editor template placeholder,
+  draft/download/upload PDF bertanda tangan, serta email yang dipindah ke
+  sesudah upload. Penutupnya (bug constraint status PostgreSQL + tes yang
+  kurang + gate penuh) ada di bagian "Batch TTE" di bawah.
+- **Sesi 2026-07-27** — perbaikan UI (kolom OPD Tujuan, hero image landing) + audit & perbaikan
+  logika periode magang. Antrean task di bawah, dikerjakan urut.
+
+## Antrean task sesi 2026-07-27
+- [~] **T1 — Kolom "OPD Tujuan" di Pengajuan Masuk (verifikator/masuk.tsx)** ↩️ DIBATALKAN
+  **Dikembalikan ke kondisi semula atas permintaan user (2026-07-27).** Riwayat
+  perubahan yang sempat diterapkan lalu dibatalkan ada di bawah ini — jangan
+  dikerjakan ulang tanpa permintaan baru.
+  Desainnya beda sendiri dari kolom lain di panel tinjau (SelectTrigger default
+  shadcn: tinggi 36px, `rounded-md`, border abu) sementara textarea di panel yang
+  sama pakai `h-11 rounded-xl` + focus ring biru. Samakan dengan versi yang sudah
+  benar di `verifikator/dashboard.tsx`.
+  → `SelectTrigger` diberi kelas identik dgn dashboard (`h-11 rounded-xl
+  border-slate-300 px-4` + `focus-visible:ring-4 ring-[#106feb]/15` +
+  `data-[placeholder]` abu + `data-[size=default]:h-11` supaya tak ditimpa varian
+  default), `SelectContent` `border-slate-200 bg-white`, tiap `SelectItem`
+  `focus:bg-[#e8f2fe]`. Satu-satunya Select di halaman itu, jadi tak ada sisa.
+- [~] **T2 — Hero image `dasbor.png` di welcome.tsx** ↩️ DIBATALKAN
+  **Dikembalikan ke kondisi semula atas permintaan user (2026-07-27):**
+  `aspect-[1920/1389]` + `object-contain` (img & blok fallback), komentar
+  penjelas dihapus. Perubahan `DatePicker` (prop `max` + `maxTanggalSelesai()`)
+  di file yang sama TIDAK ikut dibatalkan — itu milik T4a, bukan T2.
+  Riwayat perubahan yang sempat diterapkan lalu dibatalkan ada di bawah ini.
+  (a) gambar terasa "tertutup" bar URL browser-chrome di atasnya → tidak tampil full;
+  (b) file 1920×1389 (rasio 1.38) dipakai apa adanya lewat `aspect-[1920/1389]`,
+  jauh lebih jangkung dari viewport browser asli sehingga bingkai tidak meyakinkan
+  dan isi screenshot mengecil.
+  → Rasio viewport **dikunci `aspect-[16/10]`** (tidak lagi mengikuti rasio file)
+  + `object-cover object-top`. Efek: tinggi blok turun ±90px (896×560 + bar 44px,
+  dari sebelumnya 896×648), bingkai membaca seperti jendela browser sungguhan,
+  bagian atas screenshot (header + kartu Status/OPD/Durasi/Periode) utuh & lebih
+  besar, yang terpotong hanya ujung bawah (kartu "Butuh Bantuan?" + badge
+  reCAPTCHA yang memang tak diinginkan). Blok fallback `onError` ikut disamakan
+  rasionya. **Asumsi:** browser-chrome (titik lampu + bar URL) DIPERTAHANKAN
+  karena elemen desain sengaja di BLUEPRINT-REDESIGN — kalau yang dimaksud
+  "tertutup" = ingin bar URL dihapus, itu tinggal buang satu blok div.
+  Catatan: `public/images/dasbor1.png` (1920×1080, akun lama "Bhramadya", belum
+  ada nav Presensi Harian) dibiarkan — `dasbor.png` yang lebih baru tetap dipakai.
+- [x] **T3 — Data periode peserta "Faalih Fadhlurrohmaan"** ✅
+  Ubah tanggal magang jadi 15 Juli 2026 – 8 Agustus 2026 (untuk keperluan screenshot
+  hero). Belum ada UI admin untuk mengedit tanggal → lewat DB.
+  → `MGG-2026-000002` (man@gmail.com, status `forwarded_opd`): `start_date`
+  2026-07-24 → **2026-07-15**, `end_date` 2026-07-31 → **2026-08-08**. Hanya satu
+  pengajuan atas nama itu. `duration_months` dibiarkan 1 (periode baru 24 hari).
+- [ ] **T4 — Audit & perbaikan logika periode magang**
+  Temuan audit (StoreApplicationRequest, SubmissionService, TransitionApplicationStatuses):
+  - [x] T4a — `duration_months` diturunkan dengan `diffInMonths()` yang **memotong**
+        (1 Jan→30 Jun = 180 hari tersimpan "5 bulan"), dan rentang > 12 bulan
+        **di-clamp diam-diam** ke 12 sementara tanggalnya disimpan apa adanya →
+        `duration_months` bisa berbohong terhadap `start_date`/`end_date`. ✅
+        → Rumus diganti `round(diffInDays / 30.4375)` (rata-rata panjang bulan),
+        minimal 1. 180 hari kini "6 bulan", 24 hari "1 bulan", 92 hari "3 bulan".
+        Clamp `min(12, …)` **dibuang** — rentang > 12 bulan sekarang DITOLAK, bukan
+        dibulatkan: rule baru `end_date` → `before_or_equal:{start+1 tahun}` dgn
+        pesan "Periode magang maksimal 12 bulan dari tanggal mulai." (pesan
+        ditempel di field yang kelihatan di form; `duration_months.max` jadi
+        jaring pengaman saja). Cermin di frontend: `DatePicker` dapat prop `max`
+        baru + helper `maxTanggalSelesai()`; tanggal selesai auto-reset kalau
+        tanggal mulai digeser sampai melewati batas.
+  - [x] T4b — Nilai `duration_months` kiriman klien dipercaya bulat-bulat
+        (`prepareForValidation` hanya menghitung bila field kosong). Endpoint
+        pendaftaran publik → siapa pun bisa POST durasi palsu. ✅
+        → Guard `! $this->filled('duration_months')` dibuang; durasi SELALU
+        dihitung ulang server dari `start_date`/`end_date`, kiriman klien
+        diabaikan. Form publik memang tidak mengirim field ini.
+  - [x] T4c — `SubmissionService::resubmit()` menyalin `start_date`/`end_date`
+        lama apa adanya. Tiket yang ditolak setelah tanggal mulainya lewat akan
+        diajukan ulang dengan periode lampau — menembus aturan
+        `after_or_equal:today` dan langsung disambar cron begitu di-ACC. ✅
+        → Bila `start_date` lama < hari ini, seluruh periode **digeser maju**
+        mulai hari ini dengan **panjang hari yang sama** (bukan dikosongkan —
+        maksud R15 "tak perlu ketik ulang" tetap terjaga, dan kolomnya NOT NULL).
+        Pergeseran dicatat di `notes` log status: "Diajukan ulang dari MGG-… 
+        (periode digeser ke … – … karena tanggal lama sudah lampau)". Periode
+        yang masih di masa depan tidak disentuh.
+  - [x] T4d — `config('app.timezone')` = UTC sedangkan scheduler `dailyAt('01:00')`
+        dan `Date::now()` dipakai untuk membandingkan tanggal → cron sebenarnya
+        jalan 08:00 WIB, bukan 01:00 seperti aturan bisnis di CLAUDE.md. ✅
+        → Config baru `app.schedule_timezone` (env `APP_SCHEDULE_TIMEZONE`,
+        default `Asia/Jakarta`); `Schedule::command(...)->dailyAt('01:00')
+        ->timezone(...)`. **`app.timezone` sengaja TETAP UTC** — mengubahnya
+        menggeser tafsir seluruh timestamp yang sudah ada di DB; yang perlu
+        lokal cuma jadwalnya.
+        Konsekuensi yang ikut diperbaiki: 01:00 WIB = 18:00 UTC hari
+        SEBELUMNYA, jadi `Date::now()` polos di dalam command akan tertinggal
+        satu hari dan menunda semua transisi 1×24 jam → command kini memakai
+        `Date::now(config('app.schedule_timezone'))->startOfDay()`.
+- [x] **T5 — Gate** (Pint, PHPStan, Pest, tsc, eslint, prettier). ✅
+  Pint ✅ · PHPStan ✅ (`--memory-limit=1G`) · Pest **185 tes: 175 lulus / 10 skip
+  (873 assertion)** ✅ · tsc ✅ · eslint ✅ · prettier ✅.
+  Catatan PHPStan: `Date::now()` mengembalikan `CarbonImmutable` sementara kolom
+  tanggal di model bertipe `Illuminate\Support\Carbon` — assignment properti
+  langsung di `resubmit()` ditolak. Diperbaiki dengan memakai
+  `Illuminate\Support\Carbon::now()`, bukan facade `Date` (bukan cast paksa).
+  Prettier menyisakan 1 warning **pre-existing** di
+  `resources/js/pages/verifikator/users/index.tsx` — file itu tidak disentuh
+  sesi ini, dibiarkan agar diff tetap fokus.
+
+### Tes baru sesi ini
+- `Mahasiswa/ApplicationControllerTest` +4: periode > 12 bulan ditolak, tepat
+  12 bulan diterima (`duration_months` = 12), durasi kiriman klien diabaikan
+  (180 hari → 6, bukan 5), periode 10 hari → minimal 1 bulan.
+- `Mahasiswa/ResubmitTest` +2: periode lampau digeser (panjang hari sama + catatan
+  di log), periode masa depan tidak disentuh.
+- `Penyelesaian/TransitionTimezoneTest` (baru, 2 tes): waktu dibekukan di
+  2026-07-15 18:30 UTC = 2026-07-16 01:30 WIB — pengajuan `start_date`
+  2026-07-16 harus jadi `ongoing` dan `end_date` 2026-07-16 jadi `completed`,
+  sedangkan yang mulai 2026-07-17 tidak tersentuh. **Diverifikasi benar-benar
+  menangkap bug**: dengan `Date::now()` polos (versi lama) tes pertama GAGAL.
+
+### Belum dikerjakan (di luar lingkup, layak jadi batch berikutnya)
+- **Tidak ada UI admin untuk mengoreksi periode magang.** T3 terpaksa lewat
+  query DB langsung. Kalau koreksi tanggal akan sering terjadi (mis. peserta
+  mundur/maju jadwal), perlu endpoint + form di panel Verifikator/OPD.
+- Prettier pre-existing di `verifikator/users/index.tsx`.
+
+## Sesi 2026-07-28 — laporan "PDF surat penerimaan tidak terlampir di email ACC"
+**Tidak bisa direproduksi di repo/DB ini — kodenya benar.** Diverifikasi
+end-to-end (bukan hanya baca kode): job di-dispatch → antrean DB → `queue:work
+--queue=emails` → DomPDF → `MAIL_MAILER=log`, dan MIME yang keluar berisi
+`Content-Type: application/pdf; name=surat-penerimaan-MGG-2026-0051.pdf` +
+`Content-Disposition: attachment` dengan body diawali `%PDF` (±1,26 MB).
+`failed_jobs` = 0, `jobs` = 0, dan kedua pengajuan `approved` punya
+`surat_penerimaan_path` yang filenya ADA di disk privat.
+Yang **memang cacat** dan diperbaiki:
+- `GenerateSuratPenerimaanJobTest` hanya mengecek string `pdfPath` lewat
+  `Mail::fake()` — fake tak pernah membangun pesan Symfony, jadi lampiran yang
+  hilang LOLOS. Dibuktikan: `attachments()` dikosongkan sementara → 3 tes lama
+  tetap hijau. Tes baru "the sent email really carries the pdf as an attachment"
+  memeriksa pesan asli lewat transport `array` (jumlah, nama file, media type,
+  body diawali `%PDF`) dan GAGAL saat lampiran dihapus.
+- Disk `local` ber-`'throw' => false` → `Storage::put()` yang gagal (izin tulis/
+  disk penuh) hanya mengembalikan `false`. Job lama lanjut: path dicatat di DB
+  seolah surat ada, lalu meledak jauh di belakang dengan TypeError "body …
+  got null" yang tak menyebut surat sama sekali. Kini dicek (`$stored === false
+  || ! exists()`) → `RuntimeException` bernama jelas sebelum email dikirim, plus
+  `Log::info('Surat penerimaan terkirim', [... 'bytes' => …])` sebagai bukti
+  lampiran ikut terkirim saat ada laporan serupa.
+- Gate: Pint ✅ · PHPStan ✅ (--memory-limit=1G) · Pest **187 tes: 177 lulus /
+  10 skip (881 assertion)** ✅.
+- **Belum terjawab (butuh info dari sisi pelapor):** email di lingkungan mana,
+  dan apakah worker di sana benar-benar mengonsumsi antrean `emails`
+  (`queue:work` tanpa `--queue=emails` = job ACC tak pernah jalan → yang sampai
+  ke pemohon cuma email konfirmasi pendaftaran, yang MEMANG tanpa lampiran).
 
 ## Sudah selesai
 - [x] 01 — OTP expiry 10 menit → 5 menit (OtpService TTL_MINUTES, mail otp.blade.php, OtpServiceTest — 6 tes lulus)
@@ -29,8 +178,150 @@
   - Tes: `tests/Unit/OtpLockoutServiceTest.php` (6 tes — deret Fibonacci, ambang 3x, eskalasi tingkat, reset manual & idle 24 jam) + 4 tes feature di OtpLoginControllerTest (termasuk prop lockoutSeconds). Lockout independen dari expiry OTP 5 menit — tes "setelah jeda habis, login normal" membuktikan keduanya bekerja bersama.
   - Gate penuh: Pint ✅, PHPStan ✅ (perlu `--memory-limit=1G`, limit default 128M di php.ini lokal kurang), Pest 135 lulus / 10 skip (721 assertion), tsc/eslint/prettier ✅, vite build ✅.
 
-## Sedang dikerjakan
-- (kosong — batch 2026-07-16, new_revisi 2026-07-18/19, dan batch 5 2026-07-20 semua selesai)
+## Batch TTE (2026-07-29/30) — SELESAI (2026-07-30)
+- [x] Backend, route, migration, PDF, email, dan UI utama batch TTE.
+- [x] Pint, PHPStan, ESLint, TypeScript, Wayfinder, dan production build.
+- [x] Pest terfokus: 20 tes / 114 assertion lulus memakai SQLite in-memory.
+- [x] **Suite penuh PostgreSQL (magang_test) kini jalan: 200 tes, 190 lulus /
+  10 skip / 0 gagal (949 assertion).** Yang sebelumnya "1 gagal" ternyata BUKAN
+  ILIKE-nya UserController — akar sebenarnya di bawah (constraint status).
+
+### Penutup sesi 2026-07-30 (audit + sisa pekerjaan `2026-07-29-batch.md`)
+Seluruh acceptance criteria prompt batch diverifikasi sudah terimplementasi
+(kartu Kelola OPD, kop dinamis + logo statis, Kelola Surat + placeholder,
+snapshot penandatangan, approve tanpa email, Menunggu TTE + "Unggah",
+akhir periode → Perlu Sertifikat, Perlu Sertifikat → Selesai). Yang belum
+selesai dan dikerjakan sesi ini:
+
+- [x] **BUG BLOKIR — status TTE ditolak PostgreSQL (SQLSTATE 23514).**
+  Migration `2026_07_29_120827` melebarkan kolom `status` ke VARCHAR(50), tapi
+  di PostgreSQL `ALTER COLUMN ... TYPE` **tidak** membuang CHECK constraint
+  bawaan `$table->enum()`. `internship_applications_status_check` masih hanya
+  mengizinkan 7 status pra-TTE → **setiap** transisi ke `waiting_tte` /
+  `needs_certificate` gagal di level database. Artinya alur TTE mati total di
+  PostgreSQL (DB dev/produksi), bukan cuma di tes; lolos di SQLite karena
+  `->change()` di sana membangun ulang tabel tanpa check.
+  → Migration baru `2026_07_30_000100_drop_stale_status_check_on_internship_applications`
+  membuang constraint (`DROP CONSTRAINT IF EXISTS`, no-op di driver non-pgsql).
+  **Sengaja tidak dibuat ulang berisi 9 status** — mengikuti niat 120827 yang
+  memindahkan kolom ke VARCHAR biasa; daftar status sah dijaga cast
+  `App\Enums\ApplicationStatus`, sehingga penambahan status berikutnya tak bisa
+  lagi menimbulkan kegagalan senyap yang sama. `down()` sengaja kosong (memasang
+  ulang daftar 7 status akan membuat baris TTE yang sudah ada melanggar
+  constraint dan rollback gagal). Sudah di-`migrate` ke DB dev: 0 check
+  constraint sisa.
+- [x] **Tes TTE dilengkapi (commit terakhir memang bernama "kurang test").**
+  `tests/Feature/TteFlowTest.php` (2 tes, lokasi single-nested) dipindah ke
+  `tests/Feature/Feature/Opd/TteFlowTest.php` sesuai konvensi tes proyek ini,
+  lalu **2 tes → 13 tes / 68 assertion**. Tambahan menutup yang sebelumnya
+  tanpa tes sama sekali:
+  - Data Surat tersimpan (PATCH `opd/data-surat`) + endpoint tak menerima id OPD
+    sehingga OPD lain tak tersentuh, dan role lain 403.
+  - Penandatangan: orang pertama otomatis `is_primary`, penandatangan baru
+    ber-`is_primary` menurunkan yang lama (skenario Plt).
+  - Template per jenis tersimpan; **placeholder wajib yang dihapus ditolak**
+    (`assertSessionHasErrors('body')`) dan template lama tetap utuh.
+  - Substitusi placeholder pada body surat penerimaan (nama/instansi/OPD/
+    bidang/tanggal) — dibaca dari data yang masuk ke view lewat
+    `View::composer`, sebab DomPDF mengompresi stream PDF-nya.
+  - Kop surat: data OPD dinamis + `Lambang_Kota_Madiun.png` tetap terpasang
+    (assert logo dilewati bila GD absen, agar tak bikin skip baru).
+  - Snapshot penandatangan bertahan saat pejabat lama dihapus & pejabat baru
+    jadi utama, termasuk saat draft dicetak ulang.
+  - Cron: `ongoing` + `end_date` lewat → `needs_certificate` (+ status log),
+    sementara pengajuan legacy tanpa snapshot TTE tetap langsung `completed`.
+  - Guard: admin OPD lain 403 untuk unduh draft & unggah; unggah sertifikat
+    sebelum draft dibuat → 422 dan tak ada job email terkirim.
+  **Diverifikasi benar-benar menangkap bug (mutation check):** guard placeholder
+  wajib dimatikan → tes template GAGAL; early-return snapshot dimatikan → tes
+  snapshot GAGAL; `<img>` logo dibuang dari partial kop → tes kop GAGAL.
+  Ketiganya lulus kembali setelah kode dipulihkan.
+- [x] **3 error PHPStan pre-existing di kode batch TTE** dibereskan tanpa
+  suppress: `$tries` di `SendSignedAcceptanceLetterJob`/`SendSignedCertificateJob`
+  diberi docblock `@var int` (menyamai job lain), dan
+  `LetterDocumentService::renderBody` memakai `$application->opd->name ?? '-'` —
+  `??` sudah bersemantik isset sehingga `?->` di kiri `??` memang redundan
+  (runtime tetap aman saat `opd_id` null).
+- [x] **2 error ESLint import/order** (opd/dashboard.tsx, opd/surat.tsx) → `--fix`.
+- [x] **2 warning Prettier pre-existing dibereskan** (tidak lagi dibiarkan):
+  `verifikator/users/index.tsx` + `vendor/mail/html/themes/default.css`
+  (peninggalan batch email). Keduanya masuk cakupan `format:check` = `prettier
+  --check resources/`, jadi kalau dibiarkan workflow `lint.yml` merah begitu
+  branch ini masuk develop/main. Perubahan murni format.
+- **Gate penuh (2026-07-30):** Pint ✅ · PHPStan ✅ (0 error, `--memory-limit=1G`)
+  · Pest **202 tes: 192 lulus / 10 skip / 0 gagal (997 assertion)** ✅ · tsc ✅
+  · eslint ✅ · prettier ✅ (`All matched files use Prettier code style!`)
+  · `npm run build` ✅.
+- [x] **BUG — `/opd/surat` (Kelola Surat) tampil blank putih** (dilaporkan
+  2026-07-30 lewat ngrok). Akar: `Opd\LetterController@index` **tidak mengirim
+  prop `user`**, padahal halaman `pages/opd/surat.tsx` membungkus dirinya dengan
+  `MagangLayout` yang membaca `user.role` (magang-layout.tsx:295) dan
+  `user.name`. Server tetap balas **200** — yang gagal render React-nya
+  (`TypeError: Cannot read properties of undefined`), sehingga seluruh tree
+  di-unmount dan layar putih tanpa jejak error di log Laravel. Halaman TTE lain
+  (menunggu-tte, perlu-sertifikat) sudah benar karena `TteController::indexFor`
+  mengirimnya.
+  → `'user' => new MagangUserResource($request->user())` ditambahkan (+ import).
+  Audit menyeluruh seluruh `Inertia::render` di app/Http/Controllers: **hanya
+  LetterController** yang kelewat; sisanya yang tanpa prop `user` memang halaman
+  AuthLayout/publik/SettingsLayout (auth/force-password, auth/otp-login,
+  welcome, settings/*) yang tak butuh.
+  **Tes regresi (2 tes baru, kelas bug ini sebelumnya tanpa tes sama sekali —
+  tak ada satu pun tes yang membuka GET ketiga halaman TTE):** ketiga halaman
+  di-assert `has('user.name')` + `has('user.role')` + `has('opd.name')`, dan
+  `opd/surat` di-assert mengirim `templates.acceptance`/`templates.certificate`
+  (kunci array WAJIB 'acceptance'/'certificate' karena komponen membacanya
+  langsung), `placeholders`, serta `requiredPlaceholders.*`. Diverifikasi
+  menangkap bug: prop `user` dibuang lagi → tes pertama GAGAL, lulus setelah
+  dipulihkan.
+- [x] **Redesain dasbor OPD (`pages/opd/dashboard.tsx`)** — diminta 2026-07-30:
+  layout membingungkan & terasa penuh. Diagnosis: 3 masalah terpisah, bukan satu.
+  1. **DUA permukaan kontrol untuk state filter yang sama.** 5 `StatCard` dan
+     8 chip filter dua-duanya menulis `filter`, dan isinya **tidak sinkron** —
+     kartu tak punya Menunggu TTE / Perlu Sertifikat / Semua, jadi mengeklik
+     chip bisa membuat tak ada kartu yang tampak aktif.
+  2. **Setelan menempati slot paling berharga.** Blok "Kelola OPD" (4 form:
+     kuota, tag, data surat, penandatangan — ±415 baris) berada di ANTARA
+     statistik dan tabel, mendorong daftar kerja ke bawah layar padahal
+     setelan itu jarang diubah.
+  3. **Tak ada jawaban tunggal untuk "apa yang perlu saya kerjakan?"** — tiga
+     tahap yang menuntut aksi tersebar di dua permukaan.
+  → **Keputusan (dikonfirmasi user, 2 pertanyaan):**
+  - Filter jadi **dua tingkat menurut PERAN, bukan duplikasi**: `ACTION_FILTERS`
+    (3 kartu "Butuh tindakan": Perlu Keputusan, Menunggu TTE, Perlu Sertifikat)
+    + `STATUS_FILTERS` (5 chip riwayat: Disetujui, Sedang Magang, Selesai
+    Magang, Ditolak, Semua). `StatCard` dihapus, diganti `ActionCard` +
+    `StatusChip`. **Urutan wajib CLAUDE.md tetap terjaga** dibaca kiri→kanan
+    lalu atas→bawah; "Perlu Keputusan" tetap berlatar kuning (amber).
+  - **"Kelola OPD" tetap KARTU di dasbor** (aturan CLAUDE.md: bukan menu
+    sidebar) tapi dibungkus `Collapsible` shadcn, **default tertutup** dan
+    **dipindah ke bawah tabel**. Kepala kartu memuat ringkasan hidup
+    ("Kuota 3/5 · 4 tag kompetensi · 2 penandatangan") supaya isinya terbaca
+    tanpa dibuka. Keempat editor di dalamnya tidak diubah.
+  → Perbaikan lain yang ikut: angka kini dihitung untuk **semua** kunci filter
+  termasuk "Semua" (dulu tanpa angka) lewat `ALL_FILTER_KEYS` + `matchFilter`
+  yang sama dipakai tabel, jadi angka pada kontrol = jumlah baris yang tampil;
+  header "Daftar Pengajuan" menyebut "Menampilkan N dari M · filter X"; tabel
+  dimasukkan ke dalam `<section aria-labelledby="daftar-pengajuan">` (sebelumnya
+  sibling, jadi section-nya hanya berisi toolbar); empty state kini sadar-filter
+  + tombol "Hapus pencarian".
+  → **A11y/UX (checklist skill ui-ux-pro-max):** `aria-pressed` pada semua
+  kontrol filter, `cursor-pointer`, `focus-visible:ring-4`, target sentuh chip
+  `min-h-11` (44px), label `sr-only` + `htmlFor` untuk input cari, hover hanya
+  transisi **warna** (translate/scale dibuang) agar baris kartu tak bergeser
+  saat dipindai, `tabular-nums` untuk angka.
+  → **Kontrak prop TIDAK berubah** (`user`, `opd`, `applications`, `signers`) —
+  `opd.description`/`quota`/`quota_used` yang dipakai ringkasan sudah dikirim
+  `OpdResource` & sudah bertipe. `DashboardControllerTest` ditambah assert
+  `user.name` + `opd.description` + `signers` (kelas bug layar-putih di atas).
+- **Catatan arti "Selesai Magang" (kriteria review):** kuota OPD (`quota_used`)
+  di-increment saat approve dan **tidak pernah** di-decrement di status manapun —
+  jadi pergeseran arti `completed` (kini = periode berakhir DAN sertifikat
+  bertanda tangan terbit) tidak mengubah perilaku kuota. Konsumen `completed`
+  lain: kartu/filter `Opd\DashboardController`, `CertificateService`, dan
+  `SubmissionService::complete()` — `complete()` sudah mengarahkan pengajuan
+  ber-snapshot TTE ke `needs_certificate`, sementara pengajuan legacy (tanpa
+  snapshot) tetap memakai arti lama agar arsip pra-fitur utuh.
 
 
 ## Keputusan / catatan penting
@@ -40,7 +331,10 @@
 - Perbaikan PHPStan pre-existing ikut dibereskan: nullsafe pada start_date/end_date (NOT NULL di DB) dan guard null file_path di Verifikator\ReportController.
 
 ## Next step
-- (kosong — batch 5 selesai, menunggu batch berikutnya)
+- (kosong — batch TTE `2026-07-29-batch.md` selesai & lolos gate penuh,
+  menunggu batch berikutnya)
+- Sisa utang lama yang masih berlaku: **belum ada UI admin untuk mengoreksi
+  periode magang** (lihat catatan sesi 2026-07-27).
 
 ## Blocker
 - (belum ada)
@@ -187,7 +481,7 @@ persis (nama route/prop/kolom). Ringkasan:
   presensi.tsx disambungkan (riwayat + export semua entri + kirim lampiran
   via transform), nav "Presensi Harian".
 - [x] R7 — middleware global SanitizeInput (script/on*=/javascript: dibuang,
-  password dikecualikan, strip & tanda baca lolos). Tes: script bersih,
+  password dikecualikan, strip & tanda baca lol ). Tes: script bersih,
   "D-3 Teknik" utuh.
 - [x] #17/#18/#19/#21 — diverifikasi SUDAH ada sebelumnya (teks antispam tak
   ditemukan; testimoni HomeController+welcome; foto via route ter-auth; label

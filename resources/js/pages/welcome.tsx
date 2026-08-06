@@ -275,6 +275,19 @@ function toISODate(d: Date) {
     return `${y}-${m}-${day}`;
 }
 
+/**
+ * Batas akhir periode magang: 12 bulan sejak tanggal mulai. Cermin aturan
+ * `before_or_equal` di StoreApplicationRequest — kalau salah satu diubah,
+ * ubah keduanya.
+ */
+function maxTanggalSelesai(startISO: string) {
+    const start = new Date(`${startISO}T00:00:00`);
+    const max = new Date(start);
+    max.setFullYear(max.getFullYear() + 1);
+
+    return toISODate(max);
+}
+
 function formatTanggalID(iso: string) {
     if (!iso) {
         return '';
@@ -289,11 +302,13 @@ function DatePicker({
     value,
     onChange,
     min,
+    max,
     placeholder = 'Pilih tanggal',
 }: {
     value: string;
     onChange: (iso: string) => void;
     min?: string;
+    max?: string;
     placeholder?: string;
 }) {
     const [open, setOpen] = useState(false);
@@ -417,7 +432,9 @@ function DatePicker({
                                 }
 
                                 const iso = toISODate(new Date(year, month, d));
-                                const disabled = min ? iso < min : false;
+                                const disabled =
+                                    (min ? iso < min : false) ||
+                                    (max ? iso > max : false);
                                 const selected = iso === value;
                                 const isToday = iso === todayISO;
 
@@ -1050,36 +1067,58 @@ export default function Welcome({
                     {/* Wadah relatif: jadi titik acuan orbit yang mengelilingi heading */}
                     <div className="relative flex w-full flex-col items-center">
                         {/* 4 ikon melayang di sekitar heading — 2 kiri, 2 kanan */}
-                        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-[44%] -z-[5] hidden -translate-y-1/2 xl:block">
+                        <div
+                            aria-hidden
+                            className="pointer-events-none absolute inset-x-0 top-[44%] -z-[5] hidden -translate-y-1/2 xl:block"
+                        >
                             {/* Kiri atas */}
                             <motion.div
                                 animate={{ y: [0, -12, 0] }}
-                                transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                                className="absolute -left-8 -top-16 flex size-16 items-center justify-center rounded-2xl border border-[#cddcef]/60 bg-white/80 shadow-[0_8px_32px_rgba(16,111,235,0.12)] backdrop-blur-md"
+                                transition={{
+                                    duration: 4,
+                                    repeat: Infinity,
+                                    ease: 'easeInOut',
+                                }}
+                                className="absolute -top-16 -left-8 flex size-16 items-center justify-center rounded-2xl border border-[#cddcef]/60 bg-white/80 shadow-[0_8px_32px_rgba(16,111,235,0.12)] backdrop-blur-md"
                             >
                                 <FileText className="size-7 text-[#106feb]" />
                             </motion.div>
                             {/* Kiri bawah */}
                             <motion.div
                                 animate={{ y: [0, 10, 0] }}
-                                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 0.8 }}
-                                className="absolute -left-20 top-20 flex size-14 items-center justify-center rounded-2xl border border-[#cddcef]/60 bg-white/80 shadow-[0_8px_32px_rgba(16,111,235,0.12)] backdrop-blur-md"
+                                transition={{
+                                    duration: 5,
+                                    repeat: Infinity,
+                                    ease: 'easeInOut',
+                                    delay: 0.8,
+                                }}
+                                className="absolute top-20 -left-20 flex size-14 items-center justify-center rounded-2xl border border-[#cddcef]/60 bg-white/80 shadow-[0_8px_32px_rgba(16,111,235,0.12)] backdrop-blur-md"
                             >
                                 <ShieldCheck className="size-6 text-[#0b4fb0]" />
                             </motion.div>
                             {/* Kanan atas */}
                             <motion.div
                                 animate={{ y: [0, -10, 0] }}
-                                transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
-                                className="absolute -right-8 -top-16 flex size-16 items-center justify-center rounded-2xl border border-[#cddcef]/60 bg-white/80 shadow-[0_8px_32px_rgba(16,111,235,0.12)] backdrop-blur-md"
+                                transition={{
+                                    duration: 4.5,
+                                    repeat: Infinity,
+                                    ease: 'easeInOut',
+                                    delay: 0.4,
+                                }}
+                                className="absolute -top-16 -right-8 flex size-16 items-center justify-center rounded-2xl border border-[#cddcef]/60 bg-white/80 shadow-[0_8px_32px_rgba(16,111,235,0.12)] backdrop-blur-md"
                             >
                                 <Building2 className="size-7 text-[#106feb]" />
                             </motion.div>
                             {/* Kanan bawah */}
                             <motion.div
                                 animate={{ y: [0, 12, 0] }}
-                                transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut', delay: 1.2 }}
-                                className="absolute -right-20 top-20 flex size-14 items-center justify-center rounded-2xl border border-[#cddcef]/60 bg-white/80 shadow-[0_8px_32px_rgba(16,111,235,0.12)] backdrop-blur-md"
+                                transition={{
+                                    duration: 5.5,
+                                    repeat: Infinity,
+                                    ease: 'easeInOut',
+                                    delay: 1.2,
+                                }}
+                                className="absolute top-20 -right-20 flex size-14 items-center justify-center rounded-2xl border border-[#cddcef]/60 bg-white/80 shadow-[0_8px_32px_rgba(16,111,235,0.12)] backdrop-blur-md"
                             >
                                 <Award className="size-6 text-[#0b4fb0]" />
                             </motion.div>
@@ -1183,11 +1222,23 @@ export default function Welcome({
                                 className="mt-10 inline-flex items-center divide-x divide-[#cddcef]/60 overflow-hidden rounded-2xl border border-[#cddcef]/60 bg-white/70 shadow-[0_4px_24px_rgba(16,111,235,0.08)] backdrop-blur-md"
                             >
                                 {[
-                                    { icon: CheckCircle2, label: '100% Gratis' },
-                                    { icon: ShieldCheck, label: 'Data Terlindungi' },
-                                    { icon: Building2, label: '35 Instansi Resmi' },
+                                    {
+                                        icon: CheckCircle2,
+                                        label: '100% Gratis',
+                                    },
+                                    {
+                                        icon: ShieldCheck,
+                                        label: 'Data Terlindungi',
+                                    },
+                                    {
+                                        icon: Building2,
+                                        label: '35 Instansi Resmi',
+                                    },
                                 ].map(({ icon: Icon, label }) => (
-                                    <span key={label} className="inline-flex items-center gap-2 px-5 py-2.5 text-[13px] font-medium text-[#0a1628]/70 transition-colors duration-200 hover:bg-[#f0f6ff] hover:text-[#0b4fb0]">
+                                    <span
+                                        key={label}
+                                        className="inline-flex items-center gap-2 px-5 py-2.5 text-[13px] font-medium text-[#0a1628]/70 transition-colors duration-200 hover:bg-[#f0f6ff] hover:text-[#0b4fb0]"
+                                    >
                                         <Icon className="h-4 w-4 text-[#106feb]" />
                                         {label}
                                     </span>
@@ -1224,25 +1275,28 @@ export default function Welcome({
                                 src="/images/dasbor.png"
                                 alt="Tampilan dasbor E-Magang Kota Madiun"
                                 loading="lazy"
+                                width={1920}
+                                height={1389}
                                 onError={(e) => {
                                     const img = e.currentTarget;
                                     img.style.display = 'none';
                                     const fallback = img.nextElementSibling;
 
                                     if (fallback) {
-fallback.classList.remove('hidden');
-}
+                                        fallback.classList.remove('hidden');
+                                    }
                                 }}
-                                className="aspect-[4/3] w-full object-cover lg:aspect-[16/9]"
+                                className="block aspect-[1920/1389] w-full object-contain"
                             />
-                            <div className="hidden aspect-[4/3] w-full flex-col items-center justify-center bg-gradient-to-br from-[#0a1628] via-[#0b4fb0] to-[#cddcef] lg:aspect-[16/9]">
+                            <div className="hidden aspect-[1920/1389] w-full flex-col items-center justify-center bg-gradient-to-br from-[#0a1628] via-[#0b4fb0] to-[#cddcef]">
                                 <div className="flex flex-col items-center gap-3 text-white/90">
                                     <Building2 className="h-12 w-12" />
-                                    <span className="text-[15px] font-medium">Gedung Pemerintah Kota Madiun</span>
+                                    <span className="text-[15px] font-medium">
+                                        Gedung Pemerintah Kota Madiun
+                                    </span>
                                 </div>
                             </div>
                         </div>
-
                     </motion.div>
 
                     {/* 2.5. STRIP STATISTIK — angka count-up saat masuk viewport */}
@@ -1259,7 +1313,10 @@ fallback.classList.remove('hidden');
                                 variants={staggerItem}
                                 className="group relative flex flex-col items-center gap-2 overflow-hidden rounded-3xl border border-slate-100 bg-white/70 p-6 text-center shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#cddcef] hover:shadow-lg"
                             >
-                                <span className="absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 rounded-full bg-gradient-to-r from-[#106feb] to-[#0b4fb0] transition-transform duration-300 group-hover:scale-x-100" aria-hidden />
+                                <span
+                                    className="absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 rounded-full bg-gradient-to-r from-[#106feb] to-[#0b4fb0] transition-transform duration-300 group-hover:scale-x-100"
+                                    aria-hidden
+                                />
                                 <span className="flex size-11 items-center justify-center rounded-2xl bg-[#cddcef]/50 text-[#106feb] transition-all duration-300 group-hover:-rotate-3 group-hover:bg-[#106feb] group-hover:text-white group-hover:shadow-lg group-hover:shadow-[#106feb]/30">
                                     <s.icon className="size-5" />
                                 </span>
@@ -2135,10 +2192,15 @@ fallback.classList.remove('hidden');
                                                 setTanggalMulai(iso);
                                                 setData('start_date', iso);
 
-                                                // Reset tanggal selesai bila jadi lebih awal dari tanggal mulai baru.
+                                                // Reset tanggal selesai bila jadi lebih awal dari
+                                                // tanggal mulai baru, atau melewati batas 12 bulan.
                                                 if (
                                                     tanggalSelesai &&
-                                                    tanggalSelesai < iso
+                                                    (tanggalSelesai < iso ||
+                                                        tanggalSelesai >
+                                                            maxTanggalSelesai(
+                                                                iso,
+                                                            ))
                                                 ) {
                                                     setTanggalSelesai('');
                                                     setData('end_date', '');
@@ -2155,6 +2217,15 @@ fallback.classList.remove('hidden');
                                             min={
                                                 tanggalMulai ||
                                                 toISODate(new Date())
+                                            }
+                                            // Cermin aturan server: periode magang
+                                            // maksimal 12 bulan dari tanggal mulai.
+                                            max={
+                                                tanggalMulai
+                                                    ? maxTanggalSelesai(
+                                                          tanggalMulai,
+                                                      )
+                                                    : undefined
                                             }
                                             placeholder="Pilih tanggal selesai"
                                             onChange={(iso) => {

@@ -11,8 +11,11 @@ use App\Http\Controllers\Mahasiswa\DashboardController as MahasiswaDashboardCont
 use App\Http\Controllers\Mahasiswa\PresensiController;
 use App\Http\Controllers\Mahasiswa\ReportController;
 use App\Http\Controllers\Opd\DashboardController as OpdDashboardController;
+use App\Http\Controllers\Opd\LetterController;
+use App\Http\Controllers\Opd\PlacementOptionController;
 use App\Http\Controllers\Opd\ReportController as OpdReportController;
 use App\Http\Controllers\Opd\SubmissionController as OpdSubmissionController;
+use App\Http\Controllers\Opd\TteController;
 use App\Http\Controllers\OpdQuotaController;
 use App\Http\Controllers\ProfileAvatarController;
 use App\Http\Controllers\SharedPageController;
@@ -97,6 +100,9 @@ Route::middleware(['auth', 'role:admin_opd'])->group(function () {
     Route::get('opd', [OpdDashboardController::class, 'index'])->name('opd.dashboard');
     Route::get('opd/keputusan', [OpdDashboardController::class, 'keputusan'])->name('opd.keputusan');
     Route::get('opd/peserta', [OpdDashboardController::class, 'peserta'])->name('opd.peserta');
+    Route::get('opd/menunggu-tte', [TteController::class, 'waiting'])->name('opd.menunggu-tte');
+    Route::get('opd/perlu-sertifikat', [TteController::class, 'certificates'])->name('opd.perlu-sertifikat');
+    Route::get('opd/surat', [LetterController::class, 'index'])->name('opd.surat');
 });
 
 // --- Bersama semua role (butuh login: header/sidebar pakai user yang login) ---
@@ -131,6 +137,10 @@ Route::middleware(['auth', 'role:admin_opd'])
         Route::post('{application}/approve', [OpdSubmissionController::class, 'approve'])->name('approve');
         Route::post('{application}/reject', [OpdSubmissionController::class, 'reject'])->name('reject');
         Route::post('{application}/complete', [OpdSubmissionController::class, 'complete'])->name('complete');
+        // Pengajuan yang sudah disetujui TANPA snapshot penandatangan (arsip
+        // lama / korban bug ACC tanpa signer) ditarik kembali ke Menunggu TTE
+        // supaya surat resminya tetap bisa dibuat & ditandatangani.
+        Route::post('{application}/tarik-tte', [OpdSubmissionController::class, 'reissueForTte'])->name('tarik-tte');
     });
 
 // Mahasiswa: unggah laporan akhir (aktor "Selesai" #4 saat is_confirmed).
@@ -155,6 +165,30 @@ Route::middleware(['auth', 'role:admin_opd,admin_verifikator'])
 Route::middleware(['auth', 'role:admin_opd,admin_verifikator'])
     ->patch('opd-tag/{opd}', [OpdQuotaController::class, 'updateDescription'])
     ->name('opd-tag.update');
+
+Route::middleware(['auth', 'role:admin_opd'])
+    ->prefix('opd')
+    ->name('opd.')
+    ->group(function (): void {
+        Route::patch('data-surat', [LetterController::class, 'updateLetterhead'])->name('data-surat.update');
+        Route::post('penandatangan', [LetterController::class, 'storeSigner'])->name('penandatangan.store');
+        Route::put('penandatangan/{signer}', [LetterController::class, 'updateSigner'])->name('penandatangan.update');
+        Route::delete('penandatangan/{signer}', [LetterController::class, 'destroySigner'])->name('penandatangan.destroy');
+        Route::put('surat/template', [LetterController::class, 'updateTemplate'])->name('surat.template.update');
+        // Arsip dokumen yang sudah ditandatangani (tab Arsip di Kelola Surat).
+        Route::get('surat/arsip/{application}/penerimaan', [LetterController::class, 'downloadSignedAcceptance'])->name('surat.arsip.penerimaan');
+        Route::get('surat/arsip/{certificate}/sertifikat', [LetterController::class, 'downloadSignedCertificate'])->name('surat.arsip.sertifikat');
+        // Master penempatan (kartu Kelola OPD di dasbor): bidang, pembimbing
+        // lapangan, penanggung jawab — nama saja, tanpa tanda tangan.
+        Route::post('penempatan', [PlacementOptionController::class, 'store'])->name('penempatan.store');
+        Route::put('penempatan/{option}', [PlacementOptionController::class, 'update'])->name('penempatan.update');
+        Route::delete('penempatan/{option}', [PlacementOptionController::class, 'destroy'])->name('penempatan.destroy');
+        Route::get('menunggu-tte/{application}/draft', [TteController::class, 'downloadAcceptanceDraft'])->name('menunggu-tte.draft.download');
+        Route::post('menunggu-tte/{application}/unggah', [TteController::class, 'uploadAcceptance'])->name('menunggu-tte.upload');
+        Route::post('perlu-sertifikat/{application}/draft', [TteController::class, 'generateCertificateDraft'])->name('perlu-sertifikat.draft');
+        Route::get('perlu-sertifikat/{application}/draft', [TteController::class, 'downloadCertificateDraft'])->name('perlu-sertifikat.draft.download');
+        Route::post('perlu-sertifikat/{application}/unggah', [TteController::class, 'uploadCertificate'])->name('perlu-sertifikat.upload');
+    });
 
 // Pas foto pemohon (disk privat) untuk pemilik/admin. Otorisasi via
 // policy view: Mahasiswa pemilik, Verifikator semua, OPD hanya pengajuan miliknya.

@@ -1,8 +1,7 @@
 <x-mail::message>
-@include('mail.partials.header', ['badge' => 'Ditolak', 'badgeBg' => '#fee2e2', 'badgeText' => '#b91c1c'])
+@include('mail.partials.header', ['badge' => 'Pengajuan Ditolak', 'badgeBg' => '#fee2e2', 'badgeText' => '#b91c1c'])
 
 @php
-    // Tanda tangan menyesuaikan aktor penolak: Admin Verifikator atau Admin OPD.
     $penolak = $application->opdDecisionBy?->role?->value === 'admin_opd'
         ? 'Admin OPD'
         : 'Admin Verifikator';
@@ -12,7 +11,6 @@ Halo **{{ $application->user->name }}**,
 
 Pengajuan magang Anda dengan nomor tiket **{{ $application->ticket_number }}** telah **ditolak**.
 
-{{-- Rincian lengkap pengajuan peserta --}}
 <x-mail::table>
 | Rincian | Keterangan |
 |:--------|:-----------|
@@ -39,5 +37,5 @@ Kami menghargai pengajuan magang yang Anda kirimkan. Namun, setelah melalui pros
 
 Hormat kami,<br>
 **{{ $penolak }}**<br>
-Pemerintah Kota Madiun
+E-Magang Kota Madiun
 </x-mail::message>

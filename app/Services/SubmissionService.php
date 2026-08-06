@@ -12,8 +12,10 @@ use App\Jobs\SendJobRejectionEmail;
 use App\Models\ApplicationStatusLog;
 use App\Models\InternshipApplication;
 use App\Models\Opd;
+use App\Models\OpdSigner;
 use App\Models\User;
 use DomainException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -27,6 +29,7 @@ class SubmissionService implements PengajuanServiceContract
         private RateLimitService $rateLimit,
         private OtpServiceContract $otpService,
         private SkNumberService $skNumbers,
+        private ?LetterDocumentService $letters = null,
     ) {}
 
     /**
@@ -70,6 +73,37 @@ class SubmissionService implements PengajuanServiceContract
                     'is_active' => true,
                 ],
             );
+
+            // Cegah "satu magang aktif" (R2c): bila user sudah ada & punya
+            // pengajuan berstatus aktif — atau pernah menyelesaikan magang —
+            // tolak. Ini lapis kedua setelah validasi request: endpoint
+            // pendaftaran terbuka untuk umum, jangan bergantung satu lapis saja.
+            if ($user->wasRecentlyCreated === false) {
+                $hasActive = InternshipApplication::query()
+                    ->where('user_id', $user->id)
+                    ->whereIn('status', array_map(
+                        fn (ApplicationStatus $s) => $s->value,
+                        ApplicationStatus::activeStatuses(),
+                    ))
+                    ->exists();
+
+                if ($hasActive) {
+                    throw new DomainException(
+                        'Email ini masih memiliki pengajuan magang yang sedang berjalan.',
+                    );
+                }
+
+                $hasCompleted = InternshipApplication::query()
+                    ->where('user_id', $user->id)
+                    ->where('status', ApplicationStatus::Completed->value)
+                    ->exists();
+
+                if ($hasCompleted) {
+                    throw new DomainException(
+                        'Email ini sudah pernah menyelesaikan program magang. Pendaftaran ulang tidak diperbolehkan.',
+                    );
+                }
+            }
 
             // Peserta lama yang mendaftar ulang & mengunggah pas foto, tapi belum
             // punya foto profil: adopsi pas foto terbaru sebagai foto profil.
@@ -157,13 +191,17 @@ class SubmissionService implements PengajuanServiceContract
      *     division: string,
      *     field_supervisor: string,
      *     person_in_charge: string,
+     *     signer_id?: int|null,
      * }  $data
      */
     public function approve(InternshipApplication $app, array $data, User $actor): void
     {
         $this->guardStatus($app, ApplicationStatus::ForwardedOpd);
+        $signer = isset($data['signer_id'])
+            ? OpdSigner::query()->where('opd_id', $app->opd_id)->findOrFail($data['signer_id'])
+            : null;
 
-        DB::transaction(function () use ($app, $data, $actor): void {
+        DB::transaction(function () use ($app, $data, $actor, $signer): void {
             $from = $app->status;
 
             // Kunci baris OPD agar cek & increment kuota bebas race condition.
@@ -197,15 +235,33 @@ class SubmissionService implements PengajuanServiceContract
                 'person_in_charge' => $data['person_in_charge'],
                 'sk_number' => $skNumber,
                 'sk_issued_at' => $skIssuedAt,
-                'status' => ApplicationStatus::Approved,
+                'status' => $signer === null ? ApplicationStatus::Approved : ApplicationStatus::WaitingTte,
                 'opd_decision_by' => $actor->id,
                 'opd_decision_at' => Date::now(),
+                'acceptance_signer_id' => $signer?->id,
+                'acceptance_signer_name' => $signer?->name,
+                'acceptance_signer_title' => $signer?->title,
+                'acceptance_signer_nip' => $signer?->nip,
             ]);
 
-            $this->logStatus($app, $from, ApplicationStatus::Approved, $actor, 'Disetujui OPD');
+            $this->logStatus(
+                $app,
+                $from,
+                $signer === null ? ApplicationStatus::Approved : ApplicationStatus::WaitingTte,
+                $actor,
+                $signer === null ? 'Disetujui OPD' : 'Disetujui OPD, menunggu TTE surat penerimaan',
+            );
         });
 
-        GenerateJobAcceptanceLetter::dispatch($app);
+        // Data lama yang belum punya daftar penandatangan tetap mengikuti alur
+        // terdahulu. Pengajuan baru dengan signer menghasilkan draft tanpa email.
+        if ($signer === null) {
+            GenerateJobAcceptanceLetter::dispatch($app);
+
+            return;
+        }
+
+        ($this->letters ?? new LetterDocumentService)->generateAcceptanceDraft($app->fresh());
     }
 
     /**
@@ -271,6 +327,22 @@ class SubmissionService implements PengajuanServiceContract
             );
         }
 
+        if ($app->acceptance_signer_name !== null) {
+            DB::transaction(function () use ($app, $actor): void {
+                $from = $app->status;
+                $app->update(['status' => ApplicationStatus::NeedsCertificate]);
+                $this->logStatus(
+                    $app,
+                    $from,
+                    ApplicationStatus::NeedsCertificate,
+                    $actor,
+                    'Periode magang berakhir, menunggu sertifikat bertanda tangan.',
+                );
+            });
+
+            return;
+        }
+
         DB::transaction(function () use ($app, $actor, $note): void {
             $from = $app->status;
 
@@ -287,6 +359,75 @@ class SubmissionService implements PengajuanServiceContract
     }
 
     /**
+     * Akhir periode magang kini membutuhkan sertifikat bertanda tangan sebelum
+     * status menjadi completed.
+     */
+    public function needsCertificate(InternshipApplication $app, ?User $actor = null): void
+    {
+        $this->guardStatus($app, ApplicationStatus::Ongoing);
+
+        DB::transaction(function () use ($app, $actor): void {
+            $from = $app->status;
+            $app->update(['status' => ApplicationStatus::NeedsCertificate]);
+            $this->logStatus(
+                $app,
+                $from,
+                ApplicationStatus::NeedsCertificate,
+                $actor,
+                'Periode magang berakhir, menunggu sertifikat bertanda tangan.',
+            );
+        });
+    }
+
+    /**
+     * Tarik pengajuan yang sudah disetujui TANPA snapshot penandatangan
+     * kembali ke waiting_tte. Sasarannya: arsip lama (pra-fitur TTE) dan
+     * korban bug "ACC tanpa penandatangan" — keduanya melewati alur TTE
+     * sehingga tak pernah punya surat resmi bertanda tangan.
+     *
+     * Sengaja TIDAK menyentuh kuota (sudah di-increment saat approve) dan
+     * TIDAK menerbitkan nomor SK baru (sudah ada, penomoran idempoten).
+     */
+    public function reissueForTte(InternshipApplication $app, OpdSigner $signer, User $actor): void
+    {
+        if (! in_array($app->status, [ApplicationStatus::Approved, ApplicationStatus::Ongoing], true)) {
+            throw new DomainException(
+                "Pengajuan berstatus {$app->status->value} tidak bisa ditarik ke Menunggu TTE.",
+            );
+        }
+
+        if ($app->acceptance_signer_name !== null) {
+            throw new DomainException('Pengajuan ini sudah memiliki penandatangan surat.');
+        }
+
+        if ($signer->opd_id !== $app->opd_id) {
+            throw new DomainException('Penandatangan bukan milik OPD pengajuan ini.');
+        }
+
+        DB::transaction(function () use ($app, $signer, $actor): void {
+            $from = $app->status;
+
+            $app->update([
+                'status' => ApplicationStatus::WaitingTte,
+                'acceptance_signer_id' => $signer->id,
+                'acceptance_signer_name' => $signer->name,
+                'acceptance_signer_title' => $signer->title,
+                'acceptance_signer_nip' => $signer->nip,
+            ]);
+
+            $this->logStatus(
+                $app,
+                $from,
+                ApplicationStatus::WaitingTte,
+                $actor,
+                'Ditarik ke Menunggu TTE untuk penerbitan surat penerimaan bertanda tangan.',
+            );
+        });
+
+        ($this->letters ?? new LetterDocumentService)->generateAcceptanceDraft($app->fresh());
+    }
+
+    /**
      * Ajukan Ulang (R15): tiket rejected tidak bisa diedit — buat pengajuan
      * BARU dengan nomor tiket baru, seluruh data form + berkas di-copy dari
      * tiket lama agar pemohon tidak mengetik ulang. Tiket lama tetap rejected
@@ -298,6 +439,35 @@ class SubmissionService implements PengajuanServiceContract
 
         if ($old->user_id !== $actor->id) {
             throw new DomainException('Hanya pemilik pengajuan yang dapat mengajukan ulang.');
+        }
+
+        // Cegah "Ajukan Ulang" bila user sudah punya pengajuan aktif lain.
+        $hasActive = InternshipApplication::query()
+            ->where('user_id', $actor->id)
+            ->where('id', '!=', $old->id)
+            ->whereIn('status', array_map(
+                fn (ApplicationStatus $s) => $s->value,
+                ApplicationStatus::activeStatuses(),
+            ))
+            ->exists();
+
+        if ($hasActive) {
+            throw new DomainException(
+                'Anda masih memiliki pengajuan magang aktif. Selesaikan terlebih dahulu sebelum mengajukan ulang tiket yang ditolak.',
+            );
+        }
+
+        // Alumni magang tidak boleh masuk lagi lewat pintu belakang "Ajukan
+        // Ulang" — aturannya sama dengan pendaftaran baru (R2c).
+        $hasCompleted = InternshipApplication::query()
+            ->where('user_id', $actor->id)
+            ->where('status', ApplicationStatus::Completed->value)
+            ->exists();
+
+        if ($hasCompleted) {
+            throw new DomainException(
+                'Anda sudah pernah menyelesaikan program magang. Pengajuan ulang tidak diperbolehkan.',
+            );
         }
 
         $application = DB::transaction(function () use ($old, $actor): InternshipApplication {
@@ -325,6 +495,26 @@ class SubmissionService implements PengajuanServiceContract
             // (tujuan tetap terbaca dari kolom tujuan_magang).
             $new->opd_id = null;
 
+            // Periode magang tidak boleh ikut tersalin sebagai tanggal lampau:
+            // tiket yang ditolak setelah tanggal mulainya lewat akan menembus
+            // aturan `after_or_equal:today` pendaftaran, dan begitu di-ACC
+            // langsung disambar cron (approved → ongoing → completed di run yang
+            // sama). Bila tanggal mulai sudah lewat, seluruh periode digeser maju
+            // agar mulai hari ini dengan panjang hari yang sama.
+            // Illuminate\Support\Carbon (bukan facade Date yang mengembalikan
+            // CarbonImmutable) — tipe kolom tanggal di model memang Carbon.
+            $today = Carbon::now()->startOfDay();
+            $oldStart = $new->start_date->copy()->startOfDay();
+            $oldEnd = $new->end_date->copy()->startOfDay();
+            $periodShifted = $oldStart->lt($today);
+
+            if ($periodShifted) {
+                $lengthInDays = (int) $oldStart->diffInDays($oldEnd);
+
+                $new->start_date = $today->copy();
+                $new->end_date = $today->copy()->addDays($lengthInDays);
+            }
+
             // Copy fisik berkas agar tiap tiket punya arsip sendiri.
             foreach (['photo_path', 'surat_pengantar_path', 'cv_path', 'portfolio_path'] as $column) {
                 $new->{$column} = $this->copyFile($old->{$column}, $new->ticket_number);
@@ -332,12 +522,22 @@ class SubmissionService implements PengajuanServiceContract
 
             $new->save();
 
+            $note = "Diajukan ulang dari {$old->ticket_number}";
+
+            if ($periodShifted) {
+                $note .= sprintf(
+                    ' (periode digeser ke %s – %s karena tanggal lama sudah lampau)',
+                    $new->start_date->translatedFormat('d M Y'),
+                    $new->end_date->translatedFormat('d M Y'),
+                );
+            }
+
             $this->logStatus(
                 $new,
                 null,
                 ApplicationStatus::PendingVerifikator,
                 $actor,
-                "Diajukan ulang dari {$old->ticket_number}",
+                $note,
             );
 
             return $new;

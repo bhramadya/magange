@@ -4,10 +4,13 @@ use App\Enums\ApplicationStatus;
 use App\Jobs\GenerateJobAcceptanceLetter;
 use App\Jobs\SendApplicationConfirmationJob;
 use App\Jobs\SendJobRejectionEmail;
+use App\Jobs\SendSignedAcceptanceLetterJob;
+use App\Jobs\SendSignedCertificateJob;
 use App\Models\Certificate;
 use App\Models\FinalReport;
 use App\Models\InternshipApplication;
 use App\Models\Opd;
+use App\Models\OpdSigner;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -53,7 +56,23 @@ test('alur lengkap: daftar -> teruskan -> setujui -> cron mulai -> laporan -> se
     Queue::fake();
     Storage::fake('local');
 
-    $opd = Opd::create(['name' => 'Diskominfo', 'code' => 'DKI', 'is_active' => true, 'quota_total' => 5]);
+    // OPD siap-ACC: kop surat lengkap + penandatangan (syarat wajib approve).
+    $opd = Opd::create([
+        'name' => 'Diskominfo',
+        'code' => 'DKI',
+        'is_active' => true,
+        'quota_total' => 5,
+        'letterhead_address' => 'Jl. Perintis Kemerdekaan No. 32, Madiun',
+        'letterhead_phone' => '(0351) 467327',
+        'letterhead_email' => 'kominfo@madiunkota.go.id',
+    ]);
+    $signer = OpdSigner::create([
+        'opd_id' => $opd->id,
+        'name' => 'Budi Santoso',
+        'title' => 'Kepala Dinas',
+        'nip' => '198001012001011001',
+        'is_primary' => true,
+    ]);
     $verifikator = User::factory()->verifikator()->create();
     $opdAdmin = e2eOpdAdmin($opd);
 
@@ -74,51 +93,67 @@ test('alur lengkap: daftar -> teruskan -> setujui -> cron mulai -> laporan -> se
         ])->assertRedirect();
     expect($app->fresh()->status)->toBe(ApplicationStatus::ForwardedOpd);
 
-    // 3) OPD menyetujui + menetapkan penempatan → kuota bertambah, surat dikirim.
+    // 3) OPD menyetujui + menetapkan penempatan → kuota bertambah, draft surat
+    //    dicetak, TAPI email belum dikirim: pengajuan masuk antrean Menunggu TTE.
     $this->actingAs($opdAdmin)
         ->post("/opd/pengajuan/{$app->id}/approve", [
             'division' => 'Bidang TIK',
             'field_supervisor' => 'Rudi',
             'person_in_charge' => 'Kabid IT',
+            'signer_id' => $signer->id,
         ])->assertRedirect();
-    expect($app->fresh()->status)->toBe(ApplicationStatus::Approved)
+    expect($app->fresh()->status)->toBe(ApplicationStatus::WaitingTte)
+        ->and($app->fresh()->acceptance_draft_path)->not->toBeNull()
         ->and($opd->fresh()->quota_used)->toBe(1);
-    Queue::assertPushed(GenerateJobAcceptanceLetter::class);
+    Queue::assertNotPushed(GenerateJobAcceptanceLetter::class);
 
-    // 4) Cron harian: tanggal mulai = hari ini → Sedang Magang.
+    // 3b) Surat ditandatangani di luar sistem lalu diunggah → email baru dikirim.
+    //     Tanggal mulai = hari ini, jadi statusnya langsung Sedang Magang.
+    $this->actingAs($opdAdmin)
+        ->post("/opd/menunggu-tte/{$app->id}/unggah", [
+            'file' => UploadedFile::fake()->create('surat-ttd.pdf', 100, 'application/pdf'),
+        ])->assertRedirect();
+    expect($app->fresh()->status)->toBe(ApplicationStatus::Ongoing);
+    Queue::assertPushed(SendSignedAcceptanceLetterJob::class);
+
+    // 4) Cron harian idempoten: tiket yang sudah Sedang Magang tidak berubah.
     $this->artisan('magang:transition-statuses')->assertSuccessful();
     expect($app->fresh()->status)->toBe(ApplicationStatus::Ongoing);
 
     // 5) Peserta unggah laporan + konfirmasi selesai (aktor "Selesai" #4).
+    //    Pengajuan ber-snapshot TTE TIDAK langsung `completed` — ia menunggu
+    //    sertifikat bertanda tangan lebih dahulu (arti baru `completed`).
     $this->actingAs($mahasiswa)
         ->post("/mahasiswa/pengajuan/{$app->id}/laporan", [
             'file' => UploadedFile::fake()->create('laporan.pdf', 100, 'application/pdf'),
             'is_confirmed' => true,
         ])->assertRedirect();
-    expect($app->fresh()->status)->toBe(ApplicationStatus::Completed);
+    expect($app->fresh()->status)->toBe(ApplicationStatus::NeedsCertificate);
     $report = FinalReport::where('application_id', $app->id)->firstOrFail();
 
-    // 6) Admin OPD menyetujui laporan + mengunggah sertifikat (terkunci) —
-    //    batch 5: menu Laporan pindah total dari verifikator ke OPD.
+    // 6) Admin OPD menyetujui laporan akhir (batch 5: menu Laporan pindah
+    //    total dari verifikator ke OPD).
     $this->actingAs($opdAdmin)
         ->post("/opd/laporan/{$report->id}/approve")
         ->assertRedirect();
+
+    // 7) Draft sertifikat dibuat (snapshot penandatangan ikut tertulis).
     $this->actingAs($opdAdmin)
-        ->post("/opd/laporan/{$report->id}/sertifikat", [
-            'file' => UploadedFile::fake()->create('sertifikat.pdf', 100, 'application/pdf'),
-        ])->assertRedirect();
+        ->post("/opd/perlu-sertifikat/{$app->id}/draft", ['signer_id' => $signer->id])
+        ->assertRedirect();
     $certificate = Certificate::where('application_id', $app->id)->firstOrFail();
-    expect($certificate->is_download_locked)->toBeTrue();
+    expect($certificate->draft_path)->not->toBeNull()
+        ->and($certificate->signer_name)->toBe('Budi Santoso');
 
-    // 7) Survei wajib membuka kunci unduhan.
-    $this->actingAs($mahasiswa)
-        ->post("/sertifikat/{$certificate->id}/survei", [
-            'ratings' => ['bimbingan' => 5, 'lingkungan' => 4, 'relevansi' => 5, 'fasilitas' => 4, 'keseluruhan' => 5],
-            'comment' => 'Pengalaman bermanfaat.',
+    // 8) Sertifikat bertanda tangan diunggah → Selesai Magang + email terkirim.
+    $this->actingAs($opdAdmin)
+        ->post("/opd/perlu-sertifikat/{$app->id}/unggah", [
+            'file' => UploadedFile::fake()->create('sertifikat-ttd.pdf', 100, 'application/pdf'),
         ])->assertRedirect();
-    expect($certificate->fresh()->is_download_locked)->toBeFalse();
+    expect($app->fresh()->status)->toBe(ApplicationStatus::Completed);
+    Queue::assertPushed(SendSignedCertificateJob::class);
 
-    // 8) Unduh sertifikat berhasil.
+    // 9) Peserta bisa mengunduh sertifikatnya.
     $this->actingAs($mahasiswa)
         ->get("/sertifikat/{$certificate->id}/download")
         ->assertOk();
