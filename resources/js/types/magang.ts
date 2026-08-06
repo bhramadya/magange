@@ -98,6 +98,18 @@ export interface PresensiEntry {
     attachments: { id: number; name: string; url: string }[];
 }
 
+// Satu entri riwayat pengajuan (dossier) — dipakai tab "Jejak" dialog
+// Kelola Peserta (OPD) dan Kelola User (Verifikator).
+export interface RiwayatPengajuan {
+    ticket_number: string;
+    status: ApplicationStatus;
+    opd_name?: string | null;
+    institution_name?: string | null;
+    start_date: string; // ISO date
+    end_date: string; // ISO date
+    created_at: string; // ISO datetime
+}
+
 // Sertifikat selesai magang — id dipakai untuk URL survei & unduh (Fase 4).
 export interface Certificate {
     id: number;

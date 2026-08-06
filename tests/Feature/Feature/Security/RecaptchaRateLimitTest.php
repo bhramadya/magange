@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ApplicationStatus;
 use App\Models\InternshipApplication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -73,9 +74,14 @@ test('field pendaftaran tambahan tersimpan termasuk pas foto', function () {
 test('gerbang rate-limit memblokir pengajuan berlebih', function () {
     Queue::fake();
 
-    // 5 pengajuan pertama lolos; ke-6 dalam window harus diblokir.
+    // Rate limit dikunci per EMAIL (ApplicationController::store), jadi tes ini
+    // harus memakai email yang sama 5 kali. Sejak R2c ("satu magang aktif")
+    // pengajuan sebelumnya wajib ditutup dulu — statusnya di-set `rejected`
+    // (satu-satunya status yang sengaja TIDAK memblokir pendaftaran ulang),
+    // sehingga yang diuji di sini murni gerbang rate-limit, bukan gerbang R2c.
     for ($i = 0; $i < 5; $i++) {
         $this->post('/pengajuan', validPengajuan())->assertRedirect(route('login.otp'));
+        InternshipApplication::query()->update(['status' => ApplicationStatus::Rejected]);
     }
 
     $response = $this->post('/pengajuan', validPengajuan());

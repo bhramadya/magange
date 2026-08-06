@@ -23,37 +23,6 @@ function skForwardedApplication(Opd $opd): InternshipApplication
     ]);
 }
 
-/**
- * OPD yang SIAP menyetujui: kop surat lengkap (alamat/telepon/pos-el).
- *
- * Gate di ApproveApplicationRequest menolak approve bila kop belum lengkap,
- * jadi OPD tanpa kolom letterhead_* tidak akan pernah sampai ke penomoran SK.
- */
-function skOpd(): Opd
-{
-    return Opd::create([
-        'name' => 'Dinas Kominfo',
-        'code' => 'DKI',
-        'is_active' => true,
-        'quota_total' => 5,
-        'quota_used' => 0,
-        'letterhead_address' => 'Jl. Pahlawan No. 10, Madiun',
-        'letterhead_phone' => '(0351) 654321',
-        'letterhead_email' => 'kominfo@madiunkota.go.id',
-    ]);
-}
-
-function skSigner(Opd $opd): OpdSigner
-{
-    return OpdSigner::create([
-        'opd_id' => $opd->id,
-        'name' => 'Dra. Retno Wulandari',
-        'title' => 'Kepala Dinas',
-        'nip' => '197505052000032002',
-        'is_primary' => true,
-    ]);
-}
-
 // ---------------------------------------------------------------------------
 // R4/R5 — Nomor SK surat penerimaan saat OPD approve
 // ---------------------------------------------------------------------------
@@ -61,7 +30,7 @@ function skSigner(Opd $opd): OpdSigner
 test('approve OPD men-generate sk_number + sk_issued_at sekali', function () {
     Storage::fake('local');
     Queue::fake();
-    $opd = skOpd();
+    $opd = Opd::create(['name' => 'Dinas Kominfo', 'code' => 'DKI', 'is_active' => true, 'quota_total' => 5]);
     $admin = User::factory()->opdAdmin($opd->id)->create();
     $signer = skSigner($opd);
     $app = skForwardedApplication($opd);
@@ -84,10 +53,11 @@ test('approve OPD men-generate sk_number + sk_issued_at sekali', function () {
 test('nomor SK auto-increment antar approve + start number bisa diatur', function () {
     Storage::fake('local');
     Queue::fake();
+    Storage::fake('local');
     $service = app(SkNumberService::class);
     $service->setStart(SkNumberService::KEY_ACCEPTANCE, 40);
 
-    $opd = skOpd();
+    $opd = Opd::create(['name' => 'Dinas Kominfo', 'code' => 'DKI', 'is_active' => true, 'quota_total' => 5]);
     $admin = User::factory()->opdAdmin($opd->id)->create();
     $signer = skSigner($opd);
 

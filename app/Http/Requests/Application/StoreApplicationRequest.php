@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests\Application;
 
+use App\Enums\ApplicationStatus;
+use App\Models\User;
 use App\Rules\Recaptcha;
+use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
@@ -96,6 +99,60 @@ class StoreApplicationRequest extends FormRequest
             'portfolio' => ['nullable', 'file', 'mimes:pdf,doc,docx,zip,jpeg,jpg,png', 'max:10240'],
             // Gerbang anti-bot (flowchart Fase 1): token reCAPTCHA v3, action 'daftar'.
             'recaptcha_token' => [$captchaConfigured ? 'required' : 'nullable', new Recaptcha($this->ip(), 'daftar')],
+        ];
+    }
+
+    /**
+     * Validasi "satu magang aktif" (R2c): setelah seluruh rule sintaks lulus,
+     * cek rekam jejak email ini. Dua larangan yang ditegakkan di sini:
+     *   1. masih punya pengajuan berstatus aktif  → tunggu keputusannya;
+     *   2. pernah menyelesaikan magang (completed) → tidak boleh mendaftar lagi.
+     * Status `rejected` sengaja TIDAK memblokir — jalur "Ajukan Ulang" dan
+     * pendaftaran baru setelah ditolak harus tetap hidup.
+     */
+    public function after(): array
+    {
+        return [
+            function (\Illuminate\Validation\Validator $validator): void {
+                $email = $this->input('email');
+
+                if (! is_string($email) || $email === '') {
+                    return;
+                }
+
+                $user = User::where('email', $email)->first();
+
+                if ($user === null) {
+                    return;
+                }
+
+                $aktif = $user->applications()
+                    ->whereIn('status', array_map(
+                        fn (ApplicationStatus $s) => $s->value,
+                        ApplicationStatus::activeStatuses(),
+                    ))
+                    ->first();
+
+                if ($aktif !== null) {
+                    $validator->errors()->add(
+                        'email',
+                        "Email ini masih memiliki pengajuan magang yang sedang berjalan (tiket {$aktif->ticket_number}). Selesaikan atau tunggu keputusannya sebelum mendaftar lagi.",
+                    );
+
+                    return;
+                }
+
+                $selesai = $user->applications()
+                    ->where('status', ApplicationStatus::Completed->value)
+                    ->exists();
+
+                if ($selesai) {
+                    $validator->errors()->add(
+                        'email',
+                        'Email ini sudah pernah menyelesaikan program magang. Pendaftaran ulang tidak diperbolehkan.',
+                    );
+                }
+            },
         ];
     }
 

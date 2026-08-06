@@ -15,6 +15,25 @@ enum ApplicationStatus: string
     case Completed = 'completed';
 
     /**
+     * Status yang menandakan pengajuan masih berjalan — dipakai untuk
+     * validasi "satu magang aktif" (StoreApplicationRequest + SubmissionService).
+     *
+     * @return list<ApplicationStatus>
+     */
+    public static function activeStatuses(): array
+    {
+        return [
+            self::PendingVerifikator,
+            self::ForwardedOpd,
+            self::WaitingTte,
+            self::Approved,
+            self::Ongoing,
+            self::CompletionSubmitted,
+            self::NeedsCertificate,
+        ];
+    }
+
+    /**
      * Label manusiawi untuk ditampilkan di dasbor/tiket.
      */
     public function label(): string
