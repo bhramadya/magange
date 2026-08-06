@@ -586,7 +586,7 @@ export default function PresensiHarian({
                                                         )}
                                                     </span>
                                                 </p>
-                                                <button
+                                                {/* <button
                                                     type="button"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -601,7 +601,7 @@ export default function PresensiHarian({
                                                     aria-label="Hapus presensi"
                                                 >
                                                     <Trash2 className="size-4" />
-                                                </button>
+                                                </button> */}
                                             </div>
                                             <p className="mt-1 line-clamp-2 text-sm whitespace-pre-line text-slate-600">
                                                 {entry.details}

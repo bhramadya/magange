@@ -5,6 +5,7 @@ use App\Enums\ReportStatus;
 use App\Models\FinalReport;
 use App\Models\InternshipApplication;
 use App\Models\Opd;
+use App\Models\OpdSigner;
 use App\Models\SkCounter;
 use App\Models\User;
 use App\Services\SkNumberService;
@@ -22,34 +23,73 @@ function skForwardedApplication(Opd $opd): InternshipApplication
     ]);
 }
 
+/**
+ * OPD yang SIAP menyetujui: kop surat lengkap (alamat/telepon/pos-el).
+ *
+ * Gate di ApproveApplicationRequest menolak approve bila kop belum lengkap,
+ * jadi OPD tanpa kolom letterhead_* tidak akan pernah sampai ke penomoran SK.
+ */
+function skOpd(): Opd
+{
+    return Opd::create([
+        'name' => 'Dinas Kominfo',
+        'code' => 'DKI',
+        'is_active' => true,
+        'quota_total' => 5,
+        'quota_used' => 0,
+        'letterhead_address' => 'Jl. Pahlawan No. 10, Madiun',
+        'letterhead_phone' => '(0351) 654321',
+        'letterhead_email' => 'kominfo@madiunkota.go.id',
+    ]);
+}
+
+function skSigner(Opd $opd): OpdSigner
+{
+    return OpdSigner::create([
+        'opd_id' => $opd->id,
+        'name' => 'Dra. Retno Wulandari',
+        'title' => 'Kepala Dinas',
+        'nip' => '197505052000032002',
+        'is_primary' => true,
+    ]);
+}
+
 // ---------------------------------------------------------------------------
 // R4/R5 — Nomor SK surat penerimaan saat OPD approve
 // ---------------------------------------------------------------------------
 
 test('approve OPD men-generate sk_number + sk_issued_at sekali', function () {
+    Storage::fake('local');
     Queue::fake();
-    $opd = Opd::create(['name' => 'Dinas Kominfo', 'code' => 'DKI', 'is_active' => true, 'quota_total' => 5]);
+    $opd = skOpd();
     $admin = User::factory()->opdAdmin($opd->id)->create();
+    $signer = skSigner($opd);
     $app = skForwardedApplication($opd);
 
     $this->actingAs($admin)->post("/opd/pengajuan/{$app->id}/approve", [
         'division' => 'Aplikasi',
         'field_supervisor' => 'Pak Budi',
         'person_in_charge' => 'Bu Sari',
+        'signer_id' => $signer->id,
     ])->assertRedirect();
 
+    // Penomoran SK terjadi di SubmissionService::approve, jadi tetap berlaku
+    // walau alur TTE membawa status ke waiting_tte (bukan langsung approved).
     $app->refresh();
     expect($app->sk_number)->toBe('503.11/1/401.106/'.now()->year)
-        ->and($app->sk_issued_at?->toDateString())->toBe(now()->toDateString());
+        ->and($app->sk_issued_at?->toDateString())->toBe(now()->toDateString())
+        ->and($app->status)->toBe(ApplicationStatus::WaitingTte);
 });
 
 test('nomor SK auto-increment antar approve + start number bisa diatur', function () {
+    Storage::fake('local');
     Queue::fake();
     $service = app(SkNumberService::class);
     $service->setStart(SkNumberService::KEY_ACCEPTANCE, 40);
 
-    $opd = Opd::create(['name' => 'Dinas Kominfo', 'code' => 'DKI', 'is_active' => true, 'quota_total' => 5]);
+    $opd = skOpd();
     $admin = User::factory()->opdAdmin($opd->id)->create();
+    $signer = skSigner($opd);
 
     foreach ([40, 41] as $expected) {
         $app = skForwardedApplication($opd);
@@ -57,6 +97,7 @@ test('nomor SK auto-increment antar approve + start number bisa diatur', functio
             'division' => 'Aplikasi',
             'field_supervisor' => 'Pak Budi',
             'person_in_charge' => 'Bu Sari',
+            'signer_id' => $signer->id,
         ]);
 
         expect($app->refresh()->sk_number)->toBe("503.11/{$expected}/401.106/".now()->year);

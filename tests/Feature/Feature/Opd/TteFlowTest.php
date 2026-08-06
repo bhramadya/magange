@@ -31,6 +31,10 @@ function tteOpd(): Opd
         'name' => 'Dinas Kearsipan',
         'code' => 'ARSIP',
         'quota_total' => 5,
+        // Wajib disetel eksplisit: tanpa ini atribut model bernilai null (default
+        // DB baru termuat setelah refresh()), sehingga assertion yang menyimpan
+        // $opd->quota_used sebagai nilai awal membandingkan null dengan 0.
+        'quota_used' => 0,
         'letterhead_address' => 'Jl. Pemuda No. 1, Madiun',
         'letterhead_phone' => '(0351) 123456',
         'letterhead_email' => 'arsip@madiunkota.go.id',
