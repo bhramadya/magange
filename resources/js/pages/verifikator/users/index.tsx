@@ -48,6 +48,8 @@ interface UserApplicationRow {
     status: ApplicationStatus;
     opd_name?: string | null;
     institution_name?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
     created_at?: string | null;
 }
 

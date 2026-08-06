@@ -39,6 +39,7 @@ import type {
     MagangUser,
     Opd,
     PresensiEntry,
+    RiwayatPengajuan,
     Signer,
 } from '@/types/magang';
 
@@ -56,6 +57,7 @@ export interface Participant {
     student_name: string;
     application: InternshipApplication;
     presensi?: PresensiEntry[];
+    riwayat_pengajuan?: RiwayatPengajuan[];
 }
 
 /* ---- util ------------------------------------------------------------ */
@@ -788,14 +790,34 @@ function DetailDialog({
     onClose: () => void;
     signers: Signer[];
 }) {
+    type Tab = 'ringkasan' | 'detail' | 'presensi' | 'jejak';
+    const [tab, setTab] = useState<Tab>('ringkasan');
+
     const app = participant?.application ?? null;
     const canComplete =
         app?.status === 'ongoing' || app?.status === 'completion_submitted';
-    // Disetujui/sedang magang tapi tanpa snapshot penandatangan = tidak pernah
-    // melewati alur TTE.
     const perluTte =
         (app?.status === 'approved' || app?.status === 'ongoing') &&
         !app?.acceptance_signer;
+
+    const sisaHari = useMemo(() => {
+        if (!app) {
+            return null;
+        }
+        const end = new Date(app.end_date).getTime();
+        const now = REF_DATE.getTime();
+        if (now > end) {
+            return 0;
+        }
+        return Math.max(0, Math.ceil((end - now) / 86_400_000));
+    }, [app]);
+
+    const TABS: { key: Tab; label: string; icon: typeof CalendarCheck }[] = [
+        { key: 'ringkasan', label: 'Ringkasan', icon: FileCheck2 },
+        { key: 'detail', label: 'Data Detail', icon: Briefcase },
+        { key: 'presensi', label: 'Presensi', icon: CalendarCheck },
+        { key: 'jejak', label: 'Jejak', icon: History },
+    ];
 
     return (
         <Dialog
@@ -805,213 +827,346 @@ function DetailDialog({
             <DialogContent className="max-h-[90vh] overflow-y-auto bg-white text-[#0a1628] sm:max-w-lg">
                 {participant && app && (
                     <>
-                        <DialogHeader>
-                            <DialogTitle className="flex flex-wrap items-center gap-2 text-[#0a1628]">
-                                {participant.student_name}
-                                <StatusBadge status={app.status} />
-                            </DialogTitle>
-                            <DialogDescription className="font-mono text-slate-500">
-                                {app.ticket_number}
-                            </DialogDescription>
-                        </DialogHeader>
+                        {/* Kepala tetap: foto + identitas ringkas */}
+                        <div className="space-y-3">
+                            <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2 text-[#0a1628]">
+                                    {app.photo_url && (
+                                        <img
+                                            src={app.photo_url}
+                                            alt={participant.student_name}
+                                            className="size-10 shrink-0 rounded-full border border-slate-200 object-cover"
+                                        />
+                                    )}
+                                    <span className="truncate">
+                                        {participant.student_name}
+                                    </span>
+                                    <StatusBadge status={app.status} />
+                                </DialogTitle>
+                                <DialogDescription className="font-mono text-slate-500">
+                                    {app.ticket_number}
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                                <span>
+                                    {formatDate(app.start_date)} –{' '}
+                                    {formatDate(app.end_date)}
+                                </span>
+                                {sisaHari !== null && sisaHari > 0 && (
+                                    <span className="font-semibold text-[#106feb]">
+                                        sisa {sisaHari} hari
+                                    </span>
+                                )}
+                                {app.institution_name && (
+                                    <span className="truncate">
+                                        {app.institution_name}
+                                    </span>
+                                )}
+                                {app.nis && <span>NIS: {app.nis}</span>}
+                            </div>
+                        </div>
 
-                        {/* Pas foto peserta (disk privat, route terproteksi) */}
-                        {app.photo_url && (
-                            <div className="flex justify-center">
-                                <img
-                                    src={app.photo_url}
-                                    alt={`Pas foto ${participant.student_name}`}
-                                    className="h-40 w-32 rounded-xl border border-slate-200 object-cover shadow-sm"
-                                />
+                        {/* Tab navigasi */}
+                        <div
+                            role="tablist"
+                            className="flex gap-1 rounded-xl bg-slate-100 p-1"
+                        >
+                            {TABS.map((item) => (
+                                <button
+                                    key={item.key}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={tab === item.key}
+                                    aria-pressed={tab === item.key}
+                                    onClick={() => setTab(item.key)}
+                                    className={cn(
+                                        'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition min-h-11 focus-visible:ring-4 focus-visible:ring-[#106feb]/30 focus-visible:outline-none',
+                                        tab === item.key
+                                            ? 'bg-white text-[#106feb] shadow-sm'
+                                            : 'text-slate-500 hover:text-[#12213e]',
+                                    )}
+                                >
+                                    <item.icon className="size-3.5" />
+                                    <span className="hidden sm:inline">
+                                        {item.label}
+                                    </span>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Isi tab */}
+                        {tab === 'ringkasan' && (
+                            <div className="space-y-4">
+                                <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white px-4">
+                                    <DetailRow
+                                        label="Status"
+                                        value={
+                                            STATUS_META[app.status]?.label ??
+                                            app.status
+                                        }
+                                    />
+                                    <DetailRow
+                                        label="Periode"
+                                        value={`${formatDate(app.start_date)} – ${formatDate(app.end_date)}`}
+                                    />
+                                    <DetailRow
+                                        label="Durasi"
+                                        value={`${app.duration_months} bulan`}
+                                    />
+                                    <DetailRow
+                                        label="Divisi / Bidang"
+                                        value={app.division ?? '—'}
+                                        icon={Briefcase}
+                                    />
+                                    <DetailRow
+                                        label="Pembimbing Lapangan"
+                                        value={app.field_supervisor ?? '—'}
+                                        icon={UserCog}
+                                    />
+                                    <DetailRow
+                                        label="No. SK Penerimaan"
+                                        value={app.sk_number ?? '—'}
+                                    />
+                                </div>
                             </div>
                         )}
 
-                        {/* Seluruh data peserta — identitas + penempatan */}
-                        <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white px-4">
-                            <DetailRow
-                                label="NIS / NIM"
-                                value={app.nis || '—'}
-                            />
-                            <DetailRow
-                                label="Asal Instansi"
-                                value={app.institution_name}
-                            />
-                            <DetailRow
-                                label="Tujuan Magang"
-                                value={app.tujuan_magang}
-                            />
-                            <DetailRow
-                                label="Jurusan"
-                                value={app.major || '—'}
-                            />
-                            <DetailRow
-                                label="Keahlian"
-                                value={app.skills || '—'}
-                            />
-                            <DetailRow
-                                label="Alamat"
-                                value={app.address || '—'}
-                            />
-                            <DetailRow
-                                label="No. WhatsApp"
-                                value={app.applicant_whatsapp || '—'}
-                            />
-                            <DetailRow
-                                label="Email"
-                                value={app.applicant_email || '—'}
-                            />
-                            <DetailRow
-                                label="Durasi"
-                                value={`${app.duration_months} bulan`}
-                            />
-                            <DetailRow
-                                label="Periode"
-                                value={`${formatDate(app.start_date)} – ${formatDate(app.end_date)}`}
-                            />
-                            <DetailRow
-                                label="Divisi / Bidang"
-                                value={app.division ?? '—'}
-                                icon={Briefcase}
-                            />
-                            <DetailRow
-                                label="Pembimbing Lapangan"
-                                value={app.field_supervisor ?? '—'}
-                                icon={UserCog}
-                            />
-                            <DetailRow
-                                label="Pembimbing Kampus"
-                                value={app.campus_supervisor}
-                                icon={GraduationCap}
-                            />
-                            <DetailRow
-                                label="No. WA Pembimbing"
-                                value={app.campus_supervisor_whatsapp || '—'}
-                            />
-                            <DetailRow
-                                label="Penanggung Jawab"
-                                value={app.person_in_charge ?? '—'}
-                                icon={UserCog}
-                            />
-                            <DetailRow
-                                label="No. SK Penerimaan"
-                                value={app.sk_number ?? '—'}
-                            />
-                            <DetailRow
-                                label="Tanggal Terbit SK"
-                                value={
-                                    app.sk_issued_at
-                                        ? formatDate(app.sk_issued_at)
-                                        : '—'
-                                }
-                            />
-                        </div>
-
-                        {/* Dokumen lampiran (surat pengantar / CV / portofolio) */}
-                        <ApplicationDocuments app={app} />
-                        {app.acceptance_draft_url && (
-                            <a
-                                href={app.acceptance_draft_url}
-                                className="inline-flex items-center gap-2 rounded-xl border border-[#106feb] px-4 py-2 text-sm font-semibold text-[#106feb]"
-                            >
-                                <FileBadge2 className="size-4" />
-                                Download Surat Penerimaan
-                            </a>
+                        {tab === 'detail' && (
+                            <div className="space-y-4">
+                                <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white px-4">
+                                    <DetailRow
+                                        label="NIS / NIM"
+                                        value={app.nis || '—'}
+                                    />
+                                    <DetailRow
+                                        label="Asal Instansi"
+                                        value={app.institution_name}
+                                    />
+                                    <DetailRow
+                                        label="Tujuan Magang"
+                                        value={app.tujuan_magang}
+                                    />
+                                    <DetailRow
+                                        label="Jurusan"
+                                        value={app.major || '—'}
+                                    />
+                                    <DetailRow
+                                        label="Keahlian"
+                                        value={app.skills || '—'}
+                                    />
+                                    <DetailRow
+                                        label="Alamat"
+                                        value={app.address || '—'}
+                                    />
+                                    <DetailRow
+                                        label="No. WhatsApp"
+                                        value={
+                                            app.applicant_whatsapp || '—'
+                                        }
+                                    />
+                                    <DetailRow
+                                        label="Email"
+                                        value={app.applicant_email || '—'}
+                                    />
+                                    <DetailRow
+                                        label="Pembimbing Lapangan"
+                                        value={app.field_supervisor ?? '—'}
+                                        icon={UserCog}
+                                    />
+                                    <DetailRow
+                                        label="Pembimbing Kampus"
+                                        value={app.campus_supervisor}
+                                        icon={GraduationCap}
+                                    />
+                                    <DetailRow
+                                        label="No. WA Pembimbing"
+                                        value={
+                                            app.campus_supervisor_whatsapp ||
+                                            '—'
+                                        }
+                                    />
+                                    <DetailRow
+                                        label="Penanggung Jawab"
+                                        value={app.person_in_charge ?? '—'}
+                                        icon={UserCog}
+                                    />
+                                    <DetailRow
+                                        label="No. SK Penerimaan"
+                                        value={app.sk_number ?? '—'}
+                                    />
+                                    <DetailRow
+                                        label="Tanggal Terbit SK"
+                                        value={
+                                            app.sk_issued_at
+                                                ? formatDate(
+                                                      app.sk_issued_at,
+                                                  )
+                                                : '—'
+                                        }
+                                    />
+                                    {/* Dokumen lampiran */}
+                                    <ApplicationDocuments app={app} />
+                                    {app.acceptance_draft_url && (
+                                        <a
+                                            href={app.acceptance_draft_url}
+                                            className="inline-flex items-center gap-2 rounded-xl border border-[#106feb] px-4 py-2 text-sm font-semibold text-[#106feb]"
+                                        >
+                                            <FileBadge2 className="size-4" />
+                                            Download Surat Penerimaan
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
                         )}
 
-                        {/* Rekam jejak progres tiket */}
-                        <StatusTimeline app={app} />
+                        {tab === 'presensi' && (
+                            <PresensiHistory
+                                entries={participant.presensi ?? []}
+                            />
+                        )}
 
-                        {/* Riwayat presensi peserta (batch 5) */}
-                        <PresensiHistory entries={participant.presensi ?? []} />
-
-                        {app.final_report && (
-                            <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
-                                <p className="flex items-center gap-2 text-sm font-semibold text-[#12213e]">
-                                    <FileCheck2 className="size-4 text-[#106feb]" />{' '}
-                                    Laporan Akhir
-                                </p>
-                                <div>
-                                    <p className="text-sm text-slate-600">
-                                        {app.final_report.file_name}
-                                    </p>
-                                    <p className="mt-1 text-xs text-slate-400">
-                                        Diunggah{' '}
-                                        {formatDate(
-                                            app.final_report.submitted_at,
-                                        )}{' '}
-                                        ·{' '}
-                                        {app.final_report.status === 'approved'
-                                            ? 'Tervalidasi'
-                                            : app.final_report.status ===
-                                                'rejected'
-                                              ? 'Ditolak'
-                                              : 'Menunggu validasi'}
-                                    </p>
-                                </div>
-
-                                {/* Panel aksi (batch 5: pindahan menu Laporan
-                                    verifikator). Tombol tampil sesuai status. */}
-                                {app.final_report.id != null && (
-                                    <div className="space-y-3 border-t border-slate-100 pt-3">
-                                        {app.final_report.report_url && (
-                                            <a
-                                                href={
-                                                    app.final_report.report_url
-                                                }
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-2 text-sm font-semibold text-[#106feb] transition hover:underline"
-                                            >
-                                                <ExternalLink className="size-4" />{' '}
-                                                Buka Berkas Laporan
-                                            </a>
-                                        )}
-                                        {app.final_report.status ===
-                                            'pending' && (
-                                            <ApproveReportButton
-                                                reportId={app.final_report.id}
-                                            />
-                                        )}
-                                        {app.final_report.status ===
-                                            'approved' && (
-                                            <UploadCertificate
-                                                reportId={app.final_report.id}
-                                            />
-                                        )}
-                                        <CompletionLetter
-                                            report={{
-                                                ...app.final_report,
-                                                id: app.final_report.id,
-                                            }}
-                                        />
+                        {tab === 'jejak' && (
+                            <div className="space-y-4">
+                                <StatusTimeline app={app} />
+                                {(participant.riwayat_pengajuan ?? [])
+                                    .length > 0 && (
+                                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                                        <p className="flex items-center gap-2 text-sm font-semibold text-[#12213e]">
+                                            <History className="size-4 text-[#106feb]" />{' '}
+                                            Riwayat Pendaftaran Sebelumnya
+                                        </p>
+                                        <ul className="mt-3 space-y-2">
+                                            {(
+                                                participant.riwayat_pengajuan ?? []
+                                            ).map((riwayat) => (
+                                                <li
+                                                    key={
+                                                        riwayat.ticket_number
+                                                    }
+                                                    className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5"
+                                                >
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <span className="font-mono text-xs font-semibold text-[#12213e]">
+                                                            {
+                                                                riwayat.ticket_number
+                                                            }
+                                                        </span>
+                                                        <StatusBadge
+                                                            status={
+                                                                riwayat.status
+                                                            }
+                                                        />
+                                                    </div>
+                                                    <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                                                        <Building2 className="size-3 shrink-0" />
+                                                        {riwayat.opd_name ??
+                                                            'Belum ditempatkan'}
+                                                        {riwayat.institution_name
+                                                            ? ` · ${riwayat.institution_name}`
+                                                            : ''}
+                                                    </p>
+                                                </li>
+                                            ))}
+                                        </ul>
                                     </div>
                                 )}
                             </div>
                         )}
 
-                        {app.status === 'completed' &&
-                            app.certificate_available && (
-                                <p className="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-                                    <Award className="size-4" /> Magang selesai
-                                    — e-sertifikat telah terbit.
-                                </p>
+                        {/* Panel aksi tetap (laporan, TTE, selesaikan) */}
+                        <div className="mt-2 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4">
+                            {app.final_report && (
+                                <div className="space-y-3">
+                                    <p className="flex items-center gap-2 text-sm font-semibold text-[#12213e]">
+                                        <FileCheck2 className="size-4 text-[#106feb]" />{' '}
+                                        Laporan Akhir
+                                    </p>
+                                    <div>
+                                        <p className="text-sm text-slate-600">
+                                            {app.final_report.file_name}
+                                        </p>
+                                        <p className="mt-1 text-xs text-slate-400">
+                                            Diunggah{' '}
+                                            {formatDate(
+                                                app.final_report.submitted_at,
+                                            )}{' '}
+                                            ·{' '}
+                                            {app.final_report.status ===
+                                            'approved'
+                                                ? 'Tervalidasi'
+                                                : app.final_report.status ===
+                                                    'rejected'
+                                                  ? 'Ditolak'
+                                                  : 'Menunggu validasi'}
+                                        </p>
+                                    </div>
+                                    {app.final_report.id != null && (
+                                        <div className="space-y-3 border-t border-slate-100 pt-3">
+                                            {app.final_report.report_url && (
+                                                <a
+                                                    href={
+                                                        app.final_report
+                                                            .report_url
+                                                    }
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 text-sm font-semibold text-[#106feb] transition hover:underline"
+                                                >
+                                                    <ExternalLink className="size-4" />{' '}
+                                                    Buka Berkas Laporan
+                                                </a>
+                                            )}
+                                            {app.final_report.status ===
+                                                'pending' && (
+                                                <ApproveReportButton
+                                                    reportId={
+                                                        app.final_report.id
+                                                    }
+                                                />
+                                            )}
+                                            {app.final_report.status ===
+                                                'approved' && (
+                                                <UploadCertificate
+                                                    reportId={
+                                                        app.final_report.id
+                                                    }
+                                                />
+                                            )}
+                                            <CompletionLetter
+                                                report={{
+                                                    ...app.final_report,
+                                                    id: app.final_report.id,
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
                             )}
 
-                        {perluTte && (
-                            <ReissueTteAction
-                                key={`tte-${app.id}`}
-                                applicationId={app.id}
-                                signers={signers}
-                            />
-                        )}
+                            {app.status === 'completed' &&
+                                app.certificate_available && (
+                                    <p className="flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                                        <Award className="size-4" /> Magang
+                                        selesai — e-sertifikat telah terbit.
+                                    </p>
+                                )}
 
-                        {canComplete && (
-                            <CompleteAction
-                                key={app.id}
-                                endpoint={`/opd/pengajuan/${app.id}/complete`}
-                                onDone={onClose}
-                            />
-                        )}
+                            {perluTte && (
+                                <ReissueTteAction
+                                    key={`tte-${app.id}`}
+                                    applicationId={app.id}
+                                    signers={signers}
+                                />
+                            )}
+
+                            {canComplete && (
+                                <CompleteAction
+                                    key={app.id}
+                                    endpoint={`/opd/pengajuan/${app.id}/complete`}
+                                    onDone={onClose}
+                                />
+                            )}
+                        </div>
                     </>
                 )}
             </DialogContent>

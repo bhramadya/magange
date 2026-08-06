@@ -74,6 +74,37 @@ class SubmissionService implements PengajuanServiceContract
                 ],
             );
 
+            // Cegah "satu magang aktif" (R2c): bila user sudah ada & punya
+            // pengajuan berstatus aktif — atau pernah menyelesaikan magang —
+            // tolak. Ini lapis kedua setelah validasi request: endpoint
+            // pendaftaran terbuka untuk umum, jangan bergantung satu lapis saja.
+            if ($user->wasRecentlyCreated === false) {
+                $hasActive = InternshipApplication::query()
+                    ->where('user_id', $user->id)
+                    ->whereIn('status', array_map(
+                        fn (ApplicationStatus $s) => $s->value,
+                        ApplicationStatus::activeStatuses(),
+                    ))
+                    ->exists();
+
+                if ($hasActive) {
+                    throw new DomainException(
+                        'Email ini masih memiliki pengajuan magang yang sedang berjalan.',
+                    );
+                }
+
+                $hasCompleted = InternshipApplication::query()
+                    ->where('user_id', $user->id)
+                    ->where('status', ApplicationStatus::Completed->value)
+                    ->exists();
+
+                if ($hasCompleted) {
+                    throw new DomainException(
+                        'Email ini sudah pernah menyelesaikan program magang. Pendaftaran ulang tidak diperbolehkan.',
+                    );
+                }
+            }
+
             // Peserta lama yang mendaftar ulang & mengunggah pas foto, tapi belum
             // punya foto profil: adopsi pas foto terbaru sebagai foto profil.
             if (($validatedData['photo_path'] ?? null) !== null && $user->avatar_path === null) {
@@ -408,6 +439,35 @@ class SubmissionService implements PengajuanServiceContract
 
         if ($old->user_id !== $actor->id) {
             throw new DomainException('Hanya pemilik pengajuan yang dapat mengajukan ulang.');
+        }
+
+        // Cegah "Ajukan Ulang" bila user sudah punya pengajuan aktif lain.
+        $hasActive = InternshipApplication::query()
+            ->where('user_id', $actor->id)
+            ->where('id', '!=', $old->id)
+            ->whereIn('status', array_map(
+                fn (ApplicationStatus $s) => $s->value,
+                ApplicationStatus::activeStatuses(),
+            ))
+            ->exists();
+
+        if ($hasActive) {
+            throw new DomainException(
+                'Anda masih memiliki pengajuan magang aktif. Selesaikan terlebih dahulu sebelum mengajukan ulang tiket yang ditolak.',
+            );
+        }
+
+        // Alumni magang tidak boleh masuk lagi lewat pintu belakang "Ajukan
+        // Ulang" — aturannya sama dengan pendaftaran baru (R2c).
+        $hasCompleted = InternshipApplication::query()
+            ->where('user_id', $actor->id)
+            ->where('status', ApplicationStatus::Completed->value)
+            ->exists();
+
+        if ($hasCompleted) {
+            throw new DomainException(
+                'Anda sudah pernah menyelesaikan program magang. Pengajuan ulang tidak diperbolehkan.',
+            );
         }
 
         $application = DB::transaction(function () use ($old, $actor): InternshipApplication {

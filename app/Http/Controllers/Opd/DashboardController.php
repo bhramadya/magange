@@ -112,6 +112,24 @@ class DashboardController extends Controller
                 ->map(fn (PresensiLog $log): array => PresensiController::entryPayload($log))
                 ->values()
                 ->all(),
+            // Riwayat pendaftaran sebelumnya (dossier) — ditampilkan di tab
+            // "Jejak" dialog Kelola Peserta. Bentuk kunci disamakan dengan
+            // Verifikator\UserController supaya bisa pakai komponen bersama.
+            'riwayat_pengajuan' => InternshipApplication::query()
+                ->where('user_id', $app->user_id)
+                ->where('id', '!=', $app->id)
+                ->with('opd:id,name')
+                ->latest()
+                ->get()
+                ->map(fn (InternshipApplication $a): array => [
+                    'ticket_number' => $a->ticket_number,
+                    'status' => $a->status->value,
+                    'opd_name' => $a->opd?->name,
+                    'institution_name' => $a->institution_name,
+                    'start_date' => $a->start_date->toDateString(),
+                    'end_date' => $a->end_date->toDateString(),
+                    'created_at' => $a->created_at?->toIso8601String(),
+                ])->all(),
         ])->all();
 
         return Inertia::render('opd/peserta', [
