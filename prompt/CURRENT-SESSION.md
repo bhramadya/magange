@@ -3,6 +3,105 @@
 **Tanggal mulai:** 2026-07-16
 **Status:** 🟡 In Progress
 
+## Sesi 2026-08-06 (lanjutan) — R2c dituntaskan: guard lapis-2 & pesan galat sampai ke pengguna
+
+Backend R2c sudah ada sejak `1e7d637`; yang belum ada adalah **jalan keluar bagi
+pesannya**. Tiga lubang ditutup:
+
+**1. `DomainException` lolos jadi HTTP 500 (bug nyata).**
+`Mahasiswa\ApplicationController::store()` memanggil `submit()` **tanpa `try/catch`**,
+padahal `resubmit()` di file yang sama sudah menangkapnya. Lapis-2 R2c dipasang justru
+karena `/pengajuan` publik: dua POST bersamaan dari email yang sama sama-sama lolos
+`StoreApplicationRequest`, lalu yang kedua kena guard di service → **500**, bukan pesan
+yang bisa dibaca pemohon. → dibungkus `try/catch` →
+`back()->withInput()->withErrors(['email' => …])`, pola persis `resubmit()`.
+**Gotcha untuk transisi berikutnya: guard domain tanpa `catch` di controller = 500.**
+Tes lama hanya memanggil service langsung, jadi jalur HTTP ini tidak tercakup — tes
+baru mem-*mock* `PengajuanServiceContract` agar `submit()` melempar, lalu meng-assert
+`assertSessionHasErrors('email')`. Kondisi balapannya sendiri tidak bisa dibuat andal
+lewat HTTP, jadi yang diuji adalah kontrak lapisannya.
+
+**2. `welcome.tsx` — galat email tak terlihat.** Input email tak punya blok galat;
+satu-satunya tempat pesan R2c muncul adalah ringkasan generik di dekat tombol kirim,
+dan `post()` memakai `preserveScroll: true` sehingga tak ada yang menuntun mata ke sana.
+→ blok `{errors.email}` di bawah input + border rose + `aria-invalid`/`aria-describedby`
+(pola `errors.photo` yang sudah ada), plus `onError` → `scrollIntoView` ke field email
+bila itu yang ditolak, selain itu ke ringkasan. Ringkasan generik **tetap** sebagai
+jaring pengaman. Nol perubahan kontrak prop.
+
+**3. `mahasiswa/pengajuan.tsx` — Ajukan Ulang menelan alasannya.**
+`onError: () => router.visit('/#daftar')` dengan komentar *"Endpoint belum tersedia
+(backend menyusul)"* yang **sudah basi** sejak R15. Akibatnya `errors.resubmit` dari
+guard R2c tak pernah tampil, dan peserta dilempar ke form publik yang menolaknya lagi
+dengan kalimat berbeda. → redirect dihapus, alasan ditampilkan di tempat.
+
+### Gate Pint/PHPStan yang merah di sesi sebelumnya kini beres
+Dua file peninggalan `1e7d637` yang dicatat sesi lalu sudah di-Pint (murni format).
+PHPStan juga menyimpan satu galat pre-existing di file yang sama:
+`StoreApplicationRequest::after()` tanpa `@return list<callable>` — disamakan dengan
+`Opd\ApproveApplicationRequest` yang sudah punya anotasi itu.
+**PHPStan lokal wajib `--memory-limit=1G`**; tanpa itu worker paralelnya kehabisan
+memori di 128M dan `composer ci:check` gagal sebelum sempat menyentuh tes.
+
+Ikut dirapikan (pre-existing, di luar R2c, murni format/lint — nol perubahan perilaku):
+`opd/peserta.tsx` belum pernah dilewatkan prettier/eslint sejak batch R1–R2b, dan
+`mahasiswa/presensi.tsx` mengimpor `router` yang kini hanya dipakai di dalam blok
+tombol "Hapus presensi" yang dikomentari → impor dilepas, catatan cara memulihkannya
+ditulis tepat di atas blok itu.
+
+**Hasil:** `composer ci:check` ✅ (eslint · prettier · tsc · Pint · PHPStan) ·
+`php artisan test` → **232 tes: 222 lulus / 10 skip / 0 gagal (1200 assertion)** ·
+`npm run build` ✅. Naik tepat +1 tes / +4 assertion dari baseline 231/1196.
+
+**Keputusan #2 (`plan_revisi_akhir.md`) sengaja DIBIARKAN TERBUKA** atas permintaan
+pemilik: larangan mendaftar setelah `completed` tetap permanen seperti kode sekarang,
+tapi keputusannya belum ditutup — jangan anggap sudah final.
+
+**Temuan sampingan, belum diperbaiki:** `RegistrationSeeder:45` memakai tiket
+`MGG-2026-0051` — melanggar format kanonik `MGG-YYYY-NNNNNN` (6 digit).
+
+## Sesi 2026-08-06 — audit drift CLAUDE.md + suite kembali hijau
+**Suite `newback` sempat tidak bisa jalan sama sekali.** Merge `39bd383` menyisakan
+pemanggilan `skSigner()`/`skOpdSiapAcc()` di
+`tests/Feature/Feature/Verifikator/SkNumberTest.php` **tanpa definisinya** (fatal
+"undefined function" — seluruh file mati sebelum sempat assert), dan `tteOpd()` di
+`Opd/TteFlowTest.php` kehilangan `'quota_used' => 0`. Keduanya masih utuh di
+`origin/front` (`1e7d637`); ini salah resolusi merge, bukan pekerjaan baru.
+→ Dikembalikan (hanya file tes, **nol** perubahan kode produksi; gate approve TTE
+tidak disentuh). Hasil: `php artisan test` → **231 tes: 221 lulus / 10 skip / 0 gagal
+(1196 assertion)**. Sepuluh skip itu **masih ada** — klaim "0 skip" di
+`resources/js/pages/plan_revisi_akhir.md` §R1 keliru.
+
+**CLAUDE.md diperbarui** (drift diverifikasi ke file/commit, bukan diduga):
+README.md kini ada tapi **tidak akurat** (klaim Spatie Permission — tak terpasang;
+PHP >= 8.2 vs composer `^8.3`; surat penerimaan "otomatis terkirim" vs alur TTE yang
+justru sengaja tidak auto-kirim) → ditandai tidak otoritatif, README-nya sendiri
+sengaja TIDAK diubah; aturan **satu magang aktif (R2c) SUDAH ada di kode** (dulu
+tertulis "belum ada" — risiko diimplementasikan dua kali); status revisi_akhir
+poin 1 & 2 selesai, 3 & 4 belum, 5 sebagian; jumlah baris halaman besar; prop
+`riwayat_pengajuan`; TESTING-PROGRESS.md + plan_revisi_akhir.md ditambahkan sebagai
+sumber terkini (file ini berhenti di 2026-07-30).
+
+### Gate Pint masih merah — PRE-EXISTING, bukan dari sesi ini
+`vendor/bin/pint --test` pada working tree bersih (sebelum sesi ini) sudah gagal di
+**3** file. Dua di antaranya peninggalan commit R2c `1e7d637` dan belum disentuh:
+`app/Http/Requests/Application/StoreApplicationRequest.php`
+(`no_unused_imports`, `not_operator_with_successor_space`, dll.) dan
+`tests/Feature/Feature/Mahasiswa/SatuMagangAktifTest.php` (`ordered_imports`).
+Yang ketiga, `SkNumberTest.php` (`no_unused_imports` — `OpdSigner` jadi tak terpakai
+justru karena `skSigner()` terhapus), **ikut beres** saat helper-nya dikembalikan.
+Artinya `composer ci:check` tetap merah sampai dua file itu di-`composer lint`
+(murni format, nol perubahan perilaku) — dibiarkan karena di luar lingkup sesi ini.
+
+### Temuan terbuka (BELUM diperbaiki — butuh keputusan produk)
+- **Jalur sertifikat TTE melewati survei kepuasan.** `Opd\TteController`
+  `generateCertificateDraft():78` dan `uploadCertificate():112` menulis
+  `is_download_locked => false`, sedangkan jalur legacy `CertificateService`
+  mengunci (`:32`) dan baru membuka setelah survei (`:61`). Jadi invarian
+  "survei wajib sebelum unduhan terbuka" hanya berlaku di satu jalur. Ini
+  keputusan #7 di `plan_revisi_akhir.md` — **jangan** samakan salah satu sisi
+  diam-diam.
+
 ## Batch aktif
 - **Sesi 2026-07-29/30 — Alur TTE Surat Penerimaan & Sertifikat** ✅ **SELESAI
   2026-07-30**: status Menunggu TTE/Perlu Sertifikat, master penandatangan +

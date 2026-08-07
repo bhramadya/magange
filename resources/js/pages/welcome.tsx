@@ -565,6 +565,12 @@ export default function Welcome({
         recaptcha_token: '',
     });
 
+    // Sasaran scroll-to-error. Galat "satu magang aktif" (R2c) menempel di
+    // field `email`, dan form ini panjang — tanpa dituntun, pesannya terlewat
+    // (post() memakai preserveScroll agar isian tidak "melompat" saat gagal).
+    const emailFieldRef = useRef<HTMLDivElement>(null);
+    const errorSummaryRef = useRef<HTMLDivElement>(null);
+
     // State unggah pas foto — simpan nama berkas + URL pratinjau (object URL).
     const [pasFotoNama, setPasFotoNama] = useState('');
     const [pasFotoPreview, setPasFotoPreview] = useState('');
@@ -692,6 +698,20 @@ export default function Welcome({
                     setPortfolioNama('');
                     setTanggalMulai('');
                     setTanggalSelesai('');
+                },
+                // preserveScroll menahan posisi di tombol kirim, jadi tuntun
+                // mata pengguna ke sumber galat: field email bila itu yang
+                // ditolak (jalur R2c), selain itu ke ringkasan galat.
+                onError: (formErrors) => {
+                    const target =
+                        'email' in formErrors
+                            ? emailFieldRef.current
+                            : errorSummaryRef.current;
+
+                    target?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                    });
                 },
             });
         });
@@ -2297,19 +2317,50 @@ export default function Welcome({
                                             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
                                         />
                                     </div>
-                                    <div className="flex flex-col gap-2">
-                                        <label className="text-[14px] font-semibold text-[#0a1628]">
+                                    <div
+                                        ref={emailFieldRef}
+                                        className="flex flex-col gap-2"
+                                    >
+                                        <label
+                                            htmlFor="email"
+                                            className="text-[14px] font-semibold text-[#0a1628]"
+                                        >
                                             Email Aktif Anda
                                         </label>
                                         <input
+                                            id="email"
                                             type="email"
                                             value={data.email}
                                             onChange={(e) =>
                                                 setData('email', e.target.value)
                                             }
+                                            aria-invalid={
+                                                errors.email ? true : undefined
+                                            }
+                                            aria-describedby={
+                                                errors.email
+                                                    ? 'email-error'
+                                                    : undefined
+                                            }
                                             placeholder="Gunakan email utama Anda"
-                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 hover:border-[#cddcef] focus:border-transparent focus:ring-2 focus:ring-[#0b4fb0] focus:outline-none"
+                                            className={`w-full rounded-2xl border bg-white px-4 py-3.5 text-[15px] text-[#0a1628] transition-all placeholder:text-[#0a1628]/40 focus:border-transparent focus:ring-2 focus:outline-none ${
+                                                errors.email
+                                                    ? 'border-rose-400 focus:ring-rose-500'
+                                                    : 'border-slate-200 hover:border-[#cddcef] focus:ring-[#0b4fb0]'
+                                            }`}
                                         />
+                                        {/* Galat email — termasuk aturan "satu magang
+                                            aktif" (R2c), yang pesannya menyebut nomor
+                                            tiket yang masih berjalan. */}
+                                        {errors.email && (
+                                            <p
+                                                id="email-error"
+                                                role="alert"
+                                                className="text-[13px] text-rose-600"
+                                            >
+                                                {errors.email}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -2450,11 +2501,17 @@ export default function Welcome({
                                     )}
                                 </div>
 
-                                {/* Ringkasan galat validasi lain (mis. email/durasi/tanggal). */}
+                                {/* Ringkasan galat validasi lain (mis. durasi/tanggal).
+                                    Field yang sudah punya blok galat sendiri —
+                                    email, pas foto, berkas — tetap ikut terdaftar
+                                    di sini sebagai jaring pengaman. */}
                                 {Object.keys(errors).filter(
                                     (k) => k !== 'recaptcha_token',
                                 ).length > 0 && (
-                                    <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
+                                    <div
+                                        ref={errorSummaryRef}
+                                        className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3"
+                                    >
                                         <p className="text-[13px] font-semibold text-rose-700">
                                             Periksa kembali isian berikut:
                                         </p>

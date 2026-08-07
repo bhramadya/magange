@@ -1,4 +1,4 @@
-import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage } from '@inertiajs/react';
 import {
     CheckCircle2,
     FileText,
@@ -586,6 +586,11 @@ export default function PresensiHarian({
                                                         )}
                                                     </span>
                                                 </p>
+                                                {/* Tombol "Hapus presensi" sengaja
+                                                    dinonaktifkan (rute DELETE
+                                                    /presensi/{id} masih ada).
+                                                    Bila dipulihkan, impor kembali
+                                                    `router` dari @inertiajs/react. */}
                                                 {/* <button
                                                     type="button"
                                                     onClick={(e) => {

@@ -804,11 +804,14 @@ function DetailDialog({
         if (!app) {
             return null;
         }
+
         const end = new Date(app.end_date).getTime();
         const now = REF_DATE.getTime();
+
         if (now > end) {
             return 0;
         }
+
         return Math.max(0, Math.ceil((end - now) / 86_400_000));
     }, [app]);
 
@@ -880,7 +883,7 @@ function DetailDialog({
                                     aria-pressed={tab === item.key}
                                     onClick={() => setTab(item.key)}
                                     className={cn(
-                                        'flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition min-h-11 focus-visible:ring-4 focus-visible:ring-[#106feb]/30 focus-visible:outline-none',
+                                        'flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold transition focus-visible:ring-4 focus-visible:ring-[#106feb]/30 focus-visible:outline-none',
                                         tab === item.key
                                             ? 'bg-white text-[#106feb] shadow-sm'
                                             : 'text-slate-500 hover:text-[#12213e]',
@@ -960,9 +963,7 @@ function DetailDialog({
                                     />
                                     <DetailRow
                                         label="No. WhatsApp"
-                                        value={
-                                            app.applicant_whatsapp || '—'
-                                        }
+                                        value={app.applicant_whatsapp || '—'}
                                     />
                                     <DetailRow
                                         label="Email"
@@ -998,9 +999,7 @@ function DetailDialog({
                                         label="Tanggal Terbit SK"
                                         value={
                                             app.sk_issued_at
-                                                ? formatDate(
-                                                      app.sk_issued_at,
-                                                  )
+                                                ? formatDate(app.sk_issued_at)
                                                 : '—'
                                         }
                                     />
@@ -1028,8 +1027,8 @@ function DetailDialog({
                         {tab === 'jejak' && (
                             <div className="space-y-4">
                                 <StatusTimeline app={app} />
-                                {(participant.riwayat_pengajuan ?? [])
-                                    .length > 0 && (
+                                {(participant.riwayat_pengajuan ?? []).length >
+                                    0 && (
                                     <div className="rounded-xl border border-slate-200 bg-white p-4">
                                         <p className="flex items-center gap-2 text-sm font-semibold text-[#12213e]">
                                             <History className="size-4 text-[#106feb]" />{' '}
@@ -1037,12 +1036,11 @@ function DetailDialog({
                                         </p>
                                         <ul className="mt-3 space-y-2">
                                             {(
-                                                participant.riwayat_pengajuan ?? []
+                                                participant.riwayat_pengajuan ??
+                                                []
                                             ).map((riwayat) => (
                                                 <li
-                                                    key={
-                                                        riwayat.ticket_number
-                                                    }
+                                                    key={riwayat.ticket_number}
                                                     className="rounded-lg border border-slate-100 bg-slate-50/60 p-2.5"
                                                 >
                                                     <div className="flex flex-wrap items-center gap-2">

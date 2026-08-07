@@ -1,96 +1,146 @@
 # E-Magang Kota Madiun
 
-Aplikasi manajemen magang berbasis web untuk Pemerintah Kota Madiun. Dibangun untuk memfasilitasi proses pengajuan, verifikasi, dan pengelolaan magang mahasiswa di berbagai OPD (Organisasi Perangkat Daerah) secara digital.
+Aplikasi manajemen magang berbasis web untuk Pemerintah Kota Madiun: pengajuan, verifikasi, penempatan, presensi harian, sampai penerbitan sertifikat magang di 35 OPD (Organisasi Perangkat Daerah).
 
 ## ✨ Fitur Utama
 
 - **Autentikasi berlapis**
-  - Login OTP untuk Mahasiswa (expired 5 menit, autofocus input, progressive lockout berbasis Fibonacci)
-  - Login Admin via Laravel Fortify (Admin OPD & Admin Verifikator)
-- **Manajemen Pengajuan Magang**
-  - Pengajuan, verifikasi, hingga penerbitan surat diterima secara otomatis (PDF)
-  - Tracking status pengajuan real-time
-- **Kelola OPD**
-  - CRUD lengkap data OPD (Organisasi Perangkat Daerah)
-- **Manajemen Dokumen**
-  - Upload dan validasi dokumen (CV, dsb.) dengan validasi ukuran file di sisi server
-- **Role-based Access Control**
-  - Tiga role utama: `Mahasiswa`, `Admin OPD`, `Admin Verifikator` (menggunakan Spatie Permission)
-- **Sertifikat/Surat Otomatis**
-  - Generate PDF surat diterima magang secara otomatis saat pengajuan disetujui
+  - Mahasiswa: **tanpa password** — email → OTP (kedaluwarsa 5 menit), dengan lockout progresif berbasis deret Fibonacci
+  - Admin (Verifikator & OPD): username + password lewat **Laravel Fortify** di `/admin/login`
+  - Satu browser tidak boleh memegang dua akun sekaligus (403), dan setiap sesi lain milik user diinvalidasi saat login
+- **Alur pengajuan magang** — `pending_verifikator` → `forwarded_opd` → `waiting_tte` → `approved` → `ongoing` → `completion_submitted` → `needs_certificate` → `completed`, dengan `rejected` sebagai cabang akhir. Setiap transisi menulis jejak audit.
+- **Alur TTE (tanda tangan elektronik)** — Surat Penerimaan dan Sertifikat **tidak dikirim otomatis**. Sistem mencetak **draf** PDF, dokumen ditandatangani manual di luar sistem, diunggah kembali, **baru** kemudian dikirim ke peserta. Status `waiting_tte` dan `needs_certificate` adalah dua titik tunggu itu.
+- **Presensi harian** — satu absen per hari per peserta (hadir/izin/sakit) dengan dokumentasi foto 1–3 gambar; dipantau Admin OPD dan Verifikator.
+- **Kelola Surat per OPD** — kop surat, daftar penandatangan, template surat, dan arsip dokumen ber-TTE.
+- **Kelola OPD, kuota, FAQ, dan Nomor SK** oleh Admin Verifikator.
+- **Role-based access control** — tiga role (`mahasiswa`, `admin_opd`, `admin_verifikator`) lewat enum `App\Enums\UserRole` + middleware `EnsureUserRole` (alias route `role:`). **Tidak memakai Spatie Laravel Permission.**
 
 ## 🛠️ Tech Stack
 
 | Layer | Teknologi |
 |---|---|
-| Backend | Laravel 13 |
-| Frontend Bridge | Inertia.js v3 |
-| Frontend | React 19 + TypeScript |
+| Backend | Laravel 13 (PHP 8.3+) |
+| Frontend Bridge | Inertia.js v3 (tanpa lapisan REST/JSON) |
+| Frontend | React 19 + TypeScript + Tailwind v4 + shadcn/ui |
 | Database | PostgreSQL |
-| Otorisasi | Spatie Laravel Permission |
+| Otorisasi | Enum `UserRole` + middleware `EnsureUserRole` |
 | Autentikasi Admin | Laravel Fortify |
+| Autentikasi Mahasiswa | OTP via email (implementasi sendiri) |
 | PDF Generator | DomPDF |
+| Test | Pest v4 |
 
 ## 📋 Prasyarat
 
-- PHP >= 8.2
+- **PHP >= 8.3** (`composer.json` mensyaratkan `^8.3`)
 - Composer
-- Node.js >= 18 & npm/pnpm
-- PostgreSQL >= 14
+- Node.js >= 20 & npm
+- **PostgreSQL >= 14** — plus satu database kedua bernama `magang_test` untuk suite test
+- Ekstensi PHP `gd` atau `imagick` **opsional**: tanpanya normalisasi pas foto dan logo pada PDF dilewati, aplikasi tetap jalan
 
 ## 🚀 Instalasi
 
+> **`composer setup` sengaja tidak dipakai di sini.** Ikuti langkah manual di bawah.
+
 ```bash
-# Clone repository
-git clone https://github.com/username/e-magang-kota-madiun.git
-cd e-magang-kota-madiun
+git clone <url-repo> magange
+cd magange
 
-# Install dependency PHP
 composer install
-
-# Install dependency JavaScript
 npm install
 
-# Buat file environment dan jalankan php artisan key:generate
+# 1. Environment
+cp .env.example .env
+php artisan key:generate
+#    Sesuaikan DB_* dan MAIL_* di .env.
+#    APP_URL WAJIB berskema (http://localhost:8000), bukan "localhost".
 
-# Konfigurasi database di file .env
-# DB_CONNECTION=pgsql
-# DB_HOST=127.0.0.1
-# DB_PORT=5432
-# DB_DATABASE=
-# DB_USERNAME=postgres
-# DB_PASSWORD=
+# 2. Database aplikasi + database khusus test
+createdb magangdb
+createdb magang_test          # tanpa ini `php artisan test` gagal total
 
-# Jalankan migrasi dan seeder
-php artisan migrate --seed
+php artisan migrate --seed    # seeder: OPD → admin → FAQ → contoh pengajuan
 
-# Build asset frontend
-npm run build
-# atau untuk development
-npm run dev
+# 3. Wayfinder — WAJIB sebelum types:check / build
+#    Output-nya (resources/js/{actions,routes,wayfinder}) gitignored, jadi pada
+#    clone baru direktori itu belum ada dan tsc/vite akan gagal.
+php artisan wayfinder:generate --with-form
+
+# 4. Aset frontend
+npm run build       # atau `npm run dev` (sudah menjalankan wayfinder lebih dulu)
+
+# 5. Symlink storage bila perlu (berkas unggahan sendiri ada di disk privat)
+php artisan storage:link
 ```
 
 ## ▶️ Menjalankan Aplikasi
 
 ```bash
-php artisan serve
+composer dev
 ```
 
-Aplikasi dapat diakses di `http://localhost:8000`.
+Menjalankan tiga proses sekaligus: `php artisan serve`, `php artisan queue:listen --queue=emails,default`, dan Vite. Aplikasi ada di `http://localhost:8000`.
+
+> **Worker antrean tidak opsional.** Dengan `QUEUE_CONNECTION=database`, seluruh email (konfirmasi pengajuan, penolakan, OTP, surat penerimaan ber-TTE, sertifikat) hanya terkirim bila worker jalan — tanpa worker, job menumpuk di tabel `jobs` tanpa pesan galat apa pun. Dengan `QUEUE_CONNECTION=sync` job jalan inline, tapi kegagalannya muncul sebagai error 500 di layar dan tidak masuk `failed_jobs`.
+
+### SMTP lokal
+
+Cara termudah adalah **Mailpit** (satu binary, tanpa akun):
+
+```bash
+mailpit            # SMTP di 127.0.0.1:1025, UI di http://localhost:8025
+```
+
+`.env.example` sudah menunjuk ke sana. Alternatif: Mailtrap (produksi memakai `railsware/mailtrap-php`), atau `MAIL_MAILER=log` bila cukup membaca email di `storage/logs/laravel.log`.
+
+## 👤 Akun hasil seeder
+
+| Role | Username | Password | Catatan |
+|---|---|---|---|
+| Admin Verifikator | `verifikator` | `password` | Login di `/admin/login` |
+| Admin OPD | slug kode OPD, mis. `diskominfo`, `bkd`, `bakesbangpol` | `password` | Satu akun per OPD (35 akun) |
+| Mahasiswa | — | — | **Tidak bisa login pakai password.** Masuk lewat `/login-otp` dengan email; kode OTP dikirim ke email (lihat Mailpit) |
+
+Seeder juga mengisi **kop surat + satu penandatangan** untuk setiap OPD. Itu bukan hiasan: aksi "ACC" pada pengajuan **ditolak** (422) bila OPD belum punya penandatangan atau kop suratnya belum lengkap, jadi tanpa data ini instalasi baru tidak bisa menyetujui satu pengajuan pun.
 
 ## 🧪 Testing
 
 ```bash
-php artisan test
+php artisan test                                  # butuh database `magang_test`
+php artisan test --filter=SubmissionServiceTest   # satu file/kasus
 ```
+
+Suite berjalan di PostgreSQL, bukan SQLite — `phpunit.xml` memasang `DB_DATABASE=magang_test` tanpa fallback.
+
+## 🔧 Perintah Harian
+
+| Perintah | Kegunaan |
+|---|---|
+| `composer dev` | Server + worker antrean + Vite sekaligus |
+| `composer ci:check` | Gate penuh: eslint + prettier + tsc + Pint + PHPStan + Pest |
+| `composer lint` | Pint (format PHP) |
+| `npm run lint` / `npm run format` | eslint --fix / prettier --write |
+| `npm run types:check` | `tsc --noEmit` (jalankan Wayfinder lebih dulu) |
+| `npm run build` | Build produksi Vite |
+| `php artisan wayfinder:generate --with-form` | Regenerasi helper route TypeScript |
+| `php artisan migrate --seed` | Migrasi + data awal |
+| `php artisan magang:transition-statuses` | Picu manual transisi status harian (cron 01:00 WIB) |
+| `php artisan schedule:test --name="magang:transition-statuses"` | Uji jadwal tanpa menunggu cron |
+| `php artisan db:seed --class=DemoSpectrumSeeder` | Data demo satu tiket per status (untuk peragaan) |
+| `php artisan magang:demo-status {tiket} {status}` | Pindahkan satu tiket ke status demo (hanya non-produksi) |
+
+> `./vendor/bin/phpstan analyse --memory-limit=1G` — PHPStan level 7 butuh memori lebih besar dari default 128M; tanpa flag ini worker paralelnya mati dan `composer ci:check` gagal sebelum menyentuh test.
 
 ## 🗂️ Struktur Role
 
 | Role | Akses |
 |---|---|
-| Mahasiswa | Login via OTP, mengajukan magang, upload dokumen, cek status |
-| Admin OPD | Mengelola pengajuan magang di OPD masing-masing |
-| Admin Verifikator | Verifikasi akhir dan approval pengajuan magang |
+| Mahasiswa | Login OTP, mengajukan magang, unggah dokumen, presensi harian, laporan akhir, survei kepuasan, unduh sertifikat |
+| Admin OPD | Memutuskan pengajuan yang diteruskan ke OPD-nya, mengelola penempatan & peserta, alur TTE (surat penerimaan + sertifikat), kelola surat & kuota OPD |
+| Admin Verifikator | Menyaring pengajuan masuk dan meneruskannya ke OPD, CRUD OPD & FAQ, kelola user/admin, Nomor SK |
+
+## 📚 Dokumentasi Pengembang
+
+`CLAUDE.md` (aturan bisnis & invarian repo) dan `AGENTS.md` (konvensi framework) adalah acuan yang berlaku. `BLUEPRINT-REDESIGN.md` memuat spesifikasi UI, `HANDOFF-BACKEND.md` memuat kontrak prop frontend↔backend.
 
 ## 📄 Lisensi
 
@@ -98,4 +148,4 @@ Proyek ini dikembangkan untuk keperluan internal Pemerintah Kota Madiun.
 
 ## 🤝 Kontribusi
 
-Untuk kontribusi, silakan buat *issue* atau *pull request* terlebih dahulu untuk mendiskusikan perubahan yang diinginkan.
+Silakan buat *issue* atau *pull request* lebih dulu untuk mendiskusikan perubahan. Jalankan `composer ci:check` sebelum mengirim perubahan.

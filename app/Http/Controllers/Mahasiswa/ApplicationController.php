@@ -76,7 +76,18 @@ class ApplicationController extends Controller
             }
         }
 
-        $application = $this->submissionService->submit($validated, $request->ip());
+        // Lapis kedua "satu magang aktif" (R2c) hidup di dalam service, dan
+        // endpoint ini publik: dua POST bersamaan dari email yang sama sama-sama
+        // lolos StoreApplicationRequest, lalu yang kedua kena guard domain.
+        // Tanpa catch, kasus itu keluar sebagai 500 alih-alih pesan yang bisa
+        // dibaca pemohon. Pola sama dengan resubmit() di bawah.
+        try {
+            $application = $this->submissionService->submit($validated, $request->ip());
+        } catch (\DomainException $e) {
+            return back()
+                ->withInput()
+                ->withErrors(['email' => $e->getMessage()]);
+        }
 
         // Alur Fase 1: OTP sudah dikirim otomatis oleh service. Arahkan ke
         // halaman login-otp dengan email ter-isi, agar peserta langsung memasukkan

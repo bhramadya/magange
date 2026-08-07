@@ -1,58 +1,72 @@
 {
-    "enabledMcpjsonServers": ["laravel-boost"],
-    "hooks": {
-        "PostToolUse": [
-            {
-                "matcher": "Edit|Write|MultiEdit|NotebookEdit",
-                "hooks": [
-                    {
-                        "type": "command",
-                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit.sh",
-                        "timeout": 90
-                    }
-                ]
-            }
+  "permissions": {
+    "allow": [
+      "Bash(composer lint)",
+      "Bash(composer lint:check)",
+      "Bash(composer types:check)",
+      "Bash(composer test)",
+      "Bash(composer ci:check)",
+      "Bash(vendor/bin/pint:*)",
+      "Bash(vendor/bin/phpstan:*)",
+      "Bash(php artisan test:*)",
+      "Bash(php artisan route:list:*)",
+      "Bash(php artisan migrate:status)",
+      "Bash(php artisan config:clear)",
+      "Bash(php artisan schedule:list)",
+      "Bash(php artisan schedule:test:*)",
+      "Bash(php artisan wayfinder:generate:*)",
+      "Bash(php artisan about:*)",
+      "Bash(npm run types:check)",
+      "Bash(npm run lint)",
+      "Bash(npm run lint:check)",
+      "Bash(npm run format)",
+      "Bash(npm run format:check)",
+      "Bash(npm run build)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git stash list)",
+      "mcp__laravel-boost__search-docs",
+      "mcp__laravel-boost__database-schema",
+      "mcp__laravel-boost__database-connections",
+      "mcp__laravel-boost__database-query",
+      "mcp__laravel-boost__application-info",
+      "mcp__laravel-boost__get-absolute-url",
+      "mcp__laravel-boost__browser-logs",
+      "mcp__laravel-boost__read-log-entries",
+      "mcp__laravel-boost__last-error",
+      "Bash(podman ps *)",
+      "Bash(DB_HOST=127.0.0.1 DB_PORT=55432 DB_USERNAME=postgres DB_PASSWORD=secret php artisan test --filter=OtpServiceTest)",
+      "Bash(DB_HOST=127.0.0.1 DB_PORT=55432 DB_USERNAME=postgres DB_PASSWORD=secret php artisan test)",
+      "Bash(php -r '$j=json_decode\\(file_get_contents\\(\"composer.json\"\\),true\\); echo \"PHP: \".$j[\"require\"][\"php\"].\"\\\\n\"; echo \"laravel: \".$j[\"require\"][\"laravel/framework\"].\"\\\\n\";')",
+      "Bash(php -r '$j=json_decode\\(file_get_contents\\(\"package.json\"\\),true\\); echo json_encode\\([\"scripts\"=>$j[\"scripts\"],\"engines\"=>$j[\"engines\"]??null], JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES\\);')",
+      "Bash(DB_HOST=127.0.0.1 DB_PORT=55432 DB_USERNAME=postgres DB_PASSWORD=secret php artisan migrate --force)",
+      "Bash(DB_HOST=127.0.0.1 DB_PORT=55432 DB_USERNAME=postgres DB_PASSWORD=secret php artisan db:seed --force)",
+      "Bash(PGPASSWORD=secret psql -h 127.0.0.1 -p 55432 -U postgres -d magang_test -c \"select o.code, o.letterhead_email, s.title, s.nip from opds o join opd_signers s on s.opd_id=o.id order by o.id limit 6;\" -c \"select count\\(*\\) as opd_tanpa_signer from opds o where not exists \\(select 1 from opd_signers s where s.opd_id=o.id\\);\" -c \"select count\\(*\\) as kop_kosong from opds where letterhead_address is null or letterhead_phone is null or letterhead_email is null;\")"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Bash(php artisan migrate:fresh:*)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "laravel-boost"
+  ],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit.sh",
+            "timeout": 90
+          }
         ]
-    },
-    "permissions": {
-        "allow": [
-            "Bash(composer lint)",
-            "Bash(composer lint:check)",
-            "Bash(composer types:check)",
-            "Bash(composer test)",
-            "Bash(composer ci:check)",
-            "Bash(vendor/bin/pint:*)",
-            "Bash(vendor/bin/phpstan:*)",
-            "Bash(php artisan test:*)",
-            "Bash(php artisan route:list:*)",
-            "Bash(php artisan migrate:status)",
-            "Bash(php artisan config:clear)",
-            "Bash(php artisan schedule:list)",
-            "Bash(php artisan schedule:test:*)",
-            "Bash(php artisan wayfinder:generate:*)",
-            "Bash(php artisan about:*)",
-            "Bash(npm run types:check)",
-            "Bash(npm run lint)",
-            "Bash(npm run lint:check)",
-            "Bash(npm run format)",
-            "Bash(npm run format:check)",
-            "Bash(npm run build)",
-            "Bash(git status:*)",
-            "Bash(git diff:*)",
-            "Bash(git log:*)",
-            "Bash(git show:*)",
-            "Bash(git branch:*)",
-            "Bash(git stash list)",
-            "mcp__laravel-boost__search-docs",
-            "mcp__laravel-boost__database-schema",
-            "mcp__laravel-boost__database-connections",
-            "mcp__laravel-boost__database-query",
-            "mcp__laravel-boost__application-info",
-            "mcp__laravel-boost__get-absolute-url",
-            "mcp__laravel-boost__browser-logs",
-            "mcp__laravel-boost__read-log-entries",
-            "mcp__laravel-boost__last-error"
-        ],
-        "deny": ["Read(./.env)", "Read(./.env.*)", "Bash(php artisan migrate:fresh:*)"]
-    }
+      }
+    ]
+  }
 }

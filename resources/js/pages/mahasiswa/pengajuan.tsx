@@ -349,20 +349,28 @@ function DetailRow({ label, value }: { label: string; value: string | null }) {
 function ActionPanel({ application }: { application: InternshipApplication }) {
     const s = application.status;
     const [resubmitting, setResubmitting] = useState(false);
+    const [resubmitError, setResubmitError] = useState<string | null>(null);
 
     if (s === 'rejected') {
         // Ajukan Ulang: data pengajuan lama di-copy backend menjadi tiket
         // baru (status pending_verifikator). Tiket ditolak tidak bisa diedit.
         const resubmit = () => {
             setResubmitting(true);
+            setResubmitError(null);
             router.post(
                 `/mahasiswa/pengajuan/${application.id}/ajukan-ulang`,
                 {},
                 {
                     preserveScroll: true,
-                    // Endpoint belum tersedia (backend menyusul) → fallback
-                    // ke form pendaftaran publik agar tombol tetap berguna.
-                    onError: () => router.visit('/#daftar'),
+                    // Guard R2c menolak lewat errors.resubmit bila peserta
+                    // sudah punya pengajuan aktif lain atau pernah menyelesaikan
+                    // magang. Alasannya ditampilkan di tempat — melempar ke
+                    // form publik hanya memindahkan penolakan yang sama.
+                    onError: (errors) =>
+                        setResubmitError(
+                            errors.resubmit ??
+                                'Pengajuan ulang tidak dapat diproses. Silakan coba lagi.',
+                        ),
                     onFinish: () => setResubmitting(false),
                 },
             );
@@ -389,10 +397,19 @@ function ActionPanel({ application }: { application: InternshipApplication }) {
                     ) : null}
                     Ajukan Ulang <ArrowRight className="size-4" />
                 </button>
-                <p className="mt-2 text-xs text-rose-600/80">
-                    Data pengajuan Anda akan disalin menjadi tiket baru dan
-                    kembali masuk antrean verifikasi.
-                </p>
+                {resubmitError ? (
+                    <p
+                        role="alert"
+                        className="mt-3 rounded-xl border border-rose-300 bg-white px-3 py-2 text-xs font-medium text-rose-700"
+                    >
+                        {resubmitError}
+                    </p>
+                ) : (
+                    <p className="mt-2 text-xs text-rose-600/80">
+                        Data pengajuan Anda akan disalin menjadi tiket baru dan
+                        kembali masuk antrean verifikasi.
+                    </p>
+                )}
             </div>
         );
     }

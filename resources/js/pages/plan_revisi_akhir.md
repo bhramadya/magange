@@ -167,7 +167,57 @@ sengaja dipasang (CLAUDE.md, bagian TTE). Yang salah fixture-nya, bukan aturanny
 
 ---
 
-## R2 — Shortcut "Data Detail", dossier, dan batas satu magang aktif
+## R2 — Shortcut "Data Detail", dossier, dan batas satu magang aktif ✅ SELESAI 2026-08-06
+
+> **Hasil:** R2a + R2b selesai di batch B; R2c backend + tes selesai di commit
+> `1e7d637`, **sisa frontend-nya dituntaskan 2026-08-06**.
+> Gate: `composer ci:check` ✅ · `php artisan test` → **232 tes: 222 lulus /
+> 10 skip / 0 gagal (1200 assertion)** · `npm run build` ✅.
+>
+> **R2a/R2b** — `DetailDialog` di `opd/peserta.tsx` kini bertab
+> (`ringkasan · detail · presensi · jejak`) dengan panel aksi tetap di luar tab;
+> prop aditif `riwayat_pengajuan` dikirim `Opd\DashboardController::peserta()`
+> dengan bentuk kunci yang sama seperti `Verifikator\UserController`.
+>
+> **R2c** — `ApplicationStatus::activeStatuses()`, hook `after()` di
+> `StoreApplicationRequest`, guard `DomainException` di
+> `SubmissionService::submit()` **dan** `::resubmit()`, tes
+> `Mahasiswa/SatuMagangAktifTest.php` (16 tes). `rejected` sengaja tak memblokir.
+>
+> **Tiga lubang di sisi penyampaian pesan, baru ditutup 2026-08-06:**
+>
+> 1. **Bug: `DomainException` lolos jadi HTTP 500.**
+>    `Mahasiswa\ApplicationController::store()` memanggil `submit()` **tanpa
+>    `try/catch`**, padahal `resubmit()` di file yang sama menangkapnya.
+>    Lapis-2 dipasang justru karena `/pengajuan` publik — dua POST bersamaan
+>    dari email yang sama sama-sama lolos validasi, lalu yang kedua kena guard
+>    service → 500, bukan pesan yang bisa dibaca pemohon. Kini dibungkus
+>    `try/catch` → `back()->withInput()->withErrors(['email' => …])`.
+>    Tes baru mem-mock `PengajuanServiceContract` — kondisi balapannya sendiri
+>    tak bisa dibuat andal lewat HTTP, jadi yang diuji kontrak lapisannya.
+> 2. **`welcome.tsx`** — input email tak punya blok galat sama sekali; pesan
+>    R2c hanya muncul di ringkasan generik dekat tombol kirim, dan
+>    `preserveScroll: true` membuatnya terlewat. Kini ada blok `{errors.email}`
+>    + border rose + `aria-invalid`/`aria-describedby` (mengikuti pola
+>    `errors.photo`), plus `onError` → `scrollIntoView`. Ringkasan generik
+>    dipertahankan sebagai jaring pengaman field lain.
+> 3. **`mahasiswa/pengajuan.tsx`** — `onError: () => router.visit('/#daftar')`
+>    dengan komentar "backend menyusul" yang sudah basi sejak R15, sehingga
+>    `errors.resubmit` tak pernah tampil dan peserta dilempar ke form publik
+>    yang menolaknya lagi dengan kalimat berbeda. Redirect dihapus, alasan
+>    ditampilkan di tempat.
+>
+> **Keputusan #2 sengaja MASIH TERBUKA.** Perilaku sekarang (larangan permanen
+> setelah `completed`) dipertahankan apa adanya, tapi keputusannya belum
+> ditutup — jangan anggap final.
+>
+> **Catatan alat:** PHPStan lokal wajib `--memory-limit=1G` (128M bawaan bikin
+> worker paralelnya mati dan `composer ci:check` gagal sebelum menyentuh tes),
+> dan `resources/js/pages/*.md` kini masuk `.prettierignore` — prettier
+> menggabung daftar bernomor jadi paragraf dan merusak isi dokumen ini.
+>
+> **Temuan sampingan, belum diperbaiki:** `RegistrationSeeder:45` memakai tiket
+> `MGG-2026-0051` — melanggar format kanonik `MGG-YYYY-NNNNNN` (6 digit).
 
 > Revisi: pop-up Kelola Peserta terlalu panjang → buat pintasan "Data Detail";
 > menampilkan rekam jejak utuh (status pengajuan, keaktifan absensi, riwayat
@@ -442,9 +492,9 @@ persis sama dengan penyebab 4 tes merah di [P0](#p0--prasyarat-kembalikan-suite-
 
 | Batch | Isi | Alasan urutan |
 | --- | --- | --- |
-| **A** | P0 (4 tes) + R5 (env, README, seeder kop+penandatangan) | Hijaukan gate & buat instalasi bersih bisa dipakai. Seeder penandatangan juga menghapus akar masalah P0. |
-| **B** | R1 + R2a + R2b | Semuanya menyentuh `opd/peserta.tsx` + `verifikator/users/index.tsx`; dikerjakan sekali jalan agar tidak konflik. |
-| **C** | R2c (satu magang aktif) | Berdiri sendiri (request + service + tes). Bisa paralel dengan B kalau dikerjakan orang lain. |
+| **A** | P0 (4 tes) ✅ + R5 (env, README, seeder kop+penandatangan) — **R5 masih outstanding** | Hijaukan gate & buat instalasi bersih bisa dipakai. Seeder penandatangan juga menghapus akar masalah P0. |
+| **B** ✅ | R1 + R2a + R2b | Semuanya menyentuh `opd/peserta.tsx` + `verifikator/users/index.tsx`; dikerjakan sekali jalan agar tidak konflik. |
+| **C** ✅ | R2c (satu magang aktif) | Berdiri sendiri (request + service + tes). Bisa paralel dengan B kalau dikerjakan orang lain. |
 | **D** | R3 (surat) | Paling besar & paling berisiko (migration + snapshot + 4 view PDF). Butuh baseline hijau dari A. |
 | **E** | R4 (simulasi + progres) | Bergantung pada D untuk data demo TTE yang realistis. |
 
@@ -467,6 +517,12 @@ sebelum batch yang bersangkutan dimulai (bukan sebelum seluruh rencana jalan).
 2. **Larangan mendaftar setelah `completed`.** Dibaca harfiah: sekali selesai,
    email itu tidak boleh mendaftar selamanya. Apakah itu memang yang diinginkan,
    atau boleh mendaftar lagi di periode/tahun berikutnya? → *Batch C*
+   **MASIH TERBUKA per 2026-08-06 — sengaja ditunda oleh pemilik.** Batch C
+   sudah selesai dengan perilaku **larangan permanen** (kode + tes
+   `SatuMagangAktifTest` mengunci itu), tapi keputusannya belum final. Bila
+   nanti dijawab "boleh daftar lagi tahun berikutnya", yang berubah:
+   `StoreApplicationRequest::after()`, guard `completed` di
+   `SubmissionService::submit()`/`::resubmit()`, dan dua tes alumni.
 3. **Privasi dossier antar-OPD.** Bolehkah Admin OPD melihat riwayat pengajuan
    peserta ke **OPD lain** (tiket, status, periode, nama OPD)? Verifikator jelas
    boleh. Rekomendasi: tampilkan, tanpa dokumen/berkas. → *Batch B*

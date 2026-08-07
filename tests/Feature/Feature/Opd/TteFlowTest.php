@@ -31,6 +31,10 @@ function tteOpd(): Opd
         'name' => 'Dinas Kearsipan',
         'code' => 'ARSIP',
         'quota_total' => 5,
+        // Eksplisit: tanpa ini `quota_used` bernilai null di memori (default 0
+        // hanya berlaku di DB), sehingga assert "kuota tidak berubah" gagal
+        // membandingkan null vs 0 padahal perilakunya benar.
+        'quota_used' => 0,
         'letterhead_address' => 'Jl. Pemuda No. 1, Madiun',
         'letterhead_phone' => '(0351) 123456',
         'letterhead_email' => 'arsip@madiunkota.go.id',

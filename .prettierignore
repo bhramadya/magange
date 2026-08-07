@@ -1,2 +1,7 @@
 resources/js/components/ui/*
 resources/views/mail/*
+
+# Catatan tugas & kontrak revisi yang kebetulan tinggal di folder pages —
+# prosa, bukan kode. Prettier menggabung daftar bernomor jadi paragraf dan
+# menafsirkan "+ 1 admin" sebagai butir daftar, jadi isinya rusak.
+resources/js/pages/*.md

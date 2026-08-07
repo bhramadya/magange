@@ -42,7 +42,9 @@ class RegistrationSeeder extends Seeder
         );
 
         InternshipApplication::create([
-            'ticket_number' => 'MGG-2026-0051',
+            // Format kanonik MGG-YYYY-NNNNNN (6 digit) — sama dengan yang
+            // dihasilkan SubmissionService::generateTicketNumber().
+            'ticket_number' => 'MGG-2026-000051',
             'user_id' => $user->id,
             'nis' => $nis,
             'tujuan_magang' => 'DINAS KOMUNIKASI DAN INFORMATIKA',

@@ -1,5 +1,6 @@
 <?php
 
+use App\Contracts\PengajuanServiceContract;
 use App\Enums\ApplicationStatus;
 use App\Models\InternshipApplication;
 use App\Models\User;
@@ -139,7 +140,7 @@ test('guard service menolak submit walau validasi request dilewati', function ()
         'status' => ApplicationStatus::Ongoing,
     ]);
 
-    $service = app(App\Contracts\PengajuanServiceContract::class);
+    $service = app(PengajuanServiceContract::class);
 
     expect(fn () => $service->submit([
         'name' => 'Budi Santoso',
@@ -156,6 +157,26 @@ test('guard service menolak submit walau validasi request dilewati', function ()
     ], '127.0.0.1'))->toThrow(DomainException::class);
 
     expect(InternshipApplication::count())->toBe(1);
+});
+
+test('galat lapis kedua tampil sebagai pesan di field email, bukan 500', function () {
+    Queue::fake();
+
+    // Endpoint /pengajuan publik: dua POST bersamaan dari email yang sama
+    // sama-sama lolos StoreApplicationRequest, lalu yang kedua kena guard
+    // domain di dalam service. Kondisi balapan itu tidak bisa dibuat andal
+    // lewat HTTP, jadi lapisannya diuji langsung: service melempar, controller
+    // wajib menerjemahkannya jadi galat validasi.
+    $this->mock(PengajuanServiceContract::class)
+        ->shouldReceive('submit')
+        ->once()
+        ->andThrow(new DomainException('Email ini masih memiliki pengajuan magang yang sedang berjalan.'));
+
+    $this->post('/pengajuan', satuMagangPengajuan())
+        ->assertRedirect()
+        ->assertSessionHasErrors([
+            'email' => 'Email ini masih memiliki pengajuan magang yang sedang berjalan.',
+        ]);
 });
 
 // ---------------------------------------------------------------------------

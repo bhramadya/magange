@@ -5,10 +5,10 @@ namespace App\Http\Requests\Application;
 use App\Enums\ApplicationStatus;
 use App\Models\User;
 use App\Rules\Recaptcha;
-use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\Validator;
 
 class StoreApplicationRequest extends FormRequest
 {
@@ -109,11 +109,13 @@ class StoreApplicationRequest extends FormRequest
      *   2. pernah menyelesaikan magang (completed) → tidak boleh mendaftar lagi.
      * Status `rejected` sengaja TIDAK memblokir — jalur "Ajukan Ulang" dan
      * pendaftaran baru setelah ditolak harus tetap hidup.
+     *
+     * @return list<callable>
      */
     public function after(): array
     {
         return [
-            function (\Illuminate\Validation\Validator $validator): void {
+            function (Validator $validator): void {
                 $email = $this->input('email');
 
                 if (! is_string($email) || $email === '') {
