@@ -32,6 +32,7 @@ import {
     update as updatePlacement,
 } from '@/actions/App/Http/Controllers/Opd/PlacementOptionController';
 import { ApplicationDocuments } from '@/components/application-documents';
+import { ProgressBar } from '@/components/progress-bar';
 import { StatusBadge } from '@/components/status-badge';
 import {
     Collapsible,
@@ -1779,6 +1780,9 @@ export default function OpdDashboard({
                                         Diteruskan
                                     </th>
                                     <th className="px-5 py-3 font-semibold">
+                                        Progres
+                                    </th>
+                                    <th className="px-5 py-3 font-semibold">
                                         Status
                                     </th>
                                     <th className="px-5 py-3 text-right font-semibold">
@@ -1808,6 +1812,9 @@ export default function OpdDashboard({
                                             {app.forwarded_at
                                                 ? formatDate(app.forwarded_at)
                                                 : '—'}
+                                        </td>
+                                        <td className="w-40 px-5 py-3.5">
+                                            <ProgressBar app={app} />
                                         </td>
                                         <td className="px-5 py-3.5">
                                             <StatusBadge

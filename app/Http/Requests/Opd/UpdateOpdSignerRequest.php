@@ -21,6 +21,12 @@ class UpdateOpdSignerRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'nip' => ['required', 'string', 'max:50'],
+            'nik' => ['nullable', 'string', 'digits:16'],
+            'degree_prefix' => ['nullable', 'string', 'max:50'],
+            'degree_suffix' => ['nullable', 'string', 'max:50'],
+            'rank' => ['nullable', 'string', 'max:100'],
+            'rank_class' => ['nullable', 'string', 'max:20'],
+            'on_behalf_of' => ['nullable', 'string', 'max:255'],
             'is_primary' => ['nullable', 'boolean'],
         ];
     }
@@ -34,6 +40,7 @@ class UpdateOpdSignerRequest extends FormRequest
             'name.required' => 'Nama penandatangan wajib diisi.',
             'title.required' => 'Jabatan wajib diisi.',
             'nip.required' => 'NIP wajib diisi.',
+            'nik.digits' => 'NIK harus terdiri dari 16 digit.',
         ];
     }
 }

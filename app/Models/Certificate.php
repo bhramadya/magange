@@ -28,6 +28,12 @@ use Illuminate\Support\Carbon;
     'signer_name',
     'signer_title',
     'signer_nip',
+    'signer_nik',
+    'signer_degree_prefix',
+    'signer_degree_suffix',
+    'signer_rank',
+    'signer_rank_class',
+    'signer_on_behalf_of',
 ])]
 class Certificate extends Model
 {

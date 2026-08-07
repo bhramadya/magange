@@ -279,12 +279,29 @@ function LetterheadSection({ opd }: { opd: Opd }) {
 }
 
 /* ---- Penandatangan (CRUD, pola Kelola FAQ) --------------------------- */
+const gelarDepan = (s: Signer): string =>
+    s.degree_prefix ? `${s.degree_prefix} ` : '';
+const gelarBelakang = (s: Signer): string =>
+    s.degree_suffix ? `, ${s.degree_suffix}` : '';
+const namaBergelar = (s: Signer): string =>
+    `${gelarDepan(s)}${s.name}${gelarBelakang(s)}`;
+const pangkatGolongan = (s: Signer): string =>
+    [s.rank, s.rank_class].filter(Boolean).join(' ') || '';
+
 function SignerRow({ signer }: { signer: Signer }) {
     const [editing, setEditing] = useState(false);
     const [confirming, setConfirming] = useState(false);
-    const [name, setName] = useState(signer.name);
-    const [title, setTitle] = useState(signer.title);
-    const [nip, setNip] = useState(signer.nip);
+    const [form, setForm] = useState({
+        name: signer.name,
+        degree_prefix: signer.degree_prefix ?? '',
+        degree_suffix: signer.degree_suffix ?? '',
+        title: signer.title,
+        rank: signer.rank ?? '',
+        rank_class: signer.rank_class ?? '',
+        on_behalf_of: signer.on_behalf_of ?? '',
+        nip: signer.nip,
+        nik: signer.nik ?? '',
+    });
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -294,9 +311,7 @@ function SignerRow({ signer }: { signer: Signer }) {
         router.put(
             updateSigner.url(signer.id),
             {
-                name,
-                title,
-                nip,
+                ...form,
                 is_primary: jadikanUtama || signer.is_primary,
             },
             {
@@ -311,11 +326,13 @@ function SignerRow({ signer }: { signer: Signer }) {
     if (editing) {
         return (
             <div className="rounded-2xl border border-[#cddcef] bg-[#e8f2fe]/40 p-4">
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     <div>
                         <input
-                            value={name}
-                            onChange={(event) => setName(event.target.value)}
+                            value={form.name}
+                            onChange={(event) =>
+                                setForm({ ...form, name: event.target.value })
+                            }
                             placeholder="Nama"
                             className={inputClass}
                         />
@@ -327,8 +344,36 @@ function SignerRow({ signer }: { signer: Signer }) {
                     </div>
                     <div>
                         <input
-                            value={title}
-                            onChange={(event) => setTitle(event.target.value)}
+                            value={form.degree_prefix}
+                            onChange={(event) =>
+                                setForm({
+                                    ...form,
+                                    degree_prefix: event.target.value,
+                                })
+                            }
+                            placeholder="Gelar depan (Dr., Ir.)"
+                            className={inputClass}
+                        />
+                    </div>
+                    <div>
+                        <input
+                            value={form.degree_suffix}
+                            onChange={(event) =>
+                                setForm({
+                                    ...form,
+                                    degree_suffix: event.target.value,
+                                })
+                            }
+                            placeholder="Gelar belakang (S.Kom., M.M.)"
+                            className={inputClass}
+                        />
+                    </div>
+                    <div>
+                        <input
+                            value={form.title}
+                            onChange={(event) =>
+                                setForm({ ...form, title: event.target.value })
+                            }
                             placeholder="Jabatan"
                             className={inputClass}
                         />
@@ -340,8 +385,46 @@ function SignerRow({ signer }: { signer: Signer }) {
                     </div>
                     <div>
                         <input
-                            value={nip}
-                            onChange={(event) => setNip(event.target.value)}
+                            value={form.rank}
+                            onChange={(event) =>
+                                setForm({ ...form, rank: event.target.value })
+                            }
+                            placeholder="Pangkat (Pembina Tk. I)"
+                            className={inputClass}
+                        />
+                    </div>
+                    <div>
+                        <input
+                            value={form.rank_class}
+                            onChange={(event) =>
+                                setForm({
+                                    ...form,
+                                    rank_class: event.target.value,
+                                })
+                            }
+                            placeholder="Golongan (IV/b)"
+                            className={inputClass}
+                        />
+                    </div>
+                    <div>
+                        <input
+                            value={form.on_behalf_of}
+                            onChange={(event) =>
+                                setForm({
+                                    ...form,
+                                    on_behalf_of: event.target.value,
+                                })
+                            }
+                            placeholder="a.n. Kepala Dinas …"
+                            className={inputClass}
+                        />
+                    </div>
+                    <div>
+                        <input
+                            value={form.nip}
+                            onChange={(event) =>
+                                setForm({ ...form, nip: event.target.value })
+                            }
                             placeholder="NIP"
                             className={inputClass}
                         />
@@ -351,12 +434,29 @@ function SignerRow({ signer }: { signer: Signer }) {
                             </p>
                         )}
                     </div>
+                    <div>
+                        <input
+                            value={form.nik}
+                            onChange={(event) =>
+                                setForm({ ...form, nik: event.target.value })
+                            }
+                            placeholder="NIK (16 digit, opsional)"
+                            className={inputClass}
+                        />
+                        {errors.nik && (
+                            <p className="mt-1 text-xs text-rose-600">
+                                {errors.nik}
+                            </p>
+                        )}
+                    </div>
                 </div>
                 <div className="mt-3 flex items-center gap-2">
                     <button
                         type="button"
                         onClick={() => simpan()}
-                        disabled={processing || !name || !title || !nip}
+                        disabled={
+                            processing || !form.name || !form.title || !form.nip
+                        }
                         className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#106feb] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0b4fb0] disabled:opacity-50"
                     >
                         {processing ? (
@@ -369,9 +469,17 @@ function SignerRow({ signer }: { signer: Signer }) {
                     <button
                         type="button"
                         onClick={() => {
-                            setName(signer.name);
-                            setTitle(signer.title);
-                            setNip(signer.nip);
+                            setForm({
+                                name: signer.name,
+                                degree_prefix: signer.degree_prefix ?? '',
+                                degree_suffix: signer.degree_suffix ?? '',
+                                title: signer.title,
+                                rank: signer.rank ?? '',
+                                rank_class: signer.rank_class ?? '',
+                                on_behalf_of: signer.on_behalf_of ?? '',
+                                nip: signer.nip,
+                                nik: signer.nik ?? '',
+                            });
                             setErrors({});
                             setEditing(false);
                         }}
@@ -388,7 +496,7 @@ function SignerRow({ signer }: { signer: Signer }) {
         <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
                 <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-[#12213e]">
-                    {signer.name}
+                    {namaBergelar(signer)}
                     {signer.is_primary && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
                             <Star className="size-3" /> Utama
@@ -396,8 +504,16 @@ function SignerRow({ signer }: { signer: Signer }) {
                     )}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-500">
-                    {signer.title} · NIP {signer.nip}
+                    {signer.title}
+                    {pangkatGolongan(signer) && ` · ${pangkatGolongan(signer)}`}
+                    {signer.nip && ` · NIP ${signer.nip}`}
+                    {signer.nik && ` · NIK ${signer.nik}`}
                 </p>
+                {signer.on_behalf_of && (
+                    <p className="mt-0.5 text-xs text-slate-400 italic">
+                        {signer.on_behalf_of}
+                    </p>
+                )}
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
                 {!signer.is_primary && (
@@ -457,9 +573,17 @@ function SignerRow({ signer }: { signer: Signer }) {
 
 function SignerSection({ signers }: { signers: Signer[] }) {
     const [showForm, setShowForm] = useState(false);
-    const [name, setName] = useState('');
-    const [title, setTitle] = useState('');
-    const [nip, setNip] = useState('');
+    const [form, setForm] = useState({
+        name: '',
+        degree_prefix: '',
+        degree_suffix: '',
+        title: '',
+        rank: '',
+        rank_class: '',
+        on_behalf_of: '',
+        nip: '',
+        nik: '',
+    });
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -468,13 +592,21 @@ function SignerSection({ signers }: { signers: Signer[] }) {
         setErrors({});
         router.post(
             storeSigner.url(),
-            { name, title, nip, is_primary: signers.length === 0 },
+            { ...form, is_primary: signers.length === 0 },
             {
                 preserveScroll: true,
                 onSuccess: () => {
-                    setName('');
-                    setTitle('');
-                    setNip('');
+                    setForm({
+                        name: '',
+                        degree_prefix: '',
+                        degree_suffix: '',
+                        title: '',
+                        rank: '',
+                        rank_class: '',
+                        on_behalf_of: '',
+                        nip: '',
+                        nik: '',
+                    });
                     setShowForm(false);
                 },
                 onError: (errs) => setErrors(errs),
@@ -508,12 +640,15 @@ function SignerSection({ signers }: { signers: Signer[] }) {
 
             {showForm && (
                 <div className="mt-4 rounded-2xl border border-[#cddcef] bg-[#e8f2fe]/40 p-4">
-                    <div className="grid gap-2 sm:grid-cols-3">
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                         <div>
                             <input
-                                value={name}
+                                value={form.name}
                                 onChange={(event) =>
-                                    setName(event.target.value)
+                                    setForm({
+                                        ...form,
+                                        name: event.target.value,
+                                    })
                                 }
                                 placeholder="Nama"
                                 className={inputClass}
@@ -526,9 +661,38 @@ function SignerSection({ signers }: { signers: Signer[] }) {
                         </div>
                         <div>
                             <input
-                                value={title}
+                                value={form.degree_prefix}
                                 onChange={(event) =>
-                                    setTitle(event.target.value)
+                                    setForm({
+                                        ...form,
+                                        degree_prefix: event.target.value,
+                                    })
+                                }
+                                placeholder="Gelar depan (Dr., Ir.)"
+                                className={inputClass}
+                            />
+                        </div>
+                        <div>
+                            <input
+                                value={form.degree_suffix}
+                                onChange={(event) =>
+                                    setForm({
+                                        ...form,
+                                        degree_suffix: event.target.value,
+                                    })
+                                }
+                                placeholder="Gelar belakang (S.Kom., M.M.)"
+                                className={inputClass}
+                            />
+                        </div>
+                        <div>
+                            <input
+                                value={form.title}
+                                onChange={(event) =>
+                                    setForm({
+                                        ...form,
+                                        title: event.target.value,
+                                    })
                                 }
                                 placeholder="Jabatan, mis. Kepala Dinas"
                                 className={inputClass}
@@ -541,8 +705,52 @@ function SignerSection({ signers }: { signers: Signer[] }) {
                         </div>
                         <div>
                             <input
-                                value={nip}
-                                onChange={(event) => setNip(event.target.value)}
+                                value={form.rank}
+                                onChange={(event) =>
+                                    setForm({
+                                        ...form,
+                                        rank: event.target.value,
+                                    })
+                                }
+                                placeholder="Pangkat (Pembina Tk. I)"
+                                className={inputClass}
+                            />
+                        </div>
+                        <div>
+                            <input
+                                value={form.rank_class}
+                                onChange={(event) =>
+                                    setForm({
+                                        ...form,
+                                        rank_class: event.target.value,
+                                    })
+                                }
+                                placeholder="Golongan (IV/b)"
+                                className={inputClass}
+                            />
+                        </div>
+                        <div>
+                            <input
+                                value={form.on_behalf_of}
+                                onChange={(event) =>
+                                    setForm({
+                                        ...form,
+                                        on_behalf_of: event.target.value,
+                                    })
+                                }
+                                placeholder="a.n. Kepala Dinas …"
+                                className={inputClass}
+                            />
+                        </div>
+                        <div>
+                            <input
+                                value={form.nip}
+                                onChange={(event) =>
+                                    setForm({
+                                        ...form,
+                                        nip: event.target.value,
+                                    })
+                                }
                                 placeholder="NIP"
                                 className={inputClass}
                             />
@@ -552,11 +760,31 @@ function SignerSection({ signers }: { signers: Signer[] }) {
                                 </p>
                             )}
                         </div>
+                        <div>
+                            <input
+                                value={form.nik}
+                                onChange={(event) =>
+                                    setForm({
+                                        ...form,
+                                        nik: event.target.value,
+                                    })
+                                }
+                                placeholder="NIK (16 digit, opsional)"
+                                className={inputClass}
+                            />
+                            {errors.nik && (
+                                <p className="mt-1 text-xs text-rose-600">
+                                    {errors.nik}
+                                </p>
+                            )}
+                        </div>
                     </div>
                     <button
                         type="button"
                         onClick={tambah}
-                        disabled={!name || !title || !nip || processing}
+                        disabled={
+                            !form.name || !form.title || !form.nip || processing
+                        }
                         className="mt-3 inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#106feb] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#0b4fb0] disabled:opacity-50"
                     >
                         {processing ? (

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Opd\UploadCertificateRequest;
 use App\Models\FinalReport;
 use App\Services\CertificateService;
+use App\Services\LetterDocumentService;
 use App\Services\SkNumberService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
@@ -84,7 +85,7 @@ class ReportController extends Controller
         if ($report->completion_sk_number === null) {
             DB::transaction(function () use ($report): void {
                 $report->update([
-                    'completion_sk_number' => $this->skNumbers->next(SkNumberService::KEY_COMPLETION),
+                    'completion_sk_number' => $this->skNumbers->next(SkNumberService::KEY_COMPLETION, $report->application->opd_id),
                     'completion_sk_issued_at' => Date::today(),
                 ]);
             });
@@ -92,7 +93,11 @@ class ReportController extends Controller
 
         // Render & arsipkan PDF ke disk privat (regenerasi bila belum ada).
         if ($report->completion_letter_path === null || ! Storage::disk('local')->exists($report->completion_letter_path)) {
-            $pdf = Pdf::loadView('pdf.completion_letter', ['report' => $report]);
+            $letters = new LetterDocumentService;
+            $letters->ensureCompletionSnapshot($report);
+
+            $signer = LetterDocumentService::signerSnapshot($report, 'completion_signer_');
+            $pdf = Pdf::loadView('pdf.completion_letter', ['report' => $report, 'signer' => $signer]);
 
             $path = "completion-letter/{$report->id}/surat-penyelesaian-{$report->application->ticket_number}.pdf";
             Storage::disk('local')->put($path, $pdf->output());

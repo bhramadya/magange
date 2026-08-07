@@ -1,10 +1,12 @@
 <?php
 
 use App\Enums\ApplicationStatus;
+use App\Enums\ReportStatus;
 use App\Jobs\GenerateJobAcceptanceLetter;
 use App\Jobs\SendSignedAcceptanceLetterJob;
 use App\Jobs\SendSignedCertificateJob;
 use App\Models\Certificate;
+use App\Models\FinalReport;
 use App\Models\InternshipApplication;
 use App\Models\Opd;
 use App\Models\OpdLetterTemplate;
@@ -371,6 +373,138 @@ test('snapshot penandatangan bertahan walau daftar penandatangan OPD berubah', f
     expect($application->acceptance_signer_name)->toBe('Budi Santoso')
         ->and($application->acceptance_signer_nip)->toBe('198001012001011001')
         ->and($application->acceptance_signer_name)->not->toBe($baru->name);
+});
+
+test('field penandatangan baru tersimpan dan ikut ke snapshot saat approve', function () {
+    Storage::fake('local');
+    Queue::fake();
+    $opd = tteOpd();
+    $admin = User::factory()->opdAdmin($opd->id)->create();
+    $signer = OpdSigner::create([
+        'opd_id' => $opd->id,
+        'name' => 'H. Sri Rahayu',
+        'degree_prefix' => 'Dr.',
+        'degree_suffix' => 'M.M.',
+        'title' => 'Kepala Dinas',
+        'rank' => 'Pembina Tingkat I',
+        'rank_class' => 'IV/b',
+        'on_behalf_of' => 'a.n. Kepala Dinas',
+        'nip' => '198001012001011001',
+        'nik' => '3514010101800001',
+        'is_primary' => true,
+    ]);
+    $application = InternshipApplication::factory()->create([
+        'opd_id' => $opd->id,
+        'status' => ApplicationStatus::ForwardedOpd,
+        'start_date' => now()->addWeek()->toDateString(),
+    ]);
+
+    $this->actingAs($admin)->post("/opd/pengajuan/{$application->id}/approve", [
+        'division' => 'Bidang Arsip',
+        'field_supervisor' => 'Sari',
+        'person_in_charge' => 'Kepala Bidang',
+        'signer_id' => $signer->id,
+    ])->assertRedirect();
+
+    $application->refresh();
+    expect($application->acceptance_signer_name)->toBe('H. Sri Rahayu')
+        ->and($application->acceptance_signer_degree_prefix)->toBe('Dr.')
+        ->and($application->acceptance_signer_degree_suffix)->toBe('M.M.')
+        ->and($application->acceptance_signer_rank)->toBe('Pembina Tingkat I')
+        ->and($application->acceptance_signer_rank_class)->toBe('IV/b')
+        ->and($application->acceptance_signer_on_behalf_of)->toBe('a.n. Kepala Dinas')
+        ->and($application->acceptance_signer_nik)->toBe('3514010101800001')
+        ->and($application->acceptance_signer_nip)->toBe('198001012001011001');
+});
+
+test('nama penandatangan sudah bergelar saat draft surat penerimaan digenerate', function () {
+    Storage::fake('local');
+    Queue::fake();
+    $opd = tteOpd();
+    $signer = OpdSigner::create([
+        'opd_id' => $opd->id,
+        'name' => 'Sri Rahayu',
+        'degree_prefix' => 'Dr.',
+        'degree_suffix' => 'M.M.',
+        'title' => 'Kepala Dinas',
+        'rank' => 'Pembina Tingkat I',
+        'rank_class' => 'IV/b',
+        'on_behalf_of' => 'a.n. Kepala Dinas',
+        'nip' => '198001012001011001',
+        'is_primary' => true,
+    ]);
+    $application = InternshipApplication::factory()->create([
+        'opd_id' => $opd->id,
+        'status' => ApplicationStatus::WaitingTte,
+        'acceptance_signer_id' => $signer->id,
+        'acceptance_signer_name' => $signer->name,
+        'acceptance_signer_degree_prefix' => $signer->degree_prefix,
+        'acceptance_signer_degree_suffix' => $signer->degree_suffix,
+        'acceptance_signer_title' => $signer->title,
+        'acceptance_signer_rank' => $signer->rank,
+        'acceptance_signer_rank_class' => $signer->rank_class,
+        'acceptance_signer_on_behalf_of' => $signer->on_behalf_of,
+        'acceptance_signer_nip' => $signer->nip,
+        'acceptance_signer_nik' => $signer->nik,
+    ]);
+
+    app(LetterDocumentService::class)->generateAcceptanceDraft($application);
+
+    expect(LetterDocumentService::signerSnapshot($application, 'acceptance_signer_'))
+        ->name->toBe('Dr. Sri Rahayu, M.M.')
+        ->rank->toBe('Pembina Tingkat I (IV/b)')
+        ->on_behalf_of->toBe('a.n. Kepala Dinas')
+        ->nik->toBeNull();
+});
+
+test('surat penyelesaian memakai kop OPD sendiri, bukan hardcoded Kominfo', function () {
+    $opd = Opd::create([
+        'name' => 'Dinas Kearsipan',
+        'code' => 'ARSIP',
+        'quota_total' => 5,
+        'quota_used' => 0,
+        'letterhead_address' => 'Jl. Pemuda No. 1, Madiun',
+        'letterhead_phone' => '(0351) 123456',
+        'letterhead_email' => 'arsip@madiunkota.go.id',
+    ]);
+    $mahasiswa = User::factory()->create(['name' => 'Faalih Fadhlurrohmaan']);
+    $application = InternshipApplication::factory()->create([
+        'user_id' => $mahasiswa->id,
+        'opd_id' => $opd->id,
+        'status' => ApplicationStatus::Completed,
+        'institution_name' => 'Universitas Brawijaya',
+        'division' => 'Bidang Arsip',
+        'start_date' => '2026-08-01',
+        'end_date' => '2026-08-31',
+        'duration_months' => 1,
+    ]);
+    $report = FinalReport::create([
+        'application_id' => $application->id,
+        'file_name' => 'laporan.pdf',
+        'file_path' => 'reports/1/laporan.pdf',
+        'is_confirmed' => true,
+        'status' => ReportStatus::Approved,
+        'submitted_at' => now(),
+        'completion_sk_number' => '503.11/1/401.106/'.now()->year,
+        'completion_sk_issued_at' => now(),
+        'completion_signer_name' => 'Budi Santoso',
+        'completion_signer_title' => 'Kepala Dinas',
+        'completion_signer_nip' => '198001012001011001',
+    ]);
+    Storage::disk('local')->put('reports/1/laporan.pdf', '%PDF-fake');
+
+    $html = View::make('pdf.completion_letter', [
+        'report' => $report,
+        'signer' => LetterDocumentService::signerSnapshot($report, 'completion_signer_'),
+    ])->render();
+
+    expect($html)
+        ->toContain('Dinas Kearsipan')
+        ->toContain('Jl. Pemuda No. 1, Madiun')
+        ->toContain('arsip@madiunkota.go.id')
+        // Bug lama tertutup: tidak lagi menyebut Dinas Kominfo.
+        ->not->toContain('Dinas Komunikasi dan Informatika')
+        ->toContain('Budi Santoso');
 });
 
 /*

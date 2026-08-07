@@ -23,6 +23,7 @@ import { motion } from 'motion/react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useMemo, useState } from 'react';
 import { ApplicationDocuments } from '@/components/application-documents';
+import { ProgressBar } from '@/components/progress-bar';
 import { StatusBadge } from '@/components/status-badge';
 import {
     Dialog,
@@ -77,27 +78,6 @@ function initials(name: string): string {
         .slice(0, 2)
         .map((w) => w[0]?.toUpperCase() ?? '')
         .join('');
-}
-
-// Persentase progres magang berdasar periode start–end terhadap tanggal acuan.
-function progressPct(app: InternshipApplication): number {
-    if (app.status === 'completed') {
-        return 100;
-    }
-
-    const start = new Date(app.start_date).getTime();
-    const end = new Date(app.end_date).getTime();
-    const now = REF_DATE.getTime();
-
-    if (now <= start) {
-        return 0;
-    }
-
-    if (now >= end) {
-        return 100;
-    }
-
-    return Math.round(((now - start) / (end - start)) * 100);
 }
 
 /* ---- mock ------------------------------------------------------------ */
@@ -867,6 +847,13 @@ function DetailDialog({
                                 )}
                                 {app.nis && <span>NIS: {app.nis}</span>}
                             </div>
+                            {app && (
+                                <ProgressBar
+                                    app={app}
+                                    refDate={REF_DATE}
+                                    className="mt-3"
+                                />
+                            )}
                         </div>
 
                         {/* Tab navigasi */}
@@ -1183,7 +1170,6 @@ function ParticipantCard({
     onOpen: () => void;
 }) {
     const app = participant.application;
-    const pct = progressPct(app);
 
     return (
         <motion.button
@@ -1222,23 +1208,7 @@ function ParticipantCard({
             </div>
 
             {/* Progres periode */}
-            <div className="space-y-1">
-                <div className="flex items-center justify-between text-[11px] font-medium text-slate-400">
-                    <span>Progres magang</span>
-                    <span>{pct}%</span>
-                </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                    <div
-                        className={cn(
-                            'h-full rounded-full',
-                            app.status === 'completed'
-                                ? 'bg-emerald-500'
-                                : 'bg-[#106feb]',
-                        )}
-                        style={{ width: `${pct}%` }}
-                    />
-                </div>
-            </div>
+            <ProgressBar app={app} refDate={REF_DATE} />
         </motion.button>
     );
 }

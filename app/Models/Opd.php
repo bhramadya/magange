@@ -29,6 +29,7 @@ use Illuminate\Support\Carbon;
     'letterhead_address',
     'letterhead_phone',
     'letterhead_email',
+    'letter_code',
     'is_active',
     'quota_total',
     'quota_used',

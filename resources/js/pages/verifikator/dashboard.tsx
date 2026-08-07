@@ -16,6 +16,7 @@ import {
 import { motion } from 'motion/react';
 import { useMemo, useState } from 'react';
 import { ApplicationDocuments } from '@/components/application-documents';
+import { ProgressBar } from '@/components/progress-bar';
 import { StatusBadge } from '@/components/status-badge';
 import {
     Dialog,
@@ -868,6 +869,9 @@ export default function VerifikatorDashboard({
                                     Masuk
                                 </th>
                                 <th className="px-5 py-3 font-semibold">
+                                    Progres
+                                </th>
+                                <th className="px-5 py-3 font-semibold">
                                     Status
                                 </th>
                                 <th className="px-5 py-3 text-right font-semibold">
@@ -907,6 +911,9 @@ export default function VerifikatorDashboard({
                                     </td>
                                     <td className="px-5 py-3.5 text-slate-500">
                                         {formatDate(app.created_at)}
+                                    </td>
+                                    <td className="w-40 px-5 py-3.5">
+                                        <ProgressBar app={app} />
                                     </td>
                                     <td className="px-5 py-3.5">
                                         <StatusBadge status={app.status} />

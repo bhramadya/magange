@@ -15,6 +15,7 @@ import {
     GraduationCap,
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { ProgressBar } from '@/components/progress-bar';
 import { StatusBadge } from '@/components/status-badge';
 import MagangLayout from '@/layouts/magang-layout';
 import type {
@@ -439,6 +440,15 @@ export default function MahasiswaDashboard({
                             value={`${formatDate(application.start_date)} – ${formatDate(application.end_date)}`}
                         />
                     </motion.div>
+
+                    {/* Progres masa magang */}
+                    {(application.status === 'ongoing' ||
+                        application.status === 'completion_submitted' ||
+                        application.status === 'needs_certificate') && (
+                        <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                            <ProgressBar app={application} />
+                        </div>
+                    )}
 
                     <div className="mt-6 grid gap-6 lg:grid-cols-3">
                         {/* Timeline */}

@@ -79,15 +79,16 @@ test('approve OPD men-generate sk_number + sk_issued_at sekali', function () {
         ->and($app->status)->toBe(ApplicationStatus::WaitingTte);
 });
 
-test('nomor SK auto-increment antar approve + start number bisa diatur', function () {
+test('nomor SK auto-increment per OPD + start number bisa diatur per OPD', function () {
     Storage::fake('local');
     Queue::fake();
-    $service = app(SkNumberService::class);
-    $service->setStart(SkNumberService::KEY_ACCEPTANCE, 40);
 
     $opd = skOpdSiapAcc();
     $admin = User::factory()->opdAdmin($opd->id)->create();
     $signer = skSigner($opd);
+
+    // Start number milik OPD ini, bukan counter global.
+    app(SkNumberService::class)->setStart(SkNumberService::KEY_ACCEPTANCE, 40, $opd->id);
 
     foreach ([40, 41] as $expected) {
         $app = skForwardedApplication($opd);

@@ -21,6 +21,16 @@ use Illuminate\Support\Carbon;
  * @property string|null $completion_sk_number Nomor SK surat penyelesaian (set sekali)
  * @property Carbon|null $completion_sk_issued_at Tanggal terbit SK penyelesaian (statis)
  * @property string|null $completion_letter_path Arsip PDF surat penyelesaian (disk privat)
+ * @property int|null $completion_signer_id
+ * @property string|null $completion_signer_name Snapshot penandatangan, ditulis sekali
+ * @property string|null $completion_signer_title
+ * @property string|null $completion_signer_nip
+ * @property string|null $completion_signer_nik
+ * @property string|null $completion_signer_degree_prefix
+ * @property string|null $completion_signer_degree_suffix
+ * @property string|null $completion_signer_rank
+ * @property string|null $completion_signer_rank_class
+ * @property string|null $completion_signer_on_behalf_of
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -36,6 +46,16 @@ use Illuminate\Support\Carbon;
     'completion_sk_number',
     'completion_sk_issued_at',
     'completion_letter_path',
+    'completion_signer_id',
+    'completion_signer_name',
+    'completion_signer_title',
+    'completion_signer_nip',
+    'completion_signer_nik',
+    'completion_signer_degree_prefix',
+    'completion_signer_degree_suffix',
+    'completion_signer_rank',
+    'completion_signer_rank_class',
+    'completion_signer_on_behalf_of',
 ])]
 class FinalReport extends Model
 {

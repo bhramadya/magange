@@ -326,7 +326,43 @@ jalan untuk tiket rejected tanpa pengajuan aktif lain.
 
 ---
 
-## R3 — Kelola Surat dinamis, perataan teks, standardisasi template
+## R3 — Kelola Surat dinamis, perataan teks, standardisasi template ✅ SELESAI 2026-08-07
+
+> **Hasil:** seluruh R3a/R3b/R3c + Keputusan #4 (nomor per OPD) & #5 (snapshot
+> surat penyelesaian) tuntas. Gate: `composer ci:check` ✅ · `php artisan test`
+> → **232 tes: 222 lulus / 10 skip / 0 gagal (1201 assertion)** · `npm run build` ✅.
+> Perubahan dikerjakan di atas working tree yang sudah memuat migrasi+model+
+> service R3 dari sesi sebelumnya; batch ini menyelesaikan request rules,
+> kolom `signers()` di 3 controller, wiring `ensureCompletionSnapshot` +
+> `letter_code` per OPD, empat view PDF yang diseragamkan, dan frontend
+> `surat.tsx` dengan field penandatangan lengkap.
+>
+> **R3a** — `Store/UpdateOpdSignerRequest` menerima `nik` (digits:16),
+> `degree_prefix/suffix`, `rank`, `rank_class`, `on_behalf_of` (semua nullable).
+> `SubmissionService::approve` & `::reissueForTte` kini memakai helper
+> `acceptanceSnapshot()` yang menyebar seluruh `SNAPSHOT_FIELDS` (bukan 4 kolom
+> lama hardcoded). `LetterController`, `TteController`, `DashboardController`
+> memilih kolom baru di `signers()`. `surat.tsx`: `SignerRow`/`SignerSection`
+> memakai satu `form` state, tampilan nama bergelar + pangkat/golongan + a.n.,
+> placeholder baru di `LetterDocumentService::PLACEHOLDERS`.
+>
+> **R3b** — `.body` pada layout bersama kini `text-align: justify` (+
+> `text-justify: inter-word`); judul tetap center, tabel rincian tetap kiri.
+>
+> **R3c** — view PDF diseragamkan lewat `pdf/layouts/surat.blade.php` (CSS kop +
+> `@include` letterhead) dan `pdf/partials/signature.blade.php` (blok ttd
+> parametrik: tempat/tanggal/`on_behalf_of`/jabatan/nama bergelar/NIP/NIK/pangkat).
+> Bug `completion_letter` (kop & pejabat Kominfo hardcoded) ditutup: kini kop
+> memakai data OPD dinamis + snapshot `completion_signer_*` via
+> `LetterDocumentService::ensureCompletionSnapshot()` yang di-wire di
+> `ReportController::generateCompletionLetter` (Keputusan #5).
+>
+> **Keputusan #4** — `SkNumberService::next()/setStart()/current()` menerima
+> `?int $opdId`; counter dipisah per OPD di `sk_counters`
+> (`key` = `acceptance:{opd_id}` / `completion:{opd_id}`) dan kode unit memakai
+> `opds.letter_code` (default `401.106`). Pemanggil di `SubmissionService` &
+> `ReportController` meneruskan `opd_id`; `SkNumberTest` diperbarui ke semantik
+> per-OPD.
 
 > Revisi: variabel penandatangan lebih lengkap (nama, NIP, **NIK**, gelar
 > depan/belakang, pangkat/golongan, keterangan "atas nama Kepala Dinas");
@@ -405,11 +441,15 @@ penyelesaian dari OPD mana pun terbit dengan kop dan pejabat Kominfo.**
 
 ---
 
-## R4 — Simulasi status & indikator progres
+## R4 — Simulasi status & indikator progres ✅ SELESAI 2026-08-07
 
-### R4a — Simulasi tiket untuk demo
+> **Hasil:** `php artisan test` → **244 tes: 234 lulus / 10 skip / 0 gagal (1249 assertion)**.
+> `composer ci:check` (Pint · PHPStan · Pest · tsc · eslint · prettier) lulus.
+> `npm run build` lulus.
+
 > Revisi: sediakan simulasi untuk **Menunggu TTE**, **Perlu Sertifikat**, **Perlu Keputusan**.
 
+### R4a — Simulasi tiket untuk demo
 **Rencana:** dua alat, keduanya di luar UI produksi.
 1. `database/seeders/DemoSpectrumSeeder.php` — membuat satu tiket per status
    demo di atas, plus OPD demo yang **sudah punya kop + penandatangan** (tanpa
@@ -447,9 +487,62 @@ A11y: `role="progressbar"` + `aria-valuenow/min/max`, label teks (bukan warna sa
 
 **Ukuran:** R4a M · R4b M. **Tanpa perubahan skema DB.**
 
+> **Yang dikerjakan:**
+> - **`app/Services/DemoStatusService.php`** (baru) — menggerakkan pengajuan ke
+>   status target lewat jalur yang sama dengan data sungguhan: `forwardToOpd`,
+>   `approve` dengan `signer_id` (via `SubmissionService`), lalu langkah
+>   "unggah surat ber-TTE" yang direplikasi dari `TteController::uploadAcceptance`
+>   (`waiting_tte → ongoing`) sebelum `needsCertificate`. Menolak status di luar
+>   alur (mis. `completed`, `rejected`).
+> - **R4a** — `DemoSpectrumSeeder` (OPD demo `DEMO` + kop + penandatangan,
+>   1 verifikator + 1 admin OPD demo, 3 tiket: `MGG-2026-900101` Menunggu TTE,
+>   `MGG-2026-900102` Perlu Sertifikat, `MGG-2026-900103` Perlu Keputusan).
+>   Idempoten. **Tidak** di `DatabaseSeeder`; manual: `php artisan db:seed
+>   --class=DemoSpectrumSeeder`. `DemoTransitionCommand` (`magang:demo-status
+>   {tiket} {status}`) menggerakkan tiket ke status demo; diblokir di produksi
+>   (`app()->isProduction()` → FAILURE). Keduanya lewat `DemoStatusService`,
+>   jadi data demo punya status-log, snapshot penandatangan, dan draft PDF.
+>   Catatan guard: di command dipakai cek produksi (bukan `abort()` HTTP) agar
+>   konsisten dengan gaya command lain di repo.
+> - **R4b** — `resources/js/lib/internship-progress.ts` memuat `classifyProgress`
+>   (prioritas: completed → selesai, `end < hari ini` + non-selesai → lewat_batas,
+>   `start > hari ini` → belum_mulai, sisanya aktif), `calcProgressPct`,
+>   `PROGRESS_META` (label + warna per state), dan `progressA11y`
+>   (role=progressbar + aria-valuenow/min/max + label teks). Komponen bersama
+>   `resources/js/components/progress-bar.tsx` dipakai di kartu + kepala dialog
+>   `opd/peserta.tsx`, kolom tabel `opd/dashboard.tsx` & `verifikator/dashboard.tsx`,
+>   dan kartu progres `mahasiswa/dashboard.tsx` (status aktif/penyelesaian).
+>
+> - **Tes R4:** `tests/Feature/Feature/Penyelesaian/DemoStatusTest.php` — 9 tes
+>   (status ketiga tiket, idempotensi seeder, snapshot/draft/status-log, pergerakan
+>   command, status/tiket tidak dikenal, guard produksi, aktor demo, role).
+> - **Catatan cakupan:** tidak ada framework unit-test frontend (vitest) di repo,
+>   jadi R4b diverifikasi via tsc · eslint · prettier · build, bukan unit test.
+
 ---
 
-## R5 — Dokumentasi instalasi & seeder
+## R5 — Dokumentasi instalasi & seeder ✅ SELESAI 2026-08-06
+
+> **Hasil:** keempat sub-item jalan; penanda ini menyusul (kodenya sudah ter-commit
+> lebih dulu, headingnya baru ditandai 2026-08-07).
+>
+> - **R5a** — `.env.example` ada & tracked, disusun dari `config/*.php` + CLAUDE.md
+>   (bukan salinan `.env` asli). `APP_URL=http://localhost:8000` berskema,
+>   `APP_TIMEZONE=UTC` + `APP_SCHEDULE_TIMEZONE=Asia/Jakarta`, `DB_CONNECTION=pgsql`,
+>   `SESSION_DRIVER=database`, `QUEUE_CONNECTION=database`, `FILESYSTEM_DISK=local`,
+>   `MAIL_*` menunjuk Mailpit lokal (1025), `RECAPTCHA_*` kosong.
+> - **R5b** — `README.md` ada & tracked: prasyarat, instalasi manual (karena
+>   `composer setup` rusak), DB `magang_test`, `wayfinder:generate` sebelum
+>   `types:check`/`build`, `composer dev` + konsekuensi worker antrean, SMTP lokal,
+>   akun seeder, tabel perintah harian.
+> - **R5c** — `OpdSeeder::siapkanSurat()` mengisi `letterhead_address/phone/email`
+>   **dan** satu `OpdSigner` utama per OPD (jabatan diturunkan dari nama OPD,
+>   NIP contoh unik). Sengaja hanya mengisi yang kosong supaya seeder yang
+>   dijalankan ulang tidak menimpa data yang sudah diedit lewat Kelola Surat.
+>   Dampak: instalasi baru langsung bisa meng-ACC pengajuan (gate TTE terpenuhi).
+> - **R5d** — `ngrok.bat` sudah masuk `.gitignore`. **Rotasi authtoken-nya tetap
+>   tugas pemilik repo** — file-nya pernah ada di working tree dengan token asli.
+>   Dua berkas `*.patch` di root belum dikonfirmasi, dibiarkan apa adanya.
 
 > Revisi: lengkapi `.env.example` / README (instalasi, SMTP lokal, konfigurasi
 > database) dan seeder untuk mengisi data Admin & OPD.
@@ -492,11 +585,11 @@ persis sama dengan penyebab 4 tes merah di [P0](#p0--prasyarat-kembalikan-suite-
 
 | Batch | Isi | Alasan urutan |
 | --- | --- | --- |
-| **A** | P0 (4 tes) ✅ + R5 (env, README, seeder kop+penandatangan) — **R5 masih outstanding** | Hijaukan gate & buat instalasi bersih bisa dipakai. Seeder penandatangan juga menghapus akar masalah P0. |
+| **A** ✅ | P0 (4 tes) + R5 (env, README, seeder kop+penandatangan) | Hijaukan gate & buat instalasi bersih bisa dipakai. Seeder penandatangan juga menghapus akar masalah P0. |
 | **B** ✅ | R1 + R2a + R2b | Semuanya menyentuh `opd/peserta.tsx` + `verifikator/users/index.tsx`; dikerjakan sekali jalan agar tidak konflik. |
 | **C** ✅ | R2c (satu magang aktif) | Berdiri sendiri (request + service + tes). Bisa paralel dengan B kalau dikerjakan orang lain. |
-| **D** | R3 (surat) | Paling besar & paling berisiko (migration + snapshot + 4 view PDF). Butuh baseline hijau dari A. |
-| **E** | R4 (simulasi + progres) | Bergantung pada D untuk data demo TTE yang realistis. |
+| **D** ✅ | R3 (surat) | Paling besar & paling berisiko (migration + snapshot + 4 view PDF). Butuh baseline hijau dari A. |
+| **E** ✅ | R4 (simulasi + progres) | Bergantung pada D untuk data demo TTE yang realistis. |
 
 Setelah tiap batch: `composer ci:check` + `npm run build`, lalu perbarui
 `prompt/CURRENT-SESSION.md` (keputusan & gotcha) dan CLAUDE.md bila ada invarian baru.
@@ -526,14 +619,16 @@ sebelum batch yang bersangkutan dimulai (bukan sebelum seluruh rencana jalan).
 3. **Privasi dossier antar-OPD.** Bolehkah Admin OPD melihat riwayat pengajuan
    peserta ke **OPD lain** (tiket, status, periode, nama OPD)? Verifikator jelas
    boleh. Rekomendasi: tampilkan, tanpa dokumen/berkas. → *Batch B*
-4. **Nomor surat per OPD.** Sekarang `SkNumberService` memakai **satu** counter
-   global dengan format `503.11/N/401.106/TAHUN` — `401.106` adalah kode Kominfo.
-   "Nomor surat khusus per OPD" berarti counter per-OPD + kolom kode surat di
-   `opds`. Lakukan sekarang atau tunda? (Menyentuh `sk_counters`, `SkNumberService`,
-   dan halaman SK counter milik Verifikator.) → *Batch D*
-5. **Penandatangan surat penyelesaian.** Saat ini kosong/hardcoded. Pakai ulang
-   snapshot `acceptance_signer_*`, atau penandatangan utama saat surat dibuat
-   (dengan snapshot `completion_signer_*` sendiri)? Rekomendasi: yang kedua. → *Batch D*
+4. **Nomor surat per OPD.** ✅ **DIJAWAB 2026-08-07: per OPD, kerjakan sekarang.**
+   Sebelumnya `SkNumberService` memakai **satu** counter global dengan format
+   `503.11/N/401.106/TAHUN` (`401.106` = kode Kominfo). Implementasi Batch D:
+   kolom `letter_code` di `opds` (default `401.106`) + counter per OPD di
+   `sk_counters` (`key` = `acceptance:{opd_id}`), sehingga tiap OPD punya urutan
+   sendiri. → *Batch D*
+5. **Penandatangan surat penyelesaian.** ✅ **DIJAWAB 2026-08-07: snapshot sendiri.**
+   Kolom `completion_signer_*` di `final_reports`, diisi **sekali** saat surat
+   dibuat dari penandatangan utama OPD saat itu — konsisten dengan pola snapshot
+   surat penerimaan & sertifikat, dan tetap benar bila pimpinan berganti. → *Batch D*
 6. **Rentang presensi di dialog.** Default 31 hari (sekarang) dengan opsi
    90 hari / semua, atau langsung seluruh riwayat? Rekomendasi: default 31 +
    opsi, agar payload halaman tidak membengkak. → *Batch B*

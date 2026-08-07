@@ -225,7 +225,7 @@ class SubmissionService implements PengajuanServiceContract
             $skIssuedAt = $app->sk_issued_at;
 
             if ($skNumber === null) {
-                $skNumber = $this->skNumbers->next(SkNumberService::KEY_ACCEPTANCE);
+                $skNumber = $this->skNumbers->next(SkNumberService::KEY_ACCEPTANCE, $app->opd_id);
                 $skIssuedAt = Date::today();
             }
 
@@ -238,10 +238,7 @@ class SubmissionService implements PengajuanServiceContract
                 'status' => $signer === null ? ApplicationStatus::Approved : ApplicationStatus::WaitingTte,
                 'opd_decision_by' => $actor->id,
                 'opd_decision_at' => Date::now(),
-                'acceptance_signer_id' => $signer?->id,
-                'acceptance_signer_name' => $signer?->name,
-                'acceptance_signer_title' => $signer?->title,
-                'acceptance_signer_nip' => $signer?->nip,
+                ...$this->acceptanceSnapshot($signer),
             ]);
 
             $this->logStatus(
@@ -409,10 +406,7 @@ class SubmissionService implements PengajuanServiceContract
 
             $app->update([
                 'status' => ApplicationStatus::WaitingTte,
-                'acceptance_signer_id' => $signer->id,
-                'acceptance_signer_name' => $signer->name,
-                'acceptance_signer_title' => $signer->title,
-                'acceptance_signer_nip' => $signer->nip,
+                ...$this->acceptanceSnapshot($signer),
             ]);
 
             $this->logStatus(
@@ -593,6 +587,35 @@ class SubmissionService implements PengajuanServiceContract
             'changed_by' => $actor?->id,
             'notes' => $notes,
         ]);
+    }
+
+    /**
+     * Kolom snapshot penandatangan pada pengajuan (acceptance_signer_*).
+     * Menyebarkan seluruh SNAPSHOT_FIELDS OpdSigner supaya konsisten dengan
+     * ensureAcceptanceSnapshot — pengajuan tanpa penandatangan tetap boleh
+     * (seluruh kolom null, alur legacy), yang penting tidak pernah melempar.
+     *
+     * @return array<string, mixed>
+     */
+    private function acceptanceSnapshot(?OpdSigner $signer): array
+    {
+        if ($signer === null) {
+            return array_merge(
+                ['acceptance_signer_id' => null],
+                array_fill_keys(array_map(
+                    fn (string $field): string => 'acceptance_signer_'.$field,
+                    OpdSigner::SNAPSHOT_FIELDS,
+                ), null),
+            );
+        }
+
+        $attributes = ['acceptance_signer_id' => $signer->id];
+
+        foreach (OpdSigner::SNAPSHOT_FIELDS as $field) {
+            $attributes['acceptance_signer_'.$field] = $signer->{$field};
+        }
+
+        return $attributes;
     }
 
     /**

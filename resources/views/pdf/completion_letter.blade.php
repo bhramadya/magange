@@ -1,60 +1,9 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="utf-8">
-    <title>Surat Penyelesaian Magang — {{ $report->application->ticket_number }}</title>
-    <style>
-        /* Kop surat mengikuti acuan resmi (public/images/acuan_kopsurat.jpeg) —
-           pola sama dengan pdf/acceptance_letter.blade.php. */
-        * { font-family: DejaVu Sans, sans-serif; }
-        body { color: #111; font-size: 12px; line-height: 1.5; margin: 0; }
-        .kop { border-bottom: 3px solid #111; padding-bottom: 8px; margin-bottom: 2px; }
-        .kop table { width: 100%; border-collapse: collapse; }
-        .kop .logo { width: 90px; text-align: center; vertical-align: middle; }
-        .kop .logo img { width: 72px; }
-        .kop .teks { text-align: center; padding-right: 90px; }
-        .kop h1 { font-size: 14px; margin: 0; letter-spacing: 4px; font-weight: normal; }
-        .kop h2 { font-size: 18px; margin: 2px 0 0; text-transform: uppercase; font-weight: bold; }
-        .kop p { margin: 1px 0; font-size: 10px; }
-        .bar { height: 1px; background: #111; margin-bottom: 18px; }
-        .title { text-align: center; margin-bottom: 18px; }
-        .title h3 { margin: 0; font-size: 14px; text-decoration: underline; text-transform: uppercase; }
-        .title p { margin: 2px 0 0; font-size: 11px; }
-        table.detail { width: 100%; border-collapse: collapse; margin: 12px 0; }
-        table.detail td { padding: 4px 6px; vertical-align: top; }
-        table.detail td.label { width: 38%; }
-        table.detail td.sep { width: 4%; }
-        .ttd { width: 100%; margin-top: 36px; }
-        .ttd .box { width: 45%; float: right; text-align: center; }
-        .space { height: 70px; }
-        .muted { color: #444; }
-    </style>
-</head>
-<body>
-    @php($application = $report->application)
-    <div class="kop">
-        <table>
-            <tr>
-                <td class="logo">
-                    {{-- DomPDF butuh ekstensi GD untuk merender gambar; PHP lokal
-                         mungkin tanpa GD (lihat CLAUDE.md) — lewati logo agar
-                         pembuatan surat tidak pernah gagal. --}}
-                    @if (function_exists('imagecreatefrompng'))
-                        <img src="{{ public_path('images/Lambang_Kota_Madiun.png') }}" alt="Lambang Kota Madiun">
-                    @endif
-                </td>
-                <td class="teks">
-                    <h1>P E M E R I N T A H&nbsp;&nbsp;K O T A&nbsp;&nbsp;M A D I U N</h1>
-                    <h2>Dinas Komunikasi dan Informatika</h2>
-                    <p>Jalan Perintis Kemerdekaan Nomor 32, Kota Madiun, Kode Pos: 63122 Jawa Timur</p>
-                    <p>Telepon (0351) 467327</p>
-                    <p>Pos-el : kominfo@madiunkota.go.id</p>
-                </td>
-            </tr>
-        </table>
-    </div>
-    <div class="bar"></div>
+@php($application = $report->application)
+@extends('pdf.layouts.surat')
 
+@section('title', 'Surat Penyelesaian Magang — '.$application->ticket_number)
+
+@section('content')
     <div class="title">
         <h3>Surat Keterangan Penyelesaian Magang</h3>
         <p>NOMOR : {{ $report->completion_sk_number }}</p>
@@ -97,15 +46,12 @@
 
     <p>Demikian surat keterangan ini dibuat untuk dapat dipergunakan sebagaimana mestinya.</p>
 
-    <div class="ttd">
-        <div class="box">
-            <p class="muted">Ditetapkan di: Madiun</p>
-            <p class="muted">Pada tanggal: {{ ($report->completion_sk_issued_at ?? now())->format('d F Y') }}</p>
-            <p>a.n. Kepala Dinas Komunikasi dan Informatika</p>
-            <div class="space"></div>
-            <p><strong>__________________________</strong></p>
-            <p class="muted">NIP. ________________________</p>
-        </div>
-    </div>
-</body>
-</html>
+    @include('pdf.partials.signature', [
+        'signer' => $signer ?? [
+            'name' => $report->completion_signer_name,
+            'title' => $report->completion_signer_title,
+            'nip' => $report->completion_signer_nip,
+        ],
+        'tanggal' => ($report->completion_sk_issued_at ?? now())->translatedFormat('d F Y'),
+    ])
+@endsection

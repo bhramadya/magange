@@ -54,8 +54,14 @@ export interface Opd {
 export interface Signer {
     id: number;
     name: string;
+    degree_prefix: string | null;
+    degree_suffix: string | null;
     title: string;
+    rank: string | null;
+    rank_class: string | null;
+    on_behalf_of: string | null;
     nip: string;
+    nik: string | null;
     is_primary: boolean;
 }
 

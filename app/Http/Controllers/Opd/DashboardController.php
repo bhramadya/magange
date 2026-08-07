@@ -152,7 +152,10 @@ class DashboardController extends Controller
         return $request->user()->opd->signers()
             ->orderByDesc('is_primary')
             ->orderBy('name')
-            ->get(['id', 'name', 'title', 'nip', 'is_primary']);
+            ->get([
+                'id', 'name', 'degree_prefix', 'degree_suffix', 'title',
+                'rank', 'rank_class', 'on_behalf_of', 'nip', 'nik', 'is_primary',
+            ]);
     }
 
     /**
